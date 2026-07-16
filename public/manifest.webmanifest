@@ -1,0 +1,14 @@
+{
+  "name": "CodeQuest",
+  "short_name": "CodeQuest",
+  "description": "Learn real coding, one adventure at a time",
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#7ec8ff",
+  "theme_color": "#7ec8ff",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
