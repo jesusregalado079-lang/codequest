@@ -1,0 +1,343 @@
+{
+  "id": "world7",
+  "name": "Type Real Code",
+  "emoji": "⌨️",
+  "concept": "Real JavaScript — no blocks, you type the code yourself",
+  "place": "The Terminal",
+  "typed": true,
+  "theme": {
+    "floorA": "#12301f",
+    "floorB": "#0d2418",
+    "wallDark": "#050a07",
+    "wallLight": "#1b3d28"
+  },
+  "intro": {
+    "learn": [
+      "The blocks come off. From here you TYPE the code — like every real programmer does",
+      "You already know all of it! move, loops, ifs, functions, variables — same ideas, now typed",
+      "Every instruction ends with a semicolon ; and every { must have a matching }",
+      "JavaScript is picky about CAPITAL letters: moveForward() works, moveforward() does not",
+      "You WILL get errors. Good! Errors are the computer telling you exactly what to fix — read them and try again"
+    ],
+    "blocks": [
+      {
+        "icon": "⌨️",
+        "name": "the code box",
+        "text": "type your program here. Press ▶ Run to see the robot follow it"
+      },
+      {
+        "icon": "🧱",
+        "name": "the snippet buttons",
+        "text": "tap one to drop that code in — no hunting for ( ) { } ; on the keyboard!"
+      },
+      {
+        "icon": "🐞",
+        "name": "the error line",
+        "text": "if something's wrong, the robot tells you what and where. That's debugging — every coder does it all day"
+      },
+      {
+        "icon": "↺",
+        "name": "reset",
+        "text": "puts the starter code back if you get stuck"
+      }
+    ],
+    "goal": "Same puzzles you've mastered — but now the program comes out of your own fingers."
+  },
+  "recap": [
+    "You wrote real JavaScript by hand — the same language that runs every website on Earth",
+    "You typed all five fundamentals: order, for loops, if/else, functions, and variables",
+    "You learned the rules that trip up every beginner: semicolons, matching braces, and CAPITAL letters",
+    "You read error messages and fixed your own code — that's what real programming actually feels like",
+    "Nothing here was pretend. You can type this exact code into any browser's console today"
+  ],
+  "quiz": [
+    {
+      "q": "Which line moves the robot?",
+      "choices": [
+        "moveforward();",
+        "moveForward();",
+        "MoveForward;"
+      ],
+      "answer": 1,
+      "why": "JavaScript is case-sensitive: capital F, and () to call it, and ; to end the line."
+    },
+    {
+      "q": "What does the ; at the end of a line mean?",
+      "choices": [
+        "this instruction is finished",
+        "stop the program",
+        "it's decoration"
+      ],
+      "answer": 0,
+      "why": "The semicolon ends a statement — like a period at the end of a sentence."
+    },
+    {
+      "q": "You typed a { but forgot the matching }. What happens?",
+      "choices": [
+        "it works fine",
+        "an error — the computer never sees the end of the block",
+        "the robot guesses"
+      ],
+      "answer": 1,
+      "why": "Every { needs a }. The computer can't guess where your block ends."
+    },
+    {
+      "q": "for (var i = 0; i < 5; i++) { moveForward(); } — how far does the robot walk?",
+      "choices": [
+        "5 squares",
+        "1 square",
+        "forever"
+      ],
+      "answer": 0,
+      "why": "That's World 2's loop, typed for real: it runs the line inside 5 times."
+    },
+    {
+      "q": "if (onGem()) { collectGem(); } — when does collectGem() run?",
+      "choices": [
+        "always",
+        "only when the robot is standing on a gem",
+        "never"
+      ],
+      "answer": 1,
+      "why": "World 3, typed: the code inside { } runs only when the question is true."
+    },
+    {
+      "q": "function star() { moveForward(); } — what happens when the robot reaches this line?",
+      "choices": [
+        "it moves forward",
+        "nothing yet — it just learns the move",
+        "it repeats forever"
+      ],
+      "answer": 1,
+      "why": "World 4 rule: defining is not running. You have to call star(); to use it."
+    },
+    {
+      "q": "var gems = 0; gems = gems + 1; — what is gems now?",
+      "choices": [
+        "0",
+        "1",
+        "an error"
+      ],
+      "answer": 1,
+      "why": "World 5, typed: = means STORE. Take gems, add 1, store it back."
+    },
+    {
+      "q": "You get an error message. The best move is…",
+      "choices": [
+        "delete everything and start over",
+        "read it — it says what's wrong and where",
+        "ignore it and press Run again"
+      ],
+      "answer": 1,
+      "why": "Errors are help, not punishment. Every professional reads them all day long."
+    }
+  ],
+  "levels": [
+    {
+      "id": "world7-1",
+      "name": "Your First Line",
+      "grid": [
+        "####",
+        "#SG#",
+        "####"
+      ],
+      "startDir": 1,
+      "snippets": [
+        "move",
+        "collect"
+      ],
+      "starter": "// Type your program below.\n// Tap the 🧱 buttons if you don't want to type it all!\n",
+      "par": 2,
+      "hint": "Two lines: moveForward(); then collectGem(); — don't forget the semicolons!"
+    },
+    {
+      "id": "world7-2",
+      "name": "Line by Line",
+      "grid": [
+        "#######",
+        "#S...G#",
+        "#######"
+      ],
+      "startDir": 1,
+      "snippets": [
+        "move",
+        "collect"
+      ],
+      "starter": "moveForward();\n",
+      "par": 5,
+      "hint": "Count the squares to the gem. One moveForward(); per square, then collectGem();"
+    },
+    {
+      "id": "world7-3",
+      "name": "Turn It",
+      "grid": [
+        "#####",
+        "#S..#",
+        "###.#",
+        "###G#",
+        "#####"
+      ],
+      "startDir": 1,
+      "snippets": [
+        "move",
+        "right",
+        "left",
+        "collect"
+      ],
+      "starter": "",
+      "par": 6,
+      "hint": "Walk to the corner, turnRight();, walk down, then collectGem();"
+    },
+    {
+      "id": "world7-4",
+      "name": "Type a Loop",
+      "grid": [
+        "#########",
+        "#S.....G#",
+        "#########"
+      ],
+      "startDir": 1,
+      "snippets": [
+        "move",
+        "collect",
+        "loop"
+      ],
+      "starter": "",
+      "par": 4,
+      "hint": "for (var i = 0; i < 6; i++) { moveForward(); } then collectGem(); — tap the 🔁 button to get the shape right!"
+    },
+    {
+      "id": "world7-5",
+      "name": "Type an If",
+      "grid": [
+        "#########",
+        "#S.G.GG.#",
+        "#########"
+      ],
+      "startDir": 1,
+      "snippets": [
+        "move",
+        "collect",
+        "loop",
+        "if_gem"
+      ],
+      "starter": "",
+      "par": 6,
+      "hint": "Put the if INSIDE the loop: walk one step, then if (onGem()) { collectGem(); }"
+    },
+    {
+      "id": "world7-6",
+      "name": "Type an If-Else",
+      "grid": [
+        "#######",
+        "#S....#",
+        "#####.#",
+        "#####G#",
+        "#######"
+      ],
+      "startDir": 1,
+      "snippets": [
+        "move",
+        "right",
+        "collect",
+        "loop",
+        "if_path"
+      ],
+      "starter": "",
+      "par": 8,
+      "hint": "The self-steering robot, typed: if (pathAhead()) { moveForward(); } else { turnRight(); }"
+    },
+    {
+      "id": "world7-7",
+      "name": "Type a Function",
+      "grid": [
+        "#########",
+        "#S.G.G.G#",
+        "#########"
+      ],
+      "startDir": 1,
+      "snippets": [
+        "move",
+        "collect",
+        "func",
+        "call"
+      ],
+      "starter": "",
+      "par": 8,
+      "hint": "function star() { ... } teaches the move. Then star(); three times to use it."
+    },
+    {
+      "id": "world7-8",
+      "name": "Type a Variable",
+      "grid": [
+        "#########",
+        "#SGGG..E#",
+        "#########"
+      ],
+      "startDir": 1,
+      "snippets": [
+        "move",
+        "collect",
+        "loop",
+        "vardec",
+        "varadd",
+        "loopvar"
+      ],
+      "starter": "var gems = 0;\n",
+      "par": 9,
+      "hint": "Count 3 gems into the variable, then for (var i = 0; i < gems; i++) { moveForward(); } to the flag 🏁"
+    },
+    {
+      "id": "world7-9",
+      "name": "Put It Together",
+      "grid": [
+        "########",
+        "#S.G...#",
+        "######.#",
+        "#..G..G#",
+        "########"
+      ],
+      "startDir": 1,
+      "snippets": [
+        "move",
+        "right",
+        "collect",
+        "loop",
+        "if_gem",
+        "if_path"
+      ],
+      "starter": "",
+      "par": 10,
+      "hint": "One loop, two ifs — steer with pathAhead(), scoop with onGem(). All typed."
+    },
+    {
+      "id": "world7-10",
+      "name": "Boss: Real Programmer",
+      "grid": [
+        "#########",
+        "#S..G...#",
+        "#######.#",
+        "#E.G...G#",
+        "#########"
+      ],
+      "startDir": 1,
+      "snippets": [
+        "move",
+        "right",
+        "left",
+        "collect",
+        "loop",
+        "if_gem",
+        "if_path",
+        "func",
+        "call",
+        "vardec",
+        "varadd",
+        "loopvar"
+      ],
+      "starter": "",
+      "par": 10,
+      "hint": "Boss! Every tool is unlocked. Steer, scoop all 3 gems, land on the flag 🏁 — typed by your own hands."
+    }
+  ]
+}

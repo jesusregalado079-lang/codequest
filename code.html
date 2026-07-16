@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#7ec8ff" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <title>CodeQuest — Type Real Code</title>
+  <link rel="stylesheet" href="/src/ui/style.css" />
+</head>
+<body>
+  <div class="play-wrap">
+    <div class="topbar">
+      <button class="icon-btn" id="back" aria-label="Back to map">🗺️</button>
+      <div class="title" id="level-name"></div>
+      <button class="icon-btn" id="hint" aria-label="Hint">💡</button>
+    </div>
+    <div class="game-area">
+      <div class="stage-panel">
+        <div class="canvas-box"><canvas id="stage"></canvas></div>
+        <div class="controls">
+          <button class="icon-btn" id="reset" aria-label="Reset code">↺</button>
+          <button class="run-btn" id="run">▶ Run</button>
+          <span>🐢</span><input type="range" id="speed" min="1" max="4" step="1" value="3" /><span>🐇</span>
+        </div>
+      </div>
+      <div class="editor-panel">
+        <div class="snippets" id="snippets"></div>
+        <textarea id="editor" spellcheck="false" autocapitalize="off" autocorrect="off"
+          autocomplete="off" aria-label="Your code"></textarea>
+        <div class="err" id="err"></div>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="overlay hidden" id="win">
+    <div class="win-card">
+      <h2>You typed it yourself!</h2>
+      <div class="win-stars" id="win-stars"></div>
+      <div id="win-msg"></div>
+      <div class="row">
+        <button class="big-btn" id="next">Next level ▶</button>
+        <button class="big-btn" id="again" style="background:#4a90d9;box-shadow:0 4px 0 #2c5e94">Keep tweaking</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/ui/code.js"></script>
+</body>
+</html>

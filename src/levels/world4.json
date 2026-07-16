@@ -86,7 +86,7 @@
       "q": "In real JavaScript, teaching ⭐ looks like…",
       "choices": [
         "function star() { ... }",
-        "for (let i = 0; i < 3; i++)",
+        "for (var i = 0; i < 3; i++)",
         "if (onGem()) { ... }"
       ],
       "answer": 0,

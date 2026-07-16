@@ -11,6 +11,7 @@ export default defineConfig({
         world: resolve(import.meta.dirname, 'world.html'),
         quiz: resolve(import.meta.dirname, 'quiz.html'),
         game: resolve(import.meta.dirname, 'game.html'),
+        code: resolve(import.meta.dirname, 'code.html'),
       },
     },
   },

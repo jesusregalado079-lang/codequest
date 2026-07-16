@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { loadLevel, isWin } from '../src/engine/world.js';
 import { runProgram } from '../src/engine/runner.js';
 import { runGame } from '../src/engine/arcade-runner.js';
+import { friendlyError } from '../src/ui/errors.js';
 
 const world1 = JSON.parse(readFileSync(new URL('../src/levels/world1.json', import.meta.url), 'utf8'));
 const world2 = JSON.parse(readFileSync(new URL('../src/levels/world2.json', import.meta.url), 'utf8'));
@@ -13,6 +14,7 @@ const world3 = JSON.parse(readFileSync(new URL('../src/levels/world3.json', impo
 const world4 = JSON.parse(readFileSync(new URL('../src/levels/world4.json', import.meta.url), 'utf8'));
 const world5 = JSON.parse(readFileSync(new URL('../src/levels/world5.json', import.meta.url), 'utf8'));
 const world6 = JSON.parse(readFileSync(new URL('../src/levels/world6.json', import.meta.url), 'utf8'));
+const world7 = JSON.parse(readFileSync(new URL('../src/levels/world7.json', import.meta.url), 'utf8'));
 
 // Solutions written as block strings: M=move, L=turn left, R=turn right, C=collect
 const SOLUTIONS = {
@@ -226,12 +228,56 @@ for (const mission of world6.levels) {
   assert(!r.passed && r.fails[0].includes('forever'), 'runaway handler should be reported');
 }
 
+// World 7: the kid types this by hand, so the solutions ARE the level's
+// intended source — and every one must stay inside the 3-star line budget.
+const W7 = {
+  'world7-1': 'moveForward();\ncollectGem();',
+  'world7-2': 'moveForward();\nmoveForward();\nmoveForward();\nmoveForward();\ncollectGem();',
+  'world7-3': 'moveForward();\nmoveForward();\nturnRight();\nmoveForward();\nmoveForward();\ncollectGem();',
+  'world7-4': 'for (var i = 0; i < 6; i++) {\n  moveForward();\n}\ncollectGem();',
+  'world7-5': 'for (var i = 0; i < 6; i++) {\n  moveForward();\n  if (onGem()) {\n    collectGem();\n  }\n}',
+  'world7-6': 'for (var i = 0; i < 7; i++) {\n  if (pathAhead()) {\n    moveForward();\n  } else {\n    turnRight();\n  }\n}\ncollectGem();',
+  'world7-7': 'function star() {\n  moveForward();\n  moveForward();\n  collectGem();\n}\nstar();\nstar();\nstar();',
+  'world7-8': 'var gems = 0;\nfor (var i = 0; i < 3; i++) {\n  moveForward();\n  collectGem();\n  gems = gems + 1;\n}\nfor (var j = 0; j < gems; j++) {\n  moveForward();\n}',
+  'world7-9': 'for (var i = 0; i < 14; i++) {\n  if (pathAhead()) {\n    moveForward();\n  } else {\n    turnRight();\n  }\n  if (onGem()) {\n    collectGem();\n  }\n}',
+  'world7-10': 'for (var i = 0; i < 16; i++) {\n  if (pathAhead()) {\n    moveForward();\n  } else {\n    turnRight();\n  }\n  if (onGem()) {\n    collectGem();\n  }\n}',
+};
+
+const countLines = (src) =>
+  src.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('//')).length;
+
+for (const level of world7.levels) {
+  const code = W7[level.id];
+  assert(code, `missing solution for ${level.id}`);
+  const w = runProgram(code, loadLevel(level));
+  assert(!w.failed, `${level.id}: solution failed (${w.events.at(-1)?.type})`);
+  assert(isWin(w), `${level.id}: solution did not win (gems left: ${w.gems.size})`);
+  assert(countLines(code) <= level.par,
+    `${level.id}: intended solution is ${countLines(code)} lines but par is ${level.par}`);
+}
+
+// Kid-typical mistakes must produce a helpful message, never a raw stack trace
+for (const [label, src, expect] of [
+  ['ES6 let', 'let x = 1;', /only understands var/],
+  ['wrong case', 'moveforward();', /CAPITAL letters/],
+  ['unclosed brace', 'for (var i = 0; i < 2; i++) {\n  moveForward();', /never closed|out of place/],
+  ['typo', 'jump();', /doesn't know "jump"/],
+]) {
+  let msg = '';
+  try {
+    runProgram(src, loadLevel(world7.levels[0]));
+  } catch (e) {
+    msg = friendlyError(e, src);
+  }
+  assert(expect.test(msg), `${label}: unhelpful message — got "${msg}"`);
+}
+
 // Quiz sanity: every answer index points at a real choice
-for (const world of [world2, world3, world4, world5, world6]) {
+for (const world of [world2, world3, world4, world5, world6, world7]) {
   for (const q of world.quiz) {
     assert(q.choices[q.answer] !== undefined, `quiz "${q.q}": bad answer index`);
     assert(q.why, `quiz "${q.q}": missing explanation`);
   }
 }
 
-console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop, ${world3.levels.length} world-3 conditional, ${world4.levels.length} world-4 function, ${world5.levels.length} world-5 variable, ${world6.levels.length} world-6 event missions solvable, quizzes valid, executor edge cases pass`);
+console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop, ${world3.levels.length} world-3 conditional, ${world4.levels.length} world-4 function, ${world5.levels.length} world-5 variable, ${world6.levels.length} world-6 event, ${world7.levels.length} world-7 typed levels solvable, quizzes valid, kid errors translated, executor edge cases pass`);

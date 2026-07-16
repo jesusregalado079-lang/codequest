@@ -28,7 +28,7 @@
     "Loops repeat blocks so you don't copy-paste them — shorter programs, same result",
     "You put a loop inside another loop — that's nested loops, a real pro move",
     "You spotted repeating patterns (walk-walk-grab, step-turn-step) and turned them into loops",
-    "The </> panel showed your blocks as real JavaScript: for (let i = 0; i < 6; i++)"
+    "The </> panel showed your blocks as real JavaScript: for (var i = 0; i < 6; i++)"
   ],
   "quiz": [
     {
