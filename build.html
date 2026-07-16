@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#7ec8ff" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <title>CodeQuest — Level Maker</title>
+  <link rel="stylesheet" href="/src/ui/style.css" />
+</head>
+<body>
+  <div class="play-wrap">
+    <div class="topbar">
+      <button class="icon-btn" id="back" aria-label="Back to map">🗺️</button>
+      <div class="title">🏗️ Level Maker</div>
+      <button class="icon-btn" id="spin" aria-label="Spin hero">🔄</button>
+    </div>
+    <div class="build-area">
+      <div class="tools" id="tools"></div>
+      <div class="canvas-box"><canvas id="stage"></canvas></div>
+      <div class="build-bar">
+        <input type="text" id="name" maxlength="24" placeholder="Name your level" />
+        <button class="run-btn" id="test">▶ Test it</button>
+        <button class="run-btn" id="save" style="background:#4a90d9;box-shadow:0 4px 0 #2c5e94">💾 Save</button>
+      </div>
+      <div class="err" id="err"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script type="module" src="/src/ui/build.js"></script>
+</body>
+</html>

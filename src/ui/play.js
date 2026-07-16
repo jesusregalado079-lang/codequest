@@ -1,7 +1,8 @@
 // Game screen: Blockly workspace + canvas stage + run/reset loop.
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
-import { WORLDS, findLevel, worldUnlocked, levelUnlocked } from '../levels/index.js';
+import { WORLDS, findLevel, worldUnlocked, levelUnlocked, getWorld } from '../levels/index.js';
+import { getLevel, decodeLevel, toPlayable } from '../custom-levels.js';
 import { loadLevel, isWin } from '../engine/world.js';
 import { runProgram } from '../engine/runner.js';
 import { Renderer } from '../engine/renderer.js';
@@ -12,17 +13,29 @@ import { sounds } from './sounds.js';
 const profile = getActiveProfile();
 if (!profile) location.replace('index.html');
 
-const levelId = new URLSearchParams(location.search).get('level');
-const found = findLevel(levelId) ?? { world: WORLDS[0], level: WORLDS[0].levels[0], index: 0 };
+const params = new URLSearchParams(location.search);
+const customId = params.get('custom');
+const shared = params.get('shared');
+
+// Kid-made levels: play them with every block unlocked, and don't let a
+// homemade level touch the curriculum's stars or unlocks.
+let custom = null;
+if (customId) custom = getLevel(customId);
+else if (shared) { try { custom = decodeLevel(shared); } catch { custom = null; } }
+
+const found = custom
+  ? { world: getWorld('world8'), level: toPlayable(custom), index: 0 }
+  : findLevel(params.get('level')) ?? { world: WORLDS[0], level: WORLDS[0].levels[0], index: 0 };
 const { world, level, index: levelIndex } = found;
 
 // no skipping ahead via URL — locked levels bounce back to the map
-if (profile && !(worldUnlocked(WORLDS.indexOf(world), profile) && levelUnlocked(world, levelIndex, profile))) {
+if (!custom && profile
+  && !(worldUnlocked(WORLDS.indexOf(world), profile) && levelUnlocked(world, levelIndex, profile))) {
   location.replace('index.html');
 }
 
 document.getElementById('level-name').textContent =
-  `${levelIndex + 1}. ${level.name}`;
+  custom ? `${level.name} — by ${custom.author}` : `${levelIndex + 1}. ${level.name}`;
 
 defineBlocks(profile.mode === 'sprout');
 const workspace = Blockly.inject('blockly', {
@@ -109,8 +122,8 @@ runBtn.onclick = () => {
       workspace.highlightBlock(null);
       if (isWin(world)) {
         fails = 0;
-        const stars = starsFor(blockCount);
-        completeLevel(level.id, stars);
+        const stars = custom ? 3 : starsFor(blockCount);
+        if (!custom) completeLevel(level.id, stars);
         sounds.win();
         showWin(stars, blockCount);
       } else {
@@ -149,14 +162,16 @@ const winOverlay = document.getElementById('win');
 function showWin(stars, blockCount) {
   document.getElementById('win-stars').textContent =
     '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
-  document.getElementById('win-msg').textContent =
-    stars === 3
+  document.getElementById('win-msg').textContent = custom
+    ? `You beat ${custom.author}'s level in ${blockCount} blocks!`
+    : stars === 3
       ? `Perfect — solved in ${blockCount} blocks!`
       : `Solved in ${blockCount} blocks. Can you do it in ${level.par}?`;
   const next = document.getElementById('next');
-  const isLast = levelIndex >= world.levels.length - 1;
-  next.textContent = isLast ? 'World review 🎓' : 'Next level ▶';
+  const isLast = !custom && levelIndex >= world.levels.length - 1;
+  next.textContent = custom ? 'Back to the Workshop 🏗️' : isLast ? 'World review 🎓' : 'Next level ▶';
   next.onclick = () => {
+    if (custom) return void (location.href = 'index.html');
     location.href = isLast
       ? `world.html?world=${world.id}&view=recap`
       : `play.html?level=${world.levels[levelIndex + 1].id}`;

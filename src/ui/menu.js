@@ -5,6 +5,7 @@ import {
   deleteProfile, streakToday, exportData, importData,
 } from '../progress.js';
 import { sounds } from './sounds.js';
+import { listLevels, deleteLevel } from '../custom-levels.js';
 import { ARMOR, armorUnlocked, getArmor, drawHero } from './hero.js';
 import { setArmor } from '../progress.js';
 
@@ -117,9 +118,13 @@ function showMap() {
 
   WORLDS.forEach((world, wi) => {
     if (!worldUnlocked(wi, p)) {
-      app.append(el(`<div class="card coming">🔒 World ${wi + 1} · ${world.name} ${world.emoji} — beat World ${wi} boss to unlock!</div>`));
+      const gate = world.unlockAfter
+        ? `finish World ${world.unlockAfter.replace(/world(\d+).*/, '$1')} to unlock!`
+        : `beat World ${wi} boss to unlock!`;
+      app.append(el(`<div class="card coming">🔒 World ${wi + 1} · ${world.name} ${world.emoji} — ${gate}</div>`));
       return;
     }
+    if (world.sandbox) return void app.append(workshopCard(world, wi, p));
     const card = el(`<div class="card">
       <h2>${world.emoji} World ${wi + 1} · ${world.name}</h2>
       <p>${world.concept}</p>
@@ -164,10 +169,53 @@ function showMap() {
     }
     app.append(card);
   });
-  app.append(el(`<div class="card coming">World 8 · Free Build 🏗️ — coming soon!</div>`));
   const parents = el(`<p><button class="link-btn" id="parents">for grown-ups</button></p>`);
   parents.querySelector('#parents').onclick = showParents;
   app.append(parents);
+}
+
+// ---------- the Workshop (World 8) ----------
+function workshopCard(world, wi, p) {
+  const levels = listLevels();
+  const card = el(`<div class="card">
+    <h2>${world.emoji} World ${wi + 1} · ${world.name}</h2>
+    <p>${world.concept}</p>
+    <p><button class="link-btn lesson-link">📖 lesson: how to build</button></p>
+    <p><button class="big-btn make">🏗️ Make a new level</button></p>
+    <h3>${levels.length ? 'Levels your family built' : ''}</h3>
+    <div class="level-grid small workshop"></div>
+  </div>`);
+  card.querySelector('.lesson-link').onclick = () => {
+    sounds.tap();
+    location.href = `world.html?world=${world.id}&view=intro`;
+  };
+  card.querySelector('.make').onclick = () => { sounds.tap(); location.href = 'build.html'; };
+  const grid = card.querySelector('.workshop');
+  if (!levels.length) {
+    grid.append(el(`<p class="coming">No levels yet — be the first! Anything you build shows up here for the whole family to try.</p>`));
+  }
+  for (const lvl of levels) {
+    const mine = lvl.author === p.name;
+    const b = el(`<button class="level-btn made">🗺️
+      <span class="made-name">${esc(lvl.name)}</span>
+      <span class="stars">by ${esc(lvl.author)}</span>
+    </button>`);
+    b.onclick = () => { sounds.tap(); location.href = `play.html?custom=${lvl.id}`; };
+    const wrap = el(`<span class="made-wrap"></span>`);
+    wrap.append(b);
+    if (mine) {
+      const edit = el(`<button class="link-btn tiny">✏️ edit</button>`);
+      edit.onclick = () => { sounds.tap(); location.href = `build.html?edit=${lvl.id}`; };
+      const del = el(`<button class="link-btn tiny">🗑️</button>`);
+      del.onclick = () => {
+        if (confirm(`Delete "${lvl.name}"?`)) { deleteLevel(lvl.id); showMap(); }
+      };
+      wrap.append(el(`<span class="made-actions"></span>`));
+      wrap.querySelector('.made-actions').append(edit, del);
+    }
+    grid.append(wrap);
+  }
+  return card;
 }
 
 // ---------- outfits ----------

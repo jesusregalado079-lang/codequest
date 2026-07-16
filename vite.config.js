@@ -12,6 +12,7 @@ export default defineConfig({
         quiz: resolve(import.meta.dirname, 'quiz.html'),
         game: resolve(import.meta.dirname, 'game.html'),
         code: resolve(import.meta.dirname, 'code.html'),
+        build: resolve(import.meta.dirname, 'build.html'),
       },
     },
   },

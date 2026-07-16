@@ -40,11 +40,12 @@ if (view === 'intro') {
       )
       .join('')}</div>
     <p class="goal">🎯 ${intro.goal}</p>
-    <button class="big-btn" id="start">Start World ${worldNumber} ▶</button>
+    <button class="big-btn" id="start">${world.sandbox ? "🏗️ Start building" : `Start World ${worldNumber} ▶`}</button>
     <p><button class="link-btn" id="back">← back to the map</button></p>
   </div>`);
   card.querySelector('#start').onclick = () => {
     sounds.tap();
+    if (world.sandbox) return void (location.href = 'build.html');
     const firstUndone = world.levels.find((l) => !(profile.stars[l.id] > 0)) ?? world.levels[0];
     location.href = levelUrl(world, firstUndone);
   };
@@ -54,13 +55,13 @@ if (view === 'intro') {
   const card = el(`<div class="card lesson">
     <h2>🎓 What you learned</h2>
     <ul class="learn-list">${world.recap.map((l) => `<li>${l}</li>`).join('')}</ul>
-    <h3>Go back to any step</h3>
+    <h3>${world.sandbox ? '' : 'Go back to any step'}</h3>
     <div class="level-grid small"></div>
     <div class="recap-actions"></div>
     <p><button class="link-btn" id="back">← back to the map</button></p>
   </div>`);
   const grid = card.querySelector('.level-grid');
-  world.levels.forEach((lvl, i) => {
+  (world.levels ?? []).forEach((lvl, i) => {
     const stars = profile.stars[lvl.id] ?? 0;
     const unlocked = levelUnlocked(world, i, profile);
     const b = el(`<button class="level-btn ${unlocked ? '' : 'locked'}">

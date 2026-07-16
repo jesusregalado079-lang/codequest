@@ -7,6 +7,9 @@ import { loadLevel, isWin } from '../src/engine/world.js';
 import { runProgram } from '../src/engine/runner.js';
 import { runGame } from '../src/engine/arcade-runner.js';
 import { friendlyError } from '../src/ui/errors.js';
+import {
+  blankGrid, setCell, findProblems, toPlayable, encodeLevel, decodeLevel, W, H,
+} from '../src/custom-levels.js';
 
 const world1 = JSON.parse(readFileSync(new URL('../src/levels/world1.json', import.meta.url), 'utf8'));
 const world2 = JSON.parse(readFileSync(new URL('../src/levels/world2.json', import.meta.url), 'utf8'));
@@ -272,6 +275,44 @@ for (const [label, src, expect] of [
   assert(expect.test(msg), `${label}: unhelpful message — got "${msg}"`);
 }
 
+// World 8: kid-made levels must be real, playable levels — the maker can't be
+// allowed to save something the engine chokes on.
+{
+  const grid = blankGrid();
+  assert.strictEqual(grid.length, H);
+  assert(grid.every((r) => r.length === W), 'blank grid is rectangular');
+  assert(grid.every((r) => r[0] === '#' && r[W - 1] === '#'), 'side walls sealed');
+  assert(grid[0] === '#'.repeat(W) && grid[H - 1] === '#'.repeat(W), 'top/bottom sealed');
+  assert.strictEqual(grid.join('').split('S').length - 1, 1, 'exactly one hero');
+
+  // a hero with nothing to do is not a level
+  assert(findProblems(grid).some((p) => /gem|flag/.test(p)), 'empty level is flagged');
+
+  // paint a gem two squares away: now it's playable, and the engine solves it
+  const built = [...grid];
+  const heroRow = built.findIndex((r) => r.includes('S'));
+  const heroX = built[heroRow].indexOf('S');
+  built[heroRow] = setCell(built[heroRow], heroX + 2, 'G');
+  assert.deepStrictEqual(findProblems(built), [], 'a reachable gem is a valid level');
+
+  const playable = toPlayable({ id: 'x', name: 'Test', author: 'Kid', grid: built, startDir: 1 });
+  const w = runProgram('moveForward();moveForward();collectGem();', loadLevel(playable));
+  assert(!w.failed && isWin(w), 'kid-made level is solvable by the real engine');
+
+  // walling a gem off warns but is still allowed — evil levels are a feature
+  const evil = [...grid];
+  evil[1] = setCell(evil[1], 4, 'G');
+  evil[2] = '#'.repeat(W);
+  assert(findProblems(evil).some((p) => /reached/.test(p)), 'unreachable gem warns');
+
+  // levels survive the trip through a share link
+  const round = decodeLevel(encodeLevel({ name: 'Trip', author: 'Kid', grid: built, startDir: 2 }));
+  assert.deepStrictEqual(round.grid, built);
+  assert.strictEqual(round.startDir, 2);
+  assert.strictEqual(round.name, 'Trip');
+  assert.throws(() => decodeLevel(btoa('{"nope":1}')), 'garbage share links are rejected');
+}
+
 // Quiz sanity: every answer index points at a real choice
 for (const world of [world2, world3, world4, world5, world6, world7]) {
   for (const q of world.quiz) {
@@ -280,4 +321,4 @@ for (const world of [world2, world3, world4, world5, world6, world7]) {
   }
 }
 
-console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop, ${world3.levels.length} world-3 conditional, ${world4.levels.length} world-4 function, ${world5.levels.length} world-5 variable, ${world6.levels.length} world-6 event, ${world7.levels.length} world-7 typed levels solvable, quizzes valid, kid errors translated, executor edge cases pass`);
+console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop, ${world3.levels.length} world-3 conditional, ${world4.levels.length} world-4 function, ${world5.levels.length} world-5 variable, ${world6.levels.length} world-6 event, ${world7.levels.length} world-7 typed levels solvable, kid-made levels valid+shareable, quizzes valid, kid errors translated, executor edge cases pass`);

@@ -1,0 +1,37 @@
+{
+  "id": "world8",
+  "name": "Free Build",
+  "emoji": "🏗️",
+  "concept": "Make your own levels — then dare someone to beat them",
+  "place": "The Workshop",
+  "sandbox": true,
+  "unlockAfter": "world4-10",
+  "theme": {
+    "floorA": "#ffe9c7",
+    "floorB": "#f7dcae",
+    "wallDark": "#7a5c3e",
+    "wallLight": "#96724e"
+  },
+  "intro": {
+    "learn": [
+      "You've been solving other people's puzzles. Now YOU make them",
+      "Paint walls, drop gems, place your hero and the flag — it's your world",
+      "Every level you save goes in the Workshop for anyone on this iPad to play",
+      "Making a puzzle is harder than solving one — you have to know the answer AND make the question fun",
+      "That's real game design. It's the same job the people who made your favorite games do"
+    ],
+    "blocks": [
+      { "icon": "🧱", "name": "the paint tools", "text": "tap a tool, then tap the grid. Walls, floor, gems, the flag, and your hero" },
+      { "icon": "🔄", "name": "hero direction", "text": "tap your hero's arrow to spin which way they start facing" },
+      { "icon": "▶️", "name": "test it", "text": "play your own level with blocks. If YOU can't beat it, nobody can!" },
+      { "icon": "💾", "name": "save", "text": "name it and save — it shows up in the Workshop for your family to try" }
+    ],
+    "goal": "Build a level that's tricky but fair. Then hand the iPad to someone and watch them squirm 😈"
+  },
+  "recap": [
+    "You designed levels, not just solved them — that's game design",
+    "You had to think like a player AND a builder at the same time",
+    "Fair-but-tricky is the hardest thing to get right in any game",
+    "Everything you learned still applies: your levels need a path, a goal, and a reason to think"
+  ]
+}

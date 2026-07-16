@@ -198,6 +198,31 @@ table.parents td, table.parents th { padding: 6px 14px; border-bottom: 1px solid
 .quiz-choice.wrong { border-color: #e05d5d; background: #fbe4e4; }
 .quiz-why { font-weight: 600; text-align: center; }
 
+/* ---------- Workshop + Level Maker (World 8) ---------- */
+.made-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.level-btn.made { width: 108px; height: 88px; background: #fff3dc; box-shadow: 0 4px 0 #e0b95e; }
+.made-name { font-size: 0.75rem; font-weight: 700; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.made-actions { display: flex; gap: 2px; }
+.link-btn.tiny { font-size: 0.75rem; padding: 2px 4px; }
+.card .big-btn.make { display: block; margin: 0 auto; }
+
+.build-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 8px;
+  min-height: 0;
+}
+.tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.tools .snippet { font-size: 1rem; padding: 10px 14px; }
+.tools .snippet.selected { background: #4a90d9; color: #fff; box-shadow: 0 2px 0 #2c5e94; }
+.build-area .canvas-box { width: 100%; touch-action: none; }
+.build-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.build-bar input[type='text'] { width: min(240px, 60vw); font-size: 1rem; }
+.err { min-height: 1.4em; color: #b06000; font-weight: 700; font-size: 0.85rem; text-align: center; }
+
 /* ---------- code editor (World 7) ---------- */
 .editor-panel {
   flex: 1;

@@ -19,6 +19,8 @@ export const ARMOR = [
     helmet: '#6a4fd9', chest: '#563fb0', boots: '#3d2d80' },
   { id: 'coder', name: "Coder's Hoodie", unlock: 'world7-10', unlockText: 'beat the World 7 boss — type real code!',
     helmet: '#d8dee9', chest: '#1f2933', boots: '#3b4653' },
+  { id: 'builder', name: "Builder's Kit", unlock: 'world8-built', unlockText: 'build and save your first level',
+    helmet: '#ffb703', chest: '#fb8500', boots: '#b35c00' },
 ];
 
 export function armorUnlocked(armor, profile) {
