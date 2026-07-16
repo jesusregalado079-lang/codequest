@@ -153,7 +153,7 @@ function showMap() {
     }
     app.append(card);
   });
-  app.append(el(`<div class="card coming">World 3 · If This, Then That 🤔 — coming soon!</div>`));
+  app.append(el(`<div class="card coming">World 4 · Name Your Moves (functions) 🧩 — coming soon!</div>`));
   const parents = el(`<p><button class="link-btn" id="parents">for grown-ups</button></p>`);
   parents.querySelector('#parents').onclick = showParents;
   app.append(parents);
@@ -173,7 +173,7 @@ function showParents() {
   const card = el(`<div class="card">
     <h2>Grown-ups corner</h2>
     <p>Each world teaches one real programming concept — World 1 <b>sequencing</b>,
-    World 2 <b>loops</b>, with conditionals, functions and variables coming next.
+    World 2 <b>loops</b>, World 3 <b>conditionals</b>, with functions and variables coming next.
     Every world starts with a lesson, ends with a review, and (from World 2) a quiz
     that also re-tests earlier concepts. Aim for 1–2 levels a day; the streak rewards
     showing up, not bingeing.</p>

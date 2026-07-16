@@ -2,7 +2,7 @@
 // Synchronous: runs to completion (with step caps), leaving w.events for the
 // renderer to animate. Never eval().
 import Interpreter from 'js-interpreter';
-import { moveForward, turn, collect, Bump } from './world.js';
+import { moveForward, turn, collect, pathAhead, onGem, Bump } from './world.js';
 
 const MAX_STEPS = 100000;
 const MAX_EVENTS = 1000;
@@ -16,6 +16,8 @@ export function runProgram(code, w) {
     i.setProperty(globals, 'turnLeft', native(() => turn(w, -1, currentBlock)));
     i.setProperty(globals, 'turnRight', native(() => turn(w, 1, currentBlock)));
     i.setProperty(globals, 'collectGem', native(() => collect(w, currentBlock)));
+    i.setProperty(globals, 'pathAhead', native(() => pathAhead(w)));
+    i.setProperty(globals, 'onGem', native(() => onGem(w)));
   });
   let steps = 0;
   try {

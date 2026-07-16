@@ -66,6 +66,17 @@ export function collect(w, blockId) {
   }
 }
 
+// Sensors — pure reads, no events. World 3+.
+export function pathAhead(w) {
+  const d = DELTA[w.dir];
+  const t = tile(w, w.pos.x + d.x, w.pos.y + d.y);
+  return t !== '#' && t !== ' ';
+}
+
+export function onGem(w) {
+  return w.gems.has(`${w.pos.x},${w.pos.y}`);
+}
+
 export function isWin(w) {
   if (w.failed || w.gems.size > 0) return false;
   const hasExit = w.grid.some((row) => row.includes('E'));

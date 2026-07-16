@@ -1,8 +1,9 @@
 // All worlds, in curriculum order. Add a world = import its JSON here.
 import world1 from './world1.json';
 import world2 from './world2.json';
+import world3 from './world3.json';
 
-export const WORLDS = [world1, world2];
+export const WORLDS = [world1, world2, world3];
 
 export function getWorld(id) {
   return WORLDS.find((w) => w.id === id);

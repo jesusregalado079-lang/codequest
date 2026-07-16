@@ -1,0 +1,169 @@
+{
+  "id": "world3",
+  "name": "If This, Then That",
+  "emoji": "🤔",
+  "concept": "Conditionals — teach the robot to CHECK things and decide for itself",
+  "intro": {
+    "learn": [
+      "So far the robot did the same thing every time. Now it can CHECK the world and decide!",
+      "The 🤔 if block asks a question: 👀 is the path ahead open? 💎 am I on a gem?",
+      "If the answer is YES, the robot does the ✅ blocks. The if-else block adds ❌ blocks for NO",
+      "This is how real programs make decisions — in JavaScript it's if (pathAhead()) { ... } else { ... }"
+    ],
+    "blocks": [
+      { "icon": "🤔✅", "name": "if … do", "text": "checks the question — runs the blocks inside only when the answer is YES. Tap the question to change it!" },
+      { "icon": "🤔✅❌", "name": "if … do … else", "text": "YES runs the top blocks, NO runs the bottom blocks. The robot always picks one" },
+      { "icon": "👀", "name": "path ahead?", "text": "YES when the square in front is open, NO when it's a wall" },
+      { "icon": "💎", "name": "on gem?", "text": "YES when the robot is standing on a gem right now" }
+    ],
+    "goal": "Some gems are scattered where you least expect — let the robot CHECK instead of memorizing every step!"
+  },
+  "recap": [
+    "Your robot now makes decisions: if the answer is YES do one thing, else do another",
+    "You combined loops + ifs: walk the whole path and grab a gem WHENEVER you're on one",
+    "One smart program with if-else can follow a whole winding path — no memorizing turns",
+    "In real JavaScript you wrote: if (pathAhead()) { moveForward(); } else { turnRight(); }"
+  ],
+  "quiz": [
+    {
+      "q": "The robot runs ⬆️💎⬆️. When does it try to grab the gem?",
+      "choices": ["🏁 at the very end", "🥈 after the first step", "🎲 whenever it wants"],
+      "answer": 1,
+      "why": "Sequencing from World 1: blocks run in order — move, then collect, then move."
+    },
+    {
+      "q": "🔁 repeat 5 times [⬆️] — how many squares does the robot walk?",
+      "choices": ["5", "1", "10"],
+      "answer": 0,
+      "why": "Loops from World 2: the move runs 5 times."
+    },
+    {
+      "q": "Which program is SHORTER but does the same as ⬆️⬆️⬆️⬆️⬆️⬆️⬆️⬆️?",
+      "choices": ["⬆️💎⬆️💎", "🔁 8 times [⬆️]", "⬆️⬆️⬆️⬆️"],
+      "answer": 1,
+      "why": "A loop repeats the move 8 times using just 2 blocks."
+    },
+    {
+      "q": "🤔 if 💎 on gem? ✅ collect — and the robot is NOT on a gem. What happens?",
+      "choices": ["💥 the program crashes", "💎 it collects anyway", "😌 nothing — it just moves on"],
+      "answer": 2,
+      "why": "When the answer is NO, the blocks inside the if are simply skipped."
+    },
+    {
+      "q": "What kind of thing is 👀 path ahead?",
+      "choices": ["❓ a question the robot answers YES or NO", "🏃 a way to move", "🧱 a wall"],
+      "answer": 0,
+      "why": "Sensors are questions. The if block uses the answer to decide."
+    },
+    {
+      "q": "🤔 if 👀 path ahead? ✅ move ❌ turn right — the robot is facing a WALL. What does it do?",
+      "choices": ["🧱 walks into the wall", "↩️ turns right", "🛑 stops forever"],
+      "answer": 1,
+      "why": "Path ahead is NO, so the else (❌) blocks run: turn right."
+    },
+    {
+      "q": "Gems are scattered on random squares along a long path. What's the SMART plan?",
+      "choices": ["🔁 loop: move, and if on gem — collect", "💎 press collect 100 times", "🧠 memorize every gem square"],
+      "answer": 0,
+      "why": "Loops + ifs handle ANY gem layout — that's why programmers love them."
+    },
+    {
+      "q": "The robot faces a wall and runs: 🤔 if 👀 path ahead? ✅ move ❌ collect. Which block runs?",
+      "choices": ["⬆️ move", "💎 collect", "🤷 both"],
+      "answer": 1,
+      "why": "The if picks exactly ONE branch — the answer was NO, so the else runs."
+    }
+  ],
+  "levels": [
+    {
+      "id": "world3-1",
+      "name": "Gem or Not?",
+      "grid": ["#########", "#S.G.GG.#", "#########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "if_do", "move_forward", "collect_gem"],
+      "par": 4,
+      "hint": "NEW! 🤔 if block. Try: repeat 6 [ move, if 💎 on gem? ✅ collect ] — the robot checks every square!"
+    },
+    {
+      "id": "world3-2",
+      "name": "Mystery Gems",
+      "grid": ["###########", "#S.GG.G.G.#", "###########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "if_do", "move_forward", "collect_gem"],
+      "par": 4,
+      "hint": "Same trick, longer hallway: walk 8 and CHECK each square for a gem."
+    },
+    {
+      "id": "world3-3",
+      "name": "Follow the Bend",
+      "grid": ["#######", "#S....#", "#####.#", "#####G#", "#######"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "if_else", "move_forward", "turn_right", "collect_gem"],
+      "par": 5,
+      "hint": "NEW! if-else: if 👀 path ahead? ✅ move ❌ turn right. The robot finds the bend by itself!"
+    },
+    {
+      "id": "world3-4",
+      "name": "The Long Way Around",
+      "grid": ["########", "#S.....#", "######.#", "#G.....#", "########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "if_else", "move_forward", "turn_right", "collect_gem"],
+      "par": 5,
+      "hint": "Two bends this time — but the SAME if-else handles both. Just repeat it enough times!"
+    },
+    {
+      "id": "world3-5",
+      "name": "Bend + Gems",
+      "grid": ["#######", "#S..G.#", "#####.#", "#####G#", "#######"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "if_else", "if_do", "move_forward", "turn_right", "collect_gem"],
+      "par": 6,
+      "hint": "Combine BOTH checks in one loop: if path — move, else turn. Then: if on gem — collect."
+    },
+    {
+      "id": "world3-6",
+      "name": "Lefty Bends",
+      "grid": ["########", "#G.....#", "######.#", "#S.....#", "########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "if_else", "move_forward", "turn_left", "collect_gem"],
+      "par": 5,
+      "hint": "This path bends the OTHER way — when there's no path ahead, turn LEFT."
+    },
+    {
+      "id": "world3-7",
+      "name": "Mystery Maze",
+      "grid": ["########", "#S.G...#", "######.#", "#..G..G#", "########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "if_else", "if_do", "move_forward", "turn_right", "collect_gem"],
+      "par": 6,
+      "hint": "One loop, two questions each time: can I move? am I on a gem? The robot handles the rest."
+    },
+    {
+      "id": "world3-8",
+      "name": "Check to the Flag",
+      "grid": ["#######", "#S..G.#", "#####.#", "#E..G.#", "#######"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "if_else", "if_do", "move_forward", "turn_right", "collect_gem"],
+      "par": 6,
+      "hint": "Gems AND a flag 🏁. Your checking loop ends right on the flag — count your repeats!"
+    },
+    {
+      "id": "world3-9",
+      "name": "Double Trouble",
+      "grid": ["########", "#G..G..#", "######.#", "#S...G.#", "########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "if_else", "if_do", "move_forward", "turn_left", "collect_gem"],
+      "par": 6,
+      "hint": "Left bends and three sneaky gems. Same smart loop — check path, check gem, every time."
+    },
+    {
+      "id": "world3-10",
+      "name": "Boss: Sensor Master",
+      "grid": ["#########", "#S..G...#", "#######.#", "#E.G...G#", "#########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "if_else", "if_do", "move_forward", "turn_right", "collect_gem"],
+      "par": 6,
+      "hint": "Boss! The longest path yet — 3 hidden gems and the flag. One clever checking loop does it ALL."
+    }
+  ]
+}

@@ -26,9 +26,53 @@ export function defineBlocks(iconMode) {
     };
     javascriptGenerator.forBlock[d.type] = () => d.code;
   }
+  // if / if-else with a sensor dropdown — one block, no boolean-socket
+  // fiddling on touch screens. Generates real `if (pathAhead()) {...}`.
+  const SENSORS = [
+    ['👀 path ahead?', 'pathAhead'],
+    ['💎 on gem?', 'onGem'],
+  ];
+  const condition = (block) => `${block.getFieldValue('COND')}()`;
+
+  Blockly.Blocks['if_do'] = {
+    init() {
+      this.jsonInit({
+        type: 'if_do',
+        message0: iconMode ? '🤔 %1' : '🤔 if %1',
+        args0: [{ type: 'field_dropdown', name: 'COND', options: SENSORS }],
+        message1: iconMode ? '✅ %1' : 'do %1',
+        args1: [{ type: 'input_statement', name: 'DO' }],
+        previousStatement: null,
+        nextStatement: null,
+        colour: 180,
+      });
+    },
+  };
+  javascriptGenerator.forBlock['if_do'] = (block, gen) =>
+    `if (${condition(block)}) {\n${gen.statementToCode(block, 'DO')}}\n`;
+
+  Blockly.Blocks['if_else'] = {
+    init() {
+      this.jsonInit({
+        type: 'if_else',
+        message0: iconMode ? '🤔 %1' : '🤔 if %1',
+        args0: [{ type: 'field_dropdown', name: 'COND', options: SENSORS }],
+        message1: iconMode ? '✅ %1' : 'do %1',
+        args1: [{ type: 'input_statement', name: 'DO' }],
+        message2: iconMode ? '❌ %1' : 'else %1',
+        args2: [{ type: 'input_statement', name: 'ELSE' }],
+        previousStatement: null,
+        nextStatement: null,
+        colour: 180,
+      });
+    },
+  };
+  javascriptGenerator.forBlock['if_else'] = (block, gen) =>
+    `if (${condition(block)}) {\n${gen.statementToCode(block, 'DO')}} else {\n${gen.statementToCode(block, 'ELSE')}}\n`;
+
   javascriptGenerator.STATEMENT_PREFIX = 'highlightBlock(%1);\n';
   javascriptGenerator.addReservedWords(
-    'highlightBlock,moveForward,turnLeft,turnRight,collectGem'
+    'highlightBlock,moveForward,turnLeft,turnRight,collectGem,pathAhead,onGem'
   );
 }
 

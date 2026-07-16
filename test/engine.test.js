@@ -8,6 +8,7 @@ import { runProgram } from '../src/engine/runner.js';
 
 const world1 = JSON.parse(readFileSync(new URL('../src/levels/world1.json', import.meta.url), 'utf8'));
 const world2 = JSON.parse(readFileSync(new URL('../src/levels/world2.json', import.meta.url), 'utf8'));
+const world3 = JSON.parse(readFileSync(new URL('../src/levels/world3.json', import.meta.url), 'utf8'));
 
 // Solutions written as block strings: M=move, L=turn left, R=turn right, C=collect
 const SOLUTIONS = {
@@ -89,10 +90,37 @@ for (const level of world2.levels) {
   assert(isWin(w), `${level.id}: solution did not win (gems left: ${w.gems.size})`);
 }
 
-// Quiz sanity: every answer index points at a real choice
-for (const q of world2.quiz) {
-  assert(q.choices[q.answer] !== undefined, `quiz "${q.q}": bad answer index`);
-  assert(q.why, `quiz "${q.q}": missing explanation`);
+// World 3: conditional solutions — the JS the if/if-else blocks generate.
+const CHECK_GEM = 'if(onGem()){collectGem();}';
+const STEER_R = 'if(pathAhead()){moveForward();}else{turnRight();}';
+const STEER_L = 'if(pathAhead()){moveForward();}else{turnLeft();}';
+const W3 = {
+  'world3-1': `for(var i=0;i<6;i++){moveForward();${CHECK_GEM}}`,
+  'world3-2': `for(var i=0;i<8;i++){moveForward();${CHECK_GEM}}`,
+  'world3-3': `for(var i=0;i<7;i++){${STEER_R}}collectGem();`,
+  'world3-4': `for(var i=0;i<14;i++){${STEER_R}}collectGem();`,
+  'world3-5': `for(var i=0;i<7;i++){${STEER_R}${CHECK_GEM}}`,
+  'world3-6': `for(var i=0;i<14;i++){${STEER_L}}collectGem();`,
+  'world3-7': `for(var i=0;i<14;i++){${STEER_R}${CHECK_GEM}}`,
+  'world3-8': `for(var i=0;i<12;i++){${STEER_R}${CHECK_GEM}}`,
+  'world3-9': `for(var i=0;i<14;i++){${STEER_L}${CHECK_GEM}}`,
+  'world3-10': `for(var i=0;i<16;i++){${STEER_R}${CHECK_GEM}}`,
+};
+
+for (const level of world3.levels) {
+  const code = W3[level.id];
+  assert(code, `missing solution for ${level.id}`);
+  const w = runProgram(code, loadLevel(level));
+  assert(!w.failed, `${level.id}: solution failed (${w.events.at(-1)?.type})`);
+  assert(isWin(w), `${level.id}: solution did not win (gems left: ${w.gems.size})`);
 }
 
-console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop levels solvable, ${world2.quiz.length} quiz questions valid, executor edge cases pass`);
+// Quiz sanity: every answer index points at a real choice
+for (const world of [world2, world3]) {
+  for (const q of world.quiz) {
+    assert(q.choices[q.answer] !== undefined, `quiz "${q.q}": bad answer index`);
+    assert(q.why, `quiz "${q.q}": missing explanation`);
+  }
+}
+
+console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop levels, ${world3.levels.length} world-3 conditional levels solvable, quizzes valid, executor edge cases pass`);
