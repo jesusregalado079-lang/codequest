@@ -70,9 +70,46 @@ export function defineBlocks(iconMode) {
   javascriptGenerator.forBlock['if_else'] = (block, gen) =>
     `if (${condition(block)}) {\n${gen.statementToCode(block, 'DO')}} else {\n${gen.statementToCode(block, 'ELSE')}}\n`;
 
+  // Functions, kid-style: two named "moves" (⭐ and 🌙) — a definition block
+  // that teaches the move and a call block that runs it. No typing, no
+  // naming UI; generates real `function star() {...}` / `star();`.
+  // JS hoisting means the definition stack can sit anywhere on the canvas.
+  const FUNCS = [
+    { def: 'def_star', call: 'call_star', icon: '⭐', label: 'star move', fn: 'star' },
+    { def: 'def_moon', call: 'call_moon', icon: '🌙', label: 'moon move', fn: 'moon' },
+  ];
+  for (const f of FUNCS) {
+    Blockly.Blocks[f.def] = {
+      init() {
+        this.jsonInit({
+          type: f.def,
+          message0: iconMode ? `🧩 ${f.icon}` : `🧩 teach ${f.icon} ${f.label}`,
+          message1: '%1',
+          args1: [{ type: 'input_statement', name: 'BODY' }],
+          colour: 20,
+        });
+      },
+    };
+    javascriptGenerator.forBlock[f.def] = (block, gen) =>
+      `function ${f.fn}() {\n${gen.statementToCode(block, 'BODY')}}\n`;
+
+    Blockly.Blocks[f.call] = {
+      init() {
+        this.jsonInit({
+          type: f.call,
+          message0: iconMode ? f.icon : `${f.icon} do ${f.label}`,
+          previousStatement: null,
+          nextStatement: null,
+          colour: 20,
+        });
+      },
+    };
+    javascriptGenerator.forBlock[f.call] = () => `${f.fn}();\n`;
+  }
+
   javascriptGenerator.STATEMENT_PREFIX = 'highlightBlock(%1);\n';
   javascriptGenerator.addReservedWords(
-    'highlightBlock,moveForward,turnLeft,turnRight,collectGem,pathAhead,onGem'
+    'highlightBlock,moveForward,turnLeft,turnRight,collectGem,pathAhead,onGem,star,moon'
   );
 }
 

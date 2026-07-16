@@ -9,6 +9,7 @@ import { runProgram } from '../src/engine/runner.js';
 const world1 = JSON.parse(readFileSync(new URL('../src/levels/world1.json', import.meta.url), 'utf8'));
 const world2 = JSON.parse(readFileSync(new URL('../src/levels/world2.json', import.meta.url), 'utf8'));
 const world3 = JSON.parse(readFileSync(new URL('../src/levels/world3.json', import.meta.url), 'utf8'));
+const world4 = JSON.parse(readFileSync(new URL('../src/levels/world4.json', import.meta.url), 'utf8'));
 
 // Solutions written as block strings: M=move, L=turn left, R=turn right, C=collect
 const SOLUTIONS = {
@@ -115,12 +116,47 @@ for (const level of world3.levels) {
   assert(isWin(w), `${level.id}: solution did not win (gems left: ${w.gems.size})`);
 }
 
+// World 4: function solutions — the JS the teach/call blocks generate.
+// Calls appear before definitions on purpose: hoisting must work in the
+// sandboxed interpreter exactly like real JS.
+const W4 = {
+  'world4-1': 'star();star();star();function star(){moveForward();moveForward();collectGem();}',
+  'world4-2': 'star();star();star();function star(){moveForward();moveForward();moveForward();collectGem();turnRight();}',
+  'world4-3': 'star();turnRight();star();turnRight();star();function star(){for(var i=0;i<3;i++){moveForward();collectGem();}}',
+  'world4-4': 'star();moon();star();moon();star();function star(){moveForward();moveForward();collectGem();}function moon(){turnRight();moveForward();turnLeft();}',
+  'world4-5': 'star();star();for(var i=0;i<3;i++){moveForward();collectGem();}star();star();collectGem();function star(){moveForward();turnLeft();moveForward();turnRight();}',
+  'world4-6': 'for(var i=0;i<6;i++){star();}function star(){moveForward();if(onGem()){collectGem();}}',
+  'world4-7': 'star();moon();star();moon();star();function star(){moveForward();collectGem();moveForward();collectGem();}function moon(){turnRight();moveForward();turnLeft();}',
+  'world4-8': 'star();turnRight();star();turnRight();star();function star(){for(var i=0;i<3;i++){moveForward();if(onGem()){collectGem();}}}',
+  'world4-9': 'star();turnLeft();star();turnLeft();star();function star(){for(var i=0;i<3;i++){moveForward();collectGem();}}',
+  'world4-10': 'star();star();for(var i=0;i<3;i++){moon();}star();star();for(var i=0;i<3;i++){moon();}function star(){moveForward();turnLeft();moveForward();turnRight();}function moon(){moveForward();if(onGem()){collectGem();}}',
+};
+
+for (const level of world4.levels) {
+  const code = W4[level.id];
+  assert(code, `missing solution for ${level.id}`);
+  const w = runProgram(code, loadLevel(level));
+  assert(!w.failed, `${level.id}: solution failed (${w.events.at(-1)?.type})`);
+  assert(isWin(w), `${level.id}: solution did not win (gems left: ${w.gems.size})`);
+}
+
+// Calling an untaught move must throw (play.js catches it and shows a toast)
+{
+  let threw = false;
+  try {
+    runProgram('star();', loadLevel(world4.levels[0]));
+  } catch {
+    threw = true;
+  }
+  assert(threw, 'undefined function call should throw');
+}
+
 // Quiz sanity: every answer index points at a real choice
-for (const world of [world2, world3]) {
+for (const world of [world2, world3, world4]) {
   for (const q of world.quiz) {
     assert(q.choices[q.answer] !== undefined, `quiz "${q.q}": bad answer index`);
     assert(q.why, `quiz "${q.q}": missing explanation`);
   }
 }
 
-console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop levels, ${world3.levels.length} world-3 conditional levels solvable, quizzes valid, executor edge cases pass`);
+console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop, ${world3.levels.length} world-3 conditional, ${world4.levels.length} world-4 function levels solvable, quizzes valid, executor edge cases pass`);

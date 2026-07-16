@@ -86,7 +86,15 @@ runBtn.onclick = () => {
   runBtn.disabled = true;
   workspace.highlightBlock(null);
   const code = javascriptGenerator.workspaceToCode(workspace);
-  const world = runProgram(code, loadLevel(level));
+  let world;
+  try {
+    world = runProgram(code, loadLevel(level));
+  } catch {
+    // e.g. a ⭐ call with no matching teach block
+    runBtn.disabled = false;
+    showToast('🤔 A move isn\'t taught yet — check your 🧩 blocks!');
+    return;
+  }
   const speed = Number(document.getElementById('speed').value);
   renderer.play(world.events, {
     speed,
