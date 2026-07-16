@@ -1,7 +1,7 @@
 // Game screen: Blockly workspace + canvas stage + run/reset loop.
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
-import { WORLDS, findLevel } from '../levels/index.js';
+import { WORLDS, findLevel, worldUnlocked, levelUnlocked } from '../levels/index.js';
 import { loadLevel, isWin } from '../engine/world.js';
 import { runProgram } from '../engine/runner.js';
 import { Renderer } from '../engine/renderer.js';
@@ -15,6 +15,11 @@ if (!profile) location.replace('index.html');
 const levelId = new URLSearchParams(location.search).get('level');
 const found = findLevel(levelId) ?? { world: WORLDS[0], level: WORLDS[0].levels[0], index: 0 };
 const { world, level, index: levelIndex } = found;
+
+// no skipping ahead via URL — locked levels bounce back to the map
+if (profile && !(worldUnlocked(WORLDS.indexOf(world), profile) && levelUnlocked(world, levelIndex, profile))) {
+  location.replace('index.html');
+}
 
 document.getElementById('level-name').textContent =
   `${levelIndex + 1}. ${level.name}`;

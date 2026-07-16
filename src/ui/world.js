@@ -1,6 +1,6 @@
 // World lesson pages: ?world=world2&view=intro (start of world)
 // or view=recap (end of world — review + jump back to any level).
-import { getWorld, WORLDS, levelUnlocked } from '../levels/index.js';
+import { getWorld, WORLDS, levelUnlocked, worldUnlocked } from '../levels/index.js';
 import { getActiveProfile } from '../progress.js';
 import { sounds } from './sounds.js';
 
@@ -11,6 +11,9 @@ const params = new URLSearchParams(location.search);
 const world = getWorld(params.get('world')) ?? WORLDS[0];
 const view = params.get('view') === 'recap' ? 'recap' : 'intro';
 const worldNumber = WORLDS.indexOf(world) + 1;
+
+// locked worlds can't be previewed via URL
+if (profile && !worldUnlocked(worldNumber - 1, profile)) location.replace('index.html');
 
 const app = document.getElementById('app');
 const el = (html) => {

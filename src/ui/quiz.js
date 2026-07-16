@@ -11,6 +11,11 @@ const world = getWorld(new URLSearchParams(location.search).get('world'));
 if (!world?.quiz) location.replace('index.html');
 const worldNumber = WORLDS.indexOf(world) + 1;
 
+// quiz unlocks only after the world's boss is beaten
+if (profile && world && !(profile.stars[world.levels.at(-1).id] > 0)) {
+  location.replace('index.html');
+}
+
 const app = document.getElementById('app');
 const el = (html) => {
   const t = document.createElement('template');

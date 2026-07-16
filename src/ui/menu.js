@@ -15,6 +15,10 @@ const el = (html) => {
   return t.content.firstChild;
 };
 
+// profile names are kid-typed (and importable from backup files) — never
+// trust them in innerHTML
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
 function header() {
   return `<h1 class="logo">🚀 CodeQuest</h1>
     <p class="tagline">Learn real coding, one adventure at a time</p>`;
@@ -26,7 +30,7 @@ function showProfiles() {
   const card = el(`<div class="card"><h2>Who's playing?</h2><div class="profile-row"></div></div>`);
   const row = card.querySelector('.profile-row');
   for (const p of getProfiles()) {
-    const b = el(`<button class="profile-btn"><span class="avatar">${p.avatar}</span>${p.name}</button>`);
+    const b = el(`<button class="profile-btn"><span class="avatar">${p.avatar}</span>${esc(p.name)}</button>`);
     b.onclick = () => { sounds.tap(); setActiveProfile(p.id); showMap(); };
     row.append(b);
   }
@@ -97,7 +101,7 @@ function showMap() {
     ? `<span class="streak">🔥 ${p.streak.count} day${p.streak.count > 1 ? 's' : ''}${streakToday(p) ? '' : ' — play today to keep it!'}</span>`
     : `<span class="streak">Play a level to start your streak! 🔥</span>`;
   const hello = el(`<div class="card hello-bar">
-    <div class="who"><span class="avatar">${p.avatar}</span>${p.name}</div>
+    <div class="who"><span class="avatar">${p.avatar}</span>${esc(p.name)}</div>
     ${flame}
     <button class="link-btn" id="switch">switch player</button>
   </div>`);
@@ -167,7 +171,7 @@ function showParents() {
   const rows = getProfiles().map((p) => {
     const done = allLevels.filter((l) => p.stars[l.id]).length;
     const stars = Object.values(p.stars).reduce((a, b) => a + b, 0);
-    return `<tr><td>${p.avatar} ${p.name}</td><td>${done}/${total} levels</td><td>${stars} ⭐</td><td>🔥 ${p.streak.count}</td>
+    return `<tr><td>${p.avatar} ${esc(p.name)}</td><td>${done}/${total} levels</td><td>${stars} ⭐</td><td>🔥 ${p.streak.count}</td>
       <td><button class="link-btn del" data-id="${p.id}">remove</button></td></tr>`;
   }).join('');
   const card = el(`<div class="card">

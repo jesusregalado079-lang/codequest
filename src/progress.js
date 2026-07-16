@@ -78,5 +78,24 @@ export function exportData() {
 export function importData(json) {
   const parsed = JSON.parse(json); // throws on garbage — caller shows message
   if (!Array.isArray(parsed.profiles)) throw new Error('not a CodeQuest backup');
-  save(parsed);
+  // normalize every field — backup files are user-supplied and untrusted
+  const profiles = parsed.profiles.map((p) => ({
+    id: typeof p?.id === 'string' ? p.id : crypto.randomUUID(),
+    name: String(p?.name ?? 'Explorer').slice(0, 14),
+    avatar: String(p?.avatar ?? '🦊').slice(0, 4),
+    mode: p?.mode === 'sprout' ? 'sprout' : 'explorer',
+    stars: Object.fromEntries(
+      Object.entries(p?.stars ?? {}).filter(
+        ([, v]) => Number.isInteger(v) && v >= 1 && v <= 3
+      )
+    ),
+    streak: {
+      count: Number.isInteger(p?.streak?.count) ? p.streak.count : 0,
+      last: typeof p?.streak?.last === 'string' ? p.streak.last : null,
+    },
+  }));
+  const active = profiles.some((p) => p.id === parsed.active)
+    ? parsed.active
+    : profiles[0]?.id ?? null;
+  save({ profiles, active });
 }
