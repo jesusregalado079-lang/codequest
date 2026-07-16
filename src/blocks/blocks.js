@@ -107,9 +107,55 @@ export function defineBlocks(iconMode) {
     javascriptGenerator.forBlock[f.call] = () => `${f.fn}();\n`;
   }
 
+  // Variables, kid-style: ONE counter called "gems" (the 🎒 backpack).
+  // 🎒 +1 increments it; repeat-🎒-times loops that many times. Any use
+  // auto-declares `var gems = 0;` at the top of the generated code so kids
+  // see the real variable declaration in the </> panel.
+  // NOTE: loop var is `i`, not `count` — Blockly's built-in repeat block
+  // already generates `for (var count = ...)`.
+  const declareGems = (gen) => {
+    gen.definitions_['gems_var'] = 'var gems = 0;';
+  };
+
+  Blockly.Blocks['backpack_add'] = {
+    init() {
+      this.jsonInit({
+        type: 'backpack_add',
+        message0: iconMode ? '🎒 ➕' : '🎒 gems + 1',
+        previousStatement: null,
+        nextStatement: null,
+        colour: 330,
+      });
+    },
+  };
+  javascriptGenerator.forBlock['backpack_add'] = (block, gen) => {
+    declareGems(gen);
+    return 'gems = gems + 1;\n';
+  };
+
+  Blockly.Blocks['repeat_count'] = {
+    init() {
+      this.jsonInit({
+        type: 'repeat_count',
+        message0: iconMode ? '🔁 🎒' : '🔁 repeat 🎒 gems times',
+        message1: iconMode ? '%1' : 'do %1',
+        args1: [{ type: 'input_statement', name: 'DO' }],
+        previousStatement: null,
+        nextStatement: null,
+        colour: 330,
+      });
+    },
+  };
+  javascriptGenerator.forBlock['repeat_count'] = (block, gen) => {
+    declareGems(gen);
+    // ponytail: fixed loop var — nesting repeat-🎒 inside itself would reuse
+    // `i`; no level needs that, revisit if one ever does
+    return `for (var i = 0; i < gems; i++) {\n${gen.statementToCode(block, 'DO')}}\n`;
+  };
+
   javascriptGenerator.STATEMENT_PREFIX = 'highlightBlock(%1);\n';
   javascriptGenerator.addReservedWords(
-    'highlightBlock,moveForward,turnLeft,turnRight,collectGem,pathAhead,onGem,star,moon'
+    'highlightBlock,moveForward,turnLeft,turnRight,collectGem,pathAhead,onGem,star,moon,gems'
   );
 }
 

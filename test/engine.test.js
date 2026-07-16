@@ -10,6 +10,7 @@ const world1 = JSON.parse(readFileSync(new URL('../src/levels/world1.json', impo
 const world2 = JSON.parse(readFileSync(new URL('../src/levels/world2.json', import.meta.url), 'utf8'));
 const world3 = JSON.parse(readFileSync(new URL('../src/levels/world3.json', import.meta.url), 'utf8'));
 const world4 = JSON.parse(readFileSync(new URL('../src/levels/world4.json', import.meta.url), 'utf8'));
+const world5 = JSON.parse(readFileSync(new URL('../src/levels/world5.json', import.meta.url), 'utf8'));
 
 // Solutions written as block strings: M=move, L=turn left, R=turn right, C=collect
 const SOLUTIONS = {
@@ -151,12 +152,46 @@ for (const level of world4.levels) {
   assert(threw, 'undefined function call should throw');
 }
 
+// World 5: variable solutions — count gems into `gems`, then use the count.
+const V = 'var gems = 0;';
+const TALLY = 'if(onGem()){collectGem();gems=gems+1;}';
+const WALK_GEMS = 'for(var i=0;i<gems;i++){moveForward();}';
+const W5 = {
+  'world5-1': `${V}for(var k=0;k<3;k++){moveForward();collectGem();gems=gems+1;}${WALK_GEMS}`,
+  'world5-2': `${V}for(var k=0;k<6;k++){moveForward();${TALLY}}${WALK_GEMS}`,
+  'world5-3': `${V}for(var k=0;k<7;k++){moveForward();${TALLY}}turnRight();${WALK_GEMS}`,
+  'world5-4': `${V}for(var k=0;k<5;k++){moveForward();${TALLY}}turnRight();${WALK_GEMS}turnLeft();${WALK_GEMS}`,
+  'world5-5': `${V}function star(){moveForward();${TALLY}}for(var k=0;k<8;k++){star();}${WALK_GEMS}`,
+  'world5-6': `${V}for(var k=0;k<5;k++){moveForward();${TALLY}}turnRight();moveForward();moveForward();turnRight();${WALK_GEMS}`,
+  'world5-7': `${V}for(var k=0;k<3;k++){moveForward();turnLeft();moveForward();collectGem();gems=gems+1;turnRight();}${WALK_GEMS}`,
+  'world5-8': `${V}function star(){moveForward();${TALLY}}for(var k=0;k<8;k++){star();}turnRight();${WALK_GEMS}`,
+  'world5-9': `${V}for(var k=0;k<6;k++){moveForward();${TALLY}}turnLeft();${WALK_GEMS}`,
+  'world5-10': `${V}function star(){moveForward();${TALLY}}for(var k=0;k<5;k++){star();}turnRight();${WALK_GEMS}turnLeft();for(var k=0;k<4;k++){star();}turnRight();${WALK_GEMS}`,
+};
+
+for (const level of world5.levels) {
+  const code = W5[level.id];
+  assert(code, `missing solution for ${level.id}`);
+  const w = runProgram(code, loadLevel(level));
+  assert(!w.failed, `${level.id}: solution failed (${w.events.at(-1)?.type})`);
+  assert(isWin(w), `${level.id}: solution did not win (gems left: ${w.gems.size}, at ${w.pos.x},${w.pos.y})`);
+}
+
+// Miscounting must miss the flag: walk one step short on world5-1
+{
+  const w = runProgram(
+    `${V}for(var k=0;k<3;k++){moveForward();collectGem();}gems=2;${WALK_GEMS}`,
+    loadLevel(world5.levels[0])
+  );
+  assert(!w.failed && !isWin(w), 'wrong count should miss the exit');
+}
+
 // Quiz sanity: every answer index points at a real choice
-for (const world of [world2, world3, world4]) {
+for (const world of [world2, world3, world4, world5]) {
   for (const q of world.quiz) {
     assert(q.choices[q.answer] !== undefined, `quiz "${q.q}": bad answer index`);
     assert(q.why, `quiz "${q.q}": missing explanation`);
   }
 }
 
-console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop, ${world3.levels.length} world-3 conditional, ${world4.levels.length} world-4 function levels solvable, quizzes valid, executor edge cases pass`);
+console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop, ${world3.levels.length} world-3 conditional, ${world4.levels.length} world-4 function, ${world5.levels.length} world-5 variable levels solvable, quizzes valid, executor edge cases pass`);

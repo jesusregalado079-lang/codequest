@@ -3,8 +3,9 @@ import world1 from './world1.json';
 import world2 from './world2.json';
 import world3 from './world3.json';
 import world4 from './world4.json';
+import world5 from './world5.json';
 
-export const WORLDS = [world1, world2, world3, world4];
+export const WORLDS = [world1, world2, world3, world4, world5];
 
 export function getWorld(id) {
   return WORLDS.find((w) => w.id === id);

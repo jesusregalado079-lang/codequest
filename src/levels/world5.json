@@ -1,0 +1,187 @@
+{
+  "id": "world5",
+  "name": "Robot Memory",
+  "emoji": "🎒",
+  "concept": "Variables — the robot remembers a number and uses it later",
+  "place": "Ember Mines",
+  "theme": {
+    "floorA": "#e8c39e",
+    "floorB": "#dcb188",
+    "wallDark": "#6e3b2a",
+    "wallLight": "#82462f"
+  },
+  "intro": {
+    "learn": [
+      "Until now the robot forgot everything instantly. Now it has MEMORY!",
+      "The 🎒 backpack holds one number, called gems. It starts at 0",
+      "🎒 gems + 1 adds one to the number — count things as you find them!",
+      "🔁 repeat 🎒 gems times uses the remembered number — walk exactly as far as you counted",
+      "In real JavaScript this is a variable: var gems = 0; and gems = gems + 1; — check &lt;/&gt;!"
+    ],
+    "blocks": [
+      { "icon": "🎒➕", "name": "gems + 1", "text": "adds 1 to the number in the backpack. Snap it after collect gem to COUNT your treasure!" },
+      { "icon": "🔁🎒", "name": "repeat gems times", "text": "loops exactly as many times as the number in the backpack — however big it got!" },
+      { "icon": "🔁🤔⭐", "name": "old friends", "text": "loops, ifs and your ⭐ moves all work together with the backpack" }
+    ],
+    "goal": "Count gems into your backpack, then walk EXACTLY that many steps to the flag. Count wrong = wrong landing!"
+  },
+  "recap": [
+    "You used a variable — a named number the robot remembers: var gems = 0;",
+    "gems = gems + 1 means 'add one to whatever is in there' — counting, the coder way",
+    "You USED the memory later: repeat gems times walked exactly as far as you had counted",
+    "The same program works no matter how many gems there are — memory makes programs flexible",
+    "Sequencing, loops, conditionals, functions, variables — you now know the five big ideas of coding!"
+  ],
+  "quiz": [
+    {
+      "q": "What is 🎒 gems?",
+      "choices": ["a number the robot remembers", "a kind of wall", "a super-fast move"],
+      "answer": 0,
+      "why": "That's a variable — a named box holding a number the program can change and reuse."
+    },
+    {
+      "q": "gems starts at 0. The robot runs 🎒+1 three times. What's in the backpack?",
+      "choices": ["1", "3", "0"],
+      "answer": 1,
+      "why": "Each 🎒+1 adds one: 0 → 1 → 2 → 3."
+    },
+    {
+      "q": "The backpack holds 4. 🔁 repeat 🎒 gems times [⬆️] — how far does the robot walk?",
+      "choices": ["4 squares", "1 square", "gems squares… whatever that is 🤷"],
+      "answer": 0,
+      "why": "The loop reads the variable: 4 in the backpack = 4 repeats."
+    },
+    {
+      "q": "Why count with 🎒 instead of just writing the number yourself?",
+      "choices": ["it makes the robot walk faster", "the program figures the number out ITSELF while running", "numbers are not allowed"],
+      "answer": 1,
+      "why": "The robot counts whatever it actually finds — the same program works for any amount."
+    },
+    {
+      "q": "In real JavaScript, gems = gems + 1 means…",
+      "choices": ["impossible — nothing equals itself plus one!", "take what's in gems, add 1, store it back", "delete the variable"],
+      "answer": 1,
+      "why": "In code, = means STORE, not 'equals'. Read it right-to-left: compute, then store."
+    },
+    {
+      "q": "🔁 repeat 5 times [⬆️] — how many squares?",
+      "choices": ["5", "1", "10"],
+      "answer": 0,
+      "why": "World 2 check — the loop runs the move 5 times."
+    },
+    {
+      "q": "🤔 if 💎 on gem? do [collect, 🎒+1] — the robot is NOT on a gem. What happens to the backpack?",
+      "choices": ["it still adds 1", "nothing — the whole if is skipped", "it empties"],
+      "answer": 1,
+      "why": "World 3 check — answer NO skips everything inside the if, including the counting."
+    },
+    {
+      "q": "You teach ⭐ a move with 🎒+1 inside, but never call ⭐. What's in the backpack at the end?",
+      "choices": ["0", "1", "depends on the gems"],
+      "answer": 0,
+      "why": "World 4 check — a function only runs when called, so the counting never happened."
+    }
+  ],
+  "levels": [
+    {
+      "id": "world5-1",
+      "name": "Backpack Basics",
+      "grid": ["#########", "#SGGG..E#", "#########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "repeat_count", "move_forward", "collect_gem", "backpack_add"],
+      "maxInstances": { "repeat": 1 },
+      "par": 6,
+      "hint": "NEW! Count as you collect: repeat 3 [move, collect, 🎒+1]. Then 🔁 repeat 🎒 gems times [move] walks you to the flag!"
+    },
+    {
+      "id": "world5-2",
+      "name": "Count the Mystery",
+      "grid": ["############", "#S.G.GG...E#", "############"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "repeat_count", "if_do", "move_forward", "collect_gem", "backpack_add"],
+      "maxInstances": { "repeat": 1 },
+      "par": 7,
+      "hint": "Gems are scattered — walk 6 and count ONLY when you find one: if on gem [collect, 🎒+1]. Then walk gems steps to the flag."
+    },
+    {
+      "id": "world5-3",
+      "name": "Turn & Trust",
+      "grid": ["##########", "#S.GG.G..#", "########.#", "########.#", "########E#", "##########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "repeat_count", "if_do", "move_forward", "turn_right", "collect_gem", "backpack_add"],
+      "maxInstances": { "repeat": 1 },
+      "par": 8,
+      "hint": "Count along the hallway, turn right, then TRUST the backpack — repeat gems times [move] lands you on the flag."
+    },
+    {
+      "id": "world5-4",
+      "name": "Double Use",
+      "grid": ["##########", "#S.G.G.###", "######.###", "######..E#", "##########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "repeat_count", "if_do", "move_forward", "turn_left", "turn_right", "collect_gem", "backpack_add"],
+      "maxInstances": { "repeat": 1 },
+      "par": 11,
+      "hint": "One count, used TWICE: walk gems steps down, turn left, walk gems steps again. Memory doesn't run out!"
+    },
+    {
+      "id": "world5-5",
+      "name": "Star Counter",
+      "grid": ["###############", "#S.GG.G.G....E#", "###############"],
+      "startDir": 1,
+      "allowedBlocks": ["def_star", "call_star", "repeat", "repeat_count", "if_do", "move_forward", "collect_gem", "backpack_add"],
+      "maxInstances": { "repeat": 1 },
+      "par": 9,
+      "hint": "Teach ⭐ the counting step (move, if on gem: collect + 🎒+1). World 4 + World 5 = one smart robot."
+    },
+    {
+      "id": "world5-6",
+      "name": "Echo Cave",
+      "grid": ["########", "#S.GGG.#", "######.#", "###E...#", "########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "repeat_count", "if_do", "move_forward", "turn_right", "collect_gem", "backpack_add"],
+      "maxInstances": { "repeat": 1 },
+      "par": 10,
+      "hint": "Around the bend and back — the flag is exactly gems steps from the last corner."
+    },
+    {
+      "id": "world5-7",
+      "name": "Counting Stairs",
+      "grid": ["#########", "#########", "####G..E#", "###G.####", "##G.#####", "#S.######", "#########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "repeat_count", "move_forward", "turn_left", "turn_right", "collect_gem", "backpack_add"],
+      "maxInstances": { "repeat": 1 },
+      "par": 9,
+      "hint": "A gem on every stair — count them as you climb, then dash gems steps to the flag!"
+    },
+    {
+      "id": "world5-8",
+      "name": "Smart Counting Star",
+      "grid": ["###########", "#S.G.G.GG.#", "#########.#", "#########.#", "#########.#", "#########E#", "###########"],
+      "startDir": 1,
+      "allowedBlocks": ["def_star", "call_star", "repeat", "repeat_count", "if_do", "move_forward", "turn_right", "collect_gem", "backpack_add"],
+      "maxInstances": { "repeat": 1 },
+      "par": 10,
+      "hint": "Your counting ⭐ from before, a bend, and a long drop — exactly gems deep."
+    },
+    {
+      "id": "world5-9",
+      "name": "Lefty Memory",
+      "grid": ["##########", "#######E##", "#######.##", "#######.##", "#S.GG.G.##", "##########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "repeat_count", "if_do", "move_forward", "turn_left", "collect_gem", "backpack_add"],
+      "maxInstances": { "repeat": 1 },
+      "par": 8,
+      "hint": "Count the hallway, then turn LEFT and climb gems steps up to the flag."
+    },
+    {
+      "id": "world5-10",
+      "name": "Boss: Memory Master",
+      "grid": ["############", "#S.G.G.#####", "######.#####", "######..G.G#", "##########.#", "##########.#", "##########.#", "##########E#", "############"],
+      "startDir": 1,
+      "allowedBlocks": ["def_star", "call_star", "repeat", "repeat_count", "if_do", "move_forward", "turn_left", "turn_right", "collect_gem", "backpack_add"],
+      "maxInstances": { "repeat": 2 },
+      "par": 16,
+      "hint": "Boss! Keep counting through BOTH hallways — the backpack keeps growing. The final drop is exactly gems deep 🏁"
+    }
+  ]
+}

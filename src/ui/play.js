@@ -32,6 +32,7 @@ const workspace = Blockly.inject('blockly', {
   scrollbars: true,
   sounds: false,
   zoom: { startScale: profile.mode === 'sprout' ? 1.1 : 0.9 },
+  maxInstances: level.maxInstances,
 });
 
 const canvas = document.getElementById('stage');
