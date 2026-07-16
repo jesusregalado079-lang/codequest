@@ -8,6 +8,8 @@ export default defineConfig({
       input: {
         main: resolve(import.meta.dirname, 'index.html'),
         play: resolve(import.meta.dirname, 'play.html'),
+        world: resolve(import.meta.dirname, 'world.html'),
+        quiz: resolve(import.meta.dirname, 'quiz.html'),
       },
     },
   },

@@ -1,5 +1,6 @@
 // Custom kid blocks + their real-JavaScript generators.
 // iconMode (Sprout, ages 5-7): emoji-only labels. Explorer: emoji + words.
+// 'repeat' in a level's allowedBlocks maps to Blockly's built-in loop block.
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
 
@@ -31,9 +32,30 @@ export function defineBlocks(iconMode) {
   );
 }
 
+const TOOLBOX_ENTRIES = {
+  repeat: {
+    kind: 'block',
+    type: 'controls_repeat_ext',
+    inputs: { TIMES: { shadow: { type: 'math_number', fields: { NUM: 3 } } } },
+  },
+};
+
 export function toolboxFor(allowedBlocks) {
   return {
     kind: 'flyoutToolbox',
-    contents: allowedBlocks.map((type) => ({ kind: 'block', type })),
+    contents: allowedBlocks.map(
+      (type) => TOOLBOX_ENTRIES[type] ?? { kind: 'block', type }
+    ),
   };
+}
+
+// The kid-readable JavaScript shown in the </> panel — no highlight plumbing.
+export function cleanCode(workspace) {
+  const prefix = javascriptGenerator.STATEMENT_PREFIX;
+  javascriptGenerator.STATEMENT_PREFIX = null;
+  try {
+    return javascriptGenerator.workspaceToCode(workspace);
+  } finally {
+    javascriptGenerator.STATEMENT_PREFIX = prefix;
+  }
 }

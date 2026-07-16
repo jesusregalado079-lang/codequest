@@ -1,0 +1,161 @@
+{
+  "id": "world2",
+  "name": "Loops",
+  "emoji": "🔁",
+  "concept": "Loops — make the computer repeat things so YOU don't have to",
+  "intro": {
+    "learn": [
+      "Computers are AMAZING at repeating things — they never get bored",
+      "A loop runs the blocks inside it again and again — you choose how many times",
+      "Instead of ⬆️⬆️⬆️⬆️⬆️⬆️ you can say: repeat 6 times [⬆️] — shorter and smarter!",
+      "In real JavaScript this is called a for loop — tap the &lt;/&gt; button in any level to see YOUR blocks as real code"
+    ],
+    "blocks": [
+      { "icon": "🔁", "name": "repeat __ times", "text": "runs everything tucked inside it, over and over. Tap the number to change how many times!" },
+      { "icon": "⬆️↩️💎", "name": "your World 1 blocks", "text": "still here — now you can put them INSIDE a repeat" }
+    ],
+    "goal": "Solve with as FEW blocks as you can. Loops are the secret to 3 stars ⭐⭐⭐"
+  },
+  "recap": [
+    "Loops repeat blocks so you don't copy-paste them — shorter programs, same result",
+    "You put a loop inside another loop — that's nested loops, a real pro move",
+    "You spotted repeating patterns (walk-walk-grab, step-turn-step) and turned them into loops",
+    "The </> panel showed your blocks as real JavaScript: for (let i = 0; i < 6; i++)"
+  ],
+  "quiz": [
+    {
+      "q": "Blocks in a program run…",
+      "choices": ["🎲 in random order", "🥇 in the order you put them", "💥 all at the same time"],
+      "answer": 1,
+      "why": "That's sequencing from World 1 — top to bottom, always."
+    },
+    {
+      "q": "The robot faces ➡️ and runs ⬆️⬆️⬆️. How many squares does it walk?",
+      "choices": ["3", "2", "4"],
+      "answer": 0,
+      "why": "Three move blocks = three squares. The robot does exactly what you say."
+    },
+    {
+      "q": "Which block grabs a 💎?",
+      "choices": ["⬆️ move forward", "↪️ turn left", "💎 collect gem"],
+      "answer": 2,
+      "why": "And the robot must be STANDING on the gem when it collects!"
+    },
+    {
+      "q": "🔁 repeat 4 times [⬆️] — how many squares does the robot walk?",
+      "choices": ["1", "8", "4"],
+      "answer": 2,
+      "why": "The loop runs the move block 4 times."
+    },
+    {
+      "q": "Which does the SAME as ⬆️⬆️⬆️⬆️⬆️⬆️?",
+      "choices": ["🔁 repeat 6 times [⬆️]", "🔁 repeat 3 times [⬆️]", "🔁 repeat 6 times [💎]"],
+      "answer": 0,
+      "why": "Six moves = repeat the move 6 times. Two blocks instead of six!"
+    },
+    {
+      "q": "🔁 repeat 3 times [⬆️💎] — how many gems does the robot try to collect?",
+      "choices": ["6", "3", "1"],
+      "answer": 1,
+      "why": "Everything inside the loop runs 3 times: walk, grab, walk, grab, walk, grab."
+    },
+    {
+      "q": "This program repeats a pattern: ⬆️⬆️💎 ⬆️⬆️💎 ⬆️⬆️💎. Which loop matches it?",
+      "choices": ["🔁 9 times [⬆️]", "🔁 2 times [⬆️💎]", "🔁 3 times [⬆️⬆️💎]"],
+      "answer": 2,
+      "why": "The repeating chunk is ⬆️⬆️💎, and it happens 3 times."
+    }
+  ],
+  "levels": [
+    {
+      "id": "world2-1",
+      "name": "Loop-de-Loop",
+      "grid": ["#########", "#S.....G#", "#########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "move_forward", "collect_gem"],
+      "par": 3,
+      "hint": "NEW BLOCK! 🔁 repeat runs whatever you tuck inside it. Try: repeat 6 [⬆️], then 💎"
+    },
+    {
+      "id": "world2-2",
+      "name": "Gem Rhythm",
+      "grid": ["#########", "#S..G..G#", "#########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "move_forward", "collect_gem"],
+      "par": 6,
+      "hint": "The pattern is: walk walk walk, grab. It happens twice — put the WHOLE pattern inside one repeat!"
+    },
+    {
+      "id": "world2-3",
+      "name": "The Square Dance",
+      "grid": ["######", "#S..G#", "#.##.#", "#.##.#", "#G..G#", "######"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "move_forward", "turn_right", "collect_gem"],
+      "par": 6,
+      "hint": "Every side is the same dance: walk 3, grab, turn right. Repeat it 3 times!"
+    },
+    {
+      "id": "world2-4",
+      "name": "The Staircase",
+      "grid": ["#######", "#####G#", "####..#", "###..##", "##..###", "#S.####", "#######"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "move_forward", "turn_left", "turn_right", "collect_gem"],
+      "par": 6,
+      "hint": "Each stair is: forward, turn left, up, turn right. How many stairs?"
+    },
+    {
+      "id": "world2-5",
+      "name": "Gem Beat",
+      "grid": ["#########", "#S.G.G.G#", "#########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "move_forward", "collect_gem"],
+      "par": 5,
+      "hint": "Feel the beat: move move grab, move move grab, move move grab 🎵"
+    },
+    {
+      "id": "world2-6",
+      "name": "Loop Inside a Loop",
+      "grid": ["########", "#S....G#", "#.####.#", "#.####.#", "#.####.#", "#.####.#", "#G....G#", "########"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "move_forward", "turn_right", "collect_gem"],
+      "par": 5,
+      "hint": "Pro move: put a repeat INSIDE a repeat 🤯 Each side = repeat 5 [⬆️], then grab and turn."
+    },
+    {
+      "id": "world2-7",
+      "name": "Gem Stairs",
+      "grid": ["#######", "#####G#", "####G.#", "###G.##", "##G.###", "#S.####", "#######"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "move_forward", "turn_left", "turn_right", "collect_gem"],
+      "par": 6,
+      "hint": "Like the staircase — but now grab a gem on every step!"
+    },
+    {
+      "id": "world2-8",
+      "name": "Around the Block",
+      "grid": ["#######", "#S.G..#", "#.###.#", "#G###G#", "#.###.#", "#..G..#", "#######"],
+      "startDir": 1,
+      "allowedBlocks": ["repeat", "move_forward", "turn_right", "collect_gem"],
+      "par": 7,
+      "hint": "Each side: 2 steps, grab the gem, 2 more steps, turn. Four sides!"
+    },
+    {
+      "id": "world2-9",
+      "name": "Lefty Loop",
+      "grid": ["######", "#S..G#", "#.##.#", "#.##.#", "#G..G#", "######"],
+      "startDir": 2,
+      "allowedBlocks": ["repeat", "move_forward", "turn_left", "collect_gem"],
+      "par": 5,
+      "hint": "Same square, other direction! You start facing DOWN — use turn LEFT this time."
+    },
+    {
+      "id": "world2-10",
+      "name": "Boss: Loop Master",
+      "grid": ["##########", "###G....E#", "##G.######", "#G.#######", "#S########", "##########"],
+      "startDir": 0,
+      "allowedBlocks": ["repeat", "move_forward", "turn_left", "turn_right", "collect_gem"],
+      "par": 9,
+      "hint": "Boss! Climb the gem stairs with a loop, then turn and loop down the hallway to the flag 🏁"
+    }
+  ]
+}

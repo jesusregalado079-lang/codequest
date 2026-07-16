@@ -1,5 +1,5 @@
 // Menu: profile picker, world map, parents corner. Plain DOM, no framework.
-import world1 from '../levels/world1.json';
+import { WORLDS, worldUnlocked, levelUnlocked } from '../levels/index.js';
 import {
   getProfiles, getActiveProfile, setActiveProfile, createProfile,
   deleteProfile, streakToday, exportData, importData,
@@ -104,25 +104,56 @@ function showMap() {
   hello.querySelector('#switch').onclick = showProfiles;
   app.append(hello);
 
-  const card = el(`<div class="card">
-    <h2>World 1 · ${world1.name}</h2>
-    <p>${world1.concept}</p>
-    <div class="level-grid"></div>
-  </div>`);
-  const grid = card.querySelector('.level-grid');
-  world1.levels.forEach((lvl, i) => {
-    const starCount = p.stars[lvl.id] ?? 0;
-    const unlocked = i === 0 || (p.stars[world1.levels[i - 1].id] ?? 0) > 0;
-    const boss = i === world1.levels.length - 1;
-    const b = el(`<button class="level-btn ${unlocked ? '' : 'locked'} ${boss ? 'boss' : ''}">
-      ${unlocked ? (boss ? '👑' : i + 1) : '🔒'}
-      <span class="stars">${starCount ? '⭐'.repeat(starCount) : unlocked ? '· · ·' : ''}</span>
-    </button>`);
-    b.onclick = () => { sounds.tap(); location.href = `play.html?level=${lvl.id}`; };
-    grid.append(b);
+  WORLDS.forEach((world, wi) => {
+    if (!worldUnlocked(wi, p)) {
+      app.append(el(`<div class="card coming">🔒 World ${wi + 1} · ${world.name} ${world.emoji} — beat World ${wi} boss to unlock!</div>`));
+      return;
+    }
+    const card = el(`<div class="card">
+      <h2>${world.emoji} World ${wi + 1} · ${world.name}</h2>
+      <p>${world.concept}</p>
+      <p><button class="link-btn lesson-link">📖 lesson: what you'll learn</button></p>
+      <div class="level-grid"></div>
+    </div>`);
+    card.querySelector('.lesson-link').onclick = () => {
+      sounds.tap();
+      location.href = `world.html?world=${world.id}&view=intro`;
+    };
+    const grid = card.querySelector('.level-grid');
+    world.levels.forEach((lvl, i) => {
+      const starCount = p.stars[lvl.id] ?? 0;
+      const unlocked = levelUnlocked(world, i, p);
+      const boss = i === world.levels.length - 1;
+      const b = el(`<button class="level-btn ${unlocked ? '' : 'locked'} ${boss ? 'boss' : ''}">
+        ${unlocked ? (boss ? '👑' : i + 1) : '🔒'}
+        <span class="stars">${starCount ? '⭐'.repeat(starCount) : unlocked ? '· · ·' : ''}</span>
+      </button>`);
+      b.title = lvl.name;
+      b.onclick = () => { sounds.tap(); location.href = `play.html?level=${lvl.id}`; };
+      grid.append(b);
+    });
+    if (world.quiz) {
+      const bossDone = (p.stars[world.levels.at(-1).id] ?? 0) > 0;
+      const quizStars = p.stars[`${world.id}-quiz`] ?? 0;
+      const qb = el(`<button class="level-btn quiz ${bossDone ? '' : 'locked'}">
+        ${bossDone ? '📝' : '🔒'}
+        <span class="stars">${quizStars ? '⭐'.repeat(quizStars) : bossDone ? 'quiz' : ''}</span>
+      </button>`);
+      qb.onclick = () => { sounds.tap(); location.href = `quiz.html?world=${world.id}`; };
+      grid.append(qb);
+    }
+    const recapReady = (p.stars[world.levels.at(-1).id] ?? 0) > 0;
+    if (recapReady) {
+      const r = el(`<p><button class="link-btn">🎓 review: what you learned</button></p>`);
+      r.querySelector('button').onclick = () => {
+        sounds.tap();
+        location.href = `world.html?world=${world.id}&view=recap`;
+      };
+      card.append(r);
+    }
+    app.append(card);
   });
-  app.append(card);
-  app.append(el(`<div class="card coming">World 2 · Loops 🔁 — coming soon!</div>`));
+  app.append(el(`<div class="card coming">World 3 · If This, Then That 🤔 — coming soon!</div>`));
   const parents = el(`<p><button class="link-btn" id="parents">for grown-ups</button></p>`);
   parents.querySelector('#parents').onclick = showParents;
   app.append(parents);
@@ -131,18 +162,21 @@ function showMap() {
 // ---------- parents corner ----------
 function showParents() {
   app.innerHTML = header();
-  const total = world1.levels.length;
+  const allLevels = WORLDS.flatMap((w) => w.levels);
+  const total = allLevels.length;
   const rows = getProfiles().map((p) => {
-    const done = world1.levels.filter((l) => p.stars[l.id]).length;
+    const done = allLevels.filter((l) => p.stars[l.id]).length;
     const stars = Object.values(p.stars).reduce((a, b) => a + b, 0);
     return `<tr><td>${p.avatar} ${p.name}</td><td>${done}/${total} levels</td><td>${stars} ⭐</td><td>🔥 ${p.streak.count}</td>
       <td><button class="link-btn del" data-id="${p.id}">remove</button></td></tr>`;
   }).join('');
   const card = el(`<div class="card">
     <h2>Grown-ups corner</h2>
-    <p>Each world teaches one real programming concept. World 1 is <b>sequencing</b> —
-    programs are instructions executed in order. Aim for 1–2 levels a day; the streak
-    rewards showing up, not bingeing.</p>
+    <p>Each world teaches one real programming concept — World 1 <b>sequencing</b>,
+    World 2 <b>loops</b>, with conditionals, functions and variables coming next.
+    Every world starts with a lesson, ends with a review, and (from World 2) a quiz
+    that also re-tests earlier concepts. Aim for 1–2 levels a day; the streak rewards
+    showing up, not bingeing.</p>
     <table class="parents"><tr><th>Player</th><th>Progress</th><th>Stars</th><th>Streak</th><th></th></tr>${rows}</table>
     <p>
       <button class="big-btn" id="export" style="font-size:1rem">Backup progress</button>
@@ -186,4 +220,4 @@ function showParents() {
 
 getActiveProfile() ? showMap() : showProfiles();
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+if ('serviceWorker' in navigator && !import.meta.env.DEV) navigator.serviceWorker.register('sw.js');

@@ -1,7 +1,28 @@
 {
   "id": "world1",
   "name": "Step by Step",
+  "emoji": "🐾",
   "concept": "Sequencing — the computer does exactly what you say, in order",
+  "intro": {
+    "learn": [
+      "A program is a list of instructions for the computer",
+      "The robot follows your blocks EXACTLY, in order, top to bottom",
+      "If something goes wrong, change your steps and try again — real coders call that debugging!"
+    ],
+    "blocks": [
+      { "icon": "⬆️", "name": "move forward", "text": "the robot walks one square in the direction it's facing" },
+      { "icon": "↪️", "name": "turn left", "text": "the robot spins to its left (it stays on the same square)" },
+      { "icon": "↩️", "name": "turn right", "text": "the robot spins to its right" },
+      { "icon": "💎", "name": "collect gem", "text": "grabs the gem — but only if the robot is standing on it!" }
+    ],
+    "goal": "Collect every 💎 in each level. On the boss level, reach the 🏁 too!"
+  },
+  "recap": [
+    "You wrote real programs — lists of instructions the robot followed exactly",
+    "Order matters! Step 1 happens before step 2, always",
+    "You debugged: when the robot bonked a wall, you fixed the steps and tried again",
+    "Fewer blocks = cleverer program. That's what the 3 stars reward!"
+  ],
   "levels": [
     {
       "id": "world1-1",

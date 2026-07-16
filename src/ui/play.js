@@ -1,11 +1,11 @@
 // Game screen: Blockly workspace + canvas stage + run/reset loop.
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
-import world1 from '../levels/world1.json';
+import { WORLDS, findLevel } from '../levels/index.js';
 import { loadLevel, isWin } from '../engine/world.js';
 import { runProgram } from '../engine/runner.js';
 import { Renderer } from '../engine/renderer.js';
-import { defineBlocks, toolboxFor } from '../blocks/blocks.js';
+import { defineBlocks, toolboxFor, cleanCode } from '../blocks/blocks.js';
 import { getActiveProfile, completeLevel } from '../progress.js';
 import { sounds } from './sounds.js';
 
@@ -13,8 +13,8 @@ const profile = getActiveProfile();
 if (!profile) location.replace('index.html');
 
 const levelId = new URLSearchParams(location.search).get('level');
-const levelIndex = world1.levels.findIndex((l) => l.id === levelId);
-const level = world1.levels[levelIndex] ?? world1.levels[0];
+const found = findLevel(levelId) ?? { world: WORLDS[0], level: WORLDS[0].levels[0], index: 0 };
+const { world, level, index: levelIndex } = found;
 
 document.getElementById('level-name').textContent =
   `${levelIndex + 1}. ${level.name}`;
@@ -32,6 +32,25 @@ const workspace = Blockly.inject('blockly', {
 const canvas = document.getElementById('stage');
 const renderer = new Renderer(canvas, level);
 window.addEventListener('resize', () => renderer.resize());
+
+// </> panel: kids see their blocks as the real JavaScript they generate.
+// Explorer mode only — sprouts aren't reading yet.
+const codeBtn = document.getElementById('code-toggle');
+const codePanel = document.getElementById('code-panel');
+if (profile.mode === 'sprout') {
+  codeBtn.classList.add('hidden');
+} else {
+  codeBtn.onclick = () => {
+    sounds.tap();
+    codePanel.classList.toggle('hidden');
+    renderer.resize();
+  };
+  workspace.addChangeListener((e) => {
+    if (e.isUiEvent) return;
+    codePanel.querySelector('code').textContent =
+      cleanCode(workspace).trim() || '// drag blocks to write code!';
+  });
+}
 
 const runBtn = document.getElementById('run');
 const toast = document.getElementById('toast');
@@ -52,7 +71,8 @@ function starsFor(blockCount) {
 }
 
 runBtn.onclick = () => {
-  const blockCount = workspace.getAllBlocks(false).length;
+  // shadow blocks (the number inside "repeat 3") don't count against stars
+  const blockCount = workspace.getAllBlocks(false).filter((b) => !b.isShadow()).length;
   if (blockCount === 0) {
     showToast('Drag some blocks in first! 👆');
     return;
@@ -120,12 +140,12 @@ function showWin(stars, blockCount) {
       ? `Perfect — solved in ${blockCount} blocks!`
       : `Solved in ${blockCount} blocks. Can you do it in ${level.par}?`;
   const next = document.getElementById('next');
-  const isLast = levelIndex >= world1.levels.length - 1;
-  next.textContent = isLast ? 'Back to map 🗺️' : 'Next level ▶';
+  const isLast = levelIndex >= world.levels.length - 1;
+  next.textContent = isLast ? 'World review 🎓' : 'Next level ▶';
   next.onclick = () => {
     location.href = isLast
-      ? 'index.html'
-      : `play.html?level=${world1.levels[levelIndex + 1].id}`;
+      ? `world.html?world=${world.id}&view=recap`
+      : `play.html?level=${world.levels[levelIndex + 1].id}`;
   };
   document.getElementById('again').onclick = () => {
     winOverlay.classList.add('hidden');
@@ -134,4 +154,4 @@ function showWin(stars, blockCount) {
   winOverlay.classList.remove('hidden');
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+if ('serviceWorker' in navigator && !import.meta.env.DEV) navigator.serviceWorker.register('sw.js');
