@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#7ec8ff" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <title>CodeQuest — Game Builder</title>
+  <link rel="stylesheet" href="/src/ui/style.css" />
+</head>
+<body>
+  <div class="play-wrap">
+    <div class="topbar">
+      <button class="icon-btn" id="back" aria-label="Back to map">🗺️</button>
+      <div class="title" id="level-name"></div>
+      <button class="icon-btn" id="code-toggle" aria-label="Show the code">&lt;/&gt;</button>
+      <button class="icon-btn" id="hint" aria-label="Hint">💡</button>
+    </div>
+    <div class="game-area">
+      <div class="stage-panel">
+        <div class="hud">
+          <span id="hud-score">🏆 0</span>
+          <span id="hud-msg" class="hud-msg"></span>
+          <span id="hud-lives">❤️❤️❤️</span>
+        </div>
+        <div class="canvas-box"><canvas id="stage"></canvas></div>
+        <pre id="code-panel" class="code-panel hidden"><code>// wire up an event to start!</code></pre>
+        <div class="controls">
+          <button class="icon-btn" id="reset" aria-label="Reset">↺</button>
+          <button class="run-btn" id="run">▶ Test</button>
+          <button class="run-btn hidden" id="play" style="background:#8e5cd9;box-shadow:0 4px 0 #6a3fae">🎮 Play</button>
+          <button class="icon-btn hidden arrow" id="go-left" aria-label="Move left">⬅️</button>
+          <button class="icon-btn hidden arrow" id="go-right" aria-label="Move right">➡️</button>
+        </div>
+      </div>
+      <div class="blockly-panel"><div id="blockly"></div></div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="overlay hidden" id="win">
+    <div class="win-card">
+      <h2 id="win-title">Your game works!</h2>
+      <div class="win-stars" id="win-stars"></div>
+      <div id="win-msg"></div>
+      <div class="row">
+        <button class="big-btn" id="next">Next mission ▶</button>
+        <button class="big-btn" id="again" style="background:#8e5cd9;box-shadow:0 4px 0 #6a3fae">🎮 Play it!</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/ui/game.js"></script>
+</body>
+</html>

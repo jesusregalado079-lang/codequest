@@ -15,6 +15,8 @@ export const ARMOR = [
     helmet: '#5fd6d0', chest: '#3fc5be', boots: '#2fa39d' },
   { id: 'emerald', name: 'Emerald Armor', unlock: 'world5-10', unlockText: 'beat the World 5 boss',
     helmet: '#4fd97a', chest: '#3ecf6e', boots: '#2fae58' },
+  { id: 'obsidian', name: 'Obsidian Armor', unlock: 'world6-10', unlockText: 'beat the World 6 boss',
+    helmet: '#6a4fd9', chest: '#563fb0', boots: '#3d2d80' },
 ];
 
 export function armorUnlocked(armor, profile) {

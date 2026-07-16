@@ -5,12 +5,14 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 import { loadLevel, isWin } from '../src/engine/world.js';
 import { runProgram } from '../src/engine/runner.js';
+import { runGame } from '../src/engine/arcade-runner.js';
 
 const world1 = JSON.parse(readFileSync(new URL('../src/levels/world1.json', import.meta.url), 'utf8'));
 const world2 = JSON.parse(readFileSync(new URL('../src/levels/world2.json', import.meta.url), 'utf8'));
 const world3 = JSON.parse(readFileSync(new URL('../src/levels/world3.json', import.meta.url), 'utf8'));
 const world4 = JSON.parse(readFileSync(new URL('../src/levels/world4.json', import.meta.url), 'utf8'));
 const world5 = JSON.parse(readFileSync(new URL('../src/levels/world5.json', import.meta.url), 'utf8'));
+const world6 = JSON.parse(readFileSync(new URL('../src/levels/world6.json', import.meta.url), 'utf8'));
 
 // Solutions written as block strings: M=move, L=turn left, R=turn right, C=collect
 const SOLUTIONS = {
@@ -186,12 +188,50 @@ for (const level of world5.levels) {
   assert(!w.failed && !isWin(w), 'wrong count should miss the exit');
 }
 
+// World 6: event handlers — the named functions the "when" blocks generate.
+// Each mission's declarative check must pass with the intended wiring.
+const ARROWS = 'function onLeft(){movePlayer(-1);}function onRight(){movePlayer(1);}';
+const W6 = {
+  'world6-1': ARROWS,
+  'world6-2': "function onStart(){setMessage('GO!');}",
+  'world6-3': 'function onCatch(){addScore();}',
+  'world6-4': 'function onMiss(){loseLife();}',
+  'world6-5': `${ARROWS}function onCatch(){addScore();}`,
+  'world6-6': "function onCatch(){addScore();setMessage('NICE!');}",
+  'world6-7': "function onMiss(){loseLife();setMessage('OOPS!');}",
+  'world6-8': 'function onMiss(){loseLife();if(noLives()){gameOver();}}',
+  'world6-9': "function onCatch(){addScore();if(scoreHigh()){setMessage('YOU WIN!');}}",
+  'world6-10': `function onStart(){setMessage('GO!');}${ARROWS}` +
+    "function onCatch(){addScore();setMessage('NICE!');}" +
+    'function onMiss(){loseLife();if(noLives()){gameOver();}}',
+};
+
+for (const mission of world6.levels) {
+  const code = W6[mission.id];
+  assert(code, `missing solution for ${mission.id}`);
+  const r = runGame(code, mission);
+  assert(r.passed, `${mission.id}: intended wiring failed — ${r.fails.join('; ')}`);
+  assert(r.frames.length > 0, `${mission.id}: no frames to animate`);
+}
+
+// An unwired event does nothing — the mission must NOT pass on empty handlers
+for (const mission of world6.levels) {
+  const r = runGame('', mission);
+  assert(!r.passed, `${mission.id}: passes with no blocks at all`);
+}
+
+// A runaway handler is caught rather than freezing the page
+{
+  const r = runGame('function onCatch(){while(true){}}', world6.levels[2]);
+  assert(!r.passed && r.fails[0].includes('forever'), 'runaway handler should be reported');
+}
+
 // Quiz sanity: every answer index points at a real choice
-for (const world of [world2, world3, world4, world5]) {
+for (const world of [world2, world3, world4, world5, world6]) {
   for (const q of world.quiz) {
     assert(q.choices[q.answer] !== undefined, `quiz "${q.q}": bad answer index`);
     assert(q.why, `quiz "${q.q}": missing explanation`);
   }
 }
 
-console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop, ${world3.levels.length} world-3 conditional, ${world4.levels.length} world-4 function, ${world5.levels.length} world-5 variable levels solvable, quizzes valid, executor edge cases pass`);
+console.log(`ok — ${world1.levels.length} world-1 levels at par, ${world2.levels.length} world-2 loop, ${world3.levels.length} world-3 conditional, ${world4.levels.length} world-4 function, ${world5.levels.length} world-5 variable, ${world6.levels.length} world-6 event missions solvable, quizzes valid, executor edge cases pass`);

@@ -1,0 +1,212 @@
+{
+  "id": "world6",
+  "name": "Game Builder",
+  "emoji": "🕹️",
+  "concept": "Events — your code waits, and runs the moment something happens",
+  "place": "Neon Arcade",
+  "arcade": true,
+  "theme": {
+    "floorA": "#241b47",
+    "floorB": "#2c2154",
+    "wallDark": "#12102b",
+    "wallLight": "#4b3fa0"
+  },
+  "intro": {
+    "learn": [
+      "You're not solving a puzzle now — you're BUILDING A GAME called Gem Rain 💎",
+      "Every 🎯 when block is a handler: code that waits, then runs the moment that thing happens",
+      "when ⬅️ is pressed, when you CATCH a gem, when you MISS — you decide what each one does",
+      "Nothing runs top-to-bottom here. The GAME calls your code. That's an event!",
+      "In real JavaScript these are functions the game calls back: function onCatch() { addScore(); }"
+    ],
+    "blocks": [
+      { "icon": "🎯", "name": "when … blocks", "text": "the game runs whatever you tuck inside, the moment that event happens. Leave one empty and nothing happens for that event!" },
+      { "icon": "⬅️➡️", "name": "move hero", "text": "slide the hero one lane. Put these inside the arrow-key events!" },
+      { "icon": "🏆💔", "name": "score + 1 / lose a life", "text": "change the game's numbers when things happen" },
+      { "icon": "💬🤔🛑", "name": "say / if / game over", "text": "show a message, check the game's state, or end the game" }
+    ],
+    "goal": "Wire up each event, press ▶ to test your game — then press 🎮 to actually PLAY the game you built!"
+  },
+  "recap": [
+    "You built a real game — and you did it with events, the same way real apps work",
+    "An event handler is code that waits: the game calls onCatch the moment a gem lands on your hero",
+    "Events don't run in order — they run WHEN THEY HAPPEN. That's the big shift from World 1",
+    "You used everything: order inside handlers, ifs to check lives and score, variables the game keeps for you",
+    "Real JavaScript does exactly this: function onCatch() { addScore(); } — the game calls it back"
+  ],
+  "quiz": [
+    {
+      "q": "What does a 🎯 when block do?",
+      "choices": ["runs immediately, top to bottom", "waits, then runs when that thing happens", "repeats forever"],
+      "answer": 1,
+      "why": "That's an event handler — it waits for its moment, then the game runs it."
+    },
+    {
+      "q": "You put nothing inside 🎯 when you MISS a gem. What happens on a miss?",
+      "choices": ["nothing at all", "the game crashes", "you lose automatically"],
+      "answer": 0,
+      "why": "An empty handler does nothing. Events only do what YOU put inside them."
+    },
+    {
+      "q": "🎯 when you CATCH a gem → [🏆 score + 1]. You catch 4 gems. What's the score?",
+      "choices": ["1", "4", "0"],
+      "answer": 1,
+      "why": "The handler runs once per catch — 4 catches, 4 points."
+    },
+    {
+      "q": "Who decides WHEN your onCatch code runs?",
+      "choices": ["you, by putting it first", "the game, when a gem lands on you", "it runs every second"],
+      "answer": 1,
+      "why": "That's the whole idea of events — the game calls your code back at the right moment."
+    },
+    {
+      "q": "🧩 In World 4 you taught ⭐ moves. How is a 🎯 when block similar?",
+      "choices": ["both are functions — a bundle of blocks with a name", "both repeat forever", "they're not similar at all"],
+      "answer": 0,
+      "why": "A handler IS a function! The difference: you call ⭐ yourself, the game calls onCatch for you."
+    },
+    {
+      "q": "🎒 In World 5 the backpack remembered a number. What remembers your score here?",
+      "choices": ["nothing, it's magic", "the game keeps it — 🏆 score + 1 changes that variable", "you have to count it yourself"],
+      "answer": 1,
+      "why": "Score is a variable the game keeps for you. score + 1 updates it, just like gems + 1 did."
+    },
+    {
+      "q": "🤔 if 💔 no lives left? → [🛑 game over], inside when you MISS. When does the game end?",
+      "choices": ["on the very first miss", "on the miss that takes your last life", "never"],
+      "answer": 1,
+      "why": "Every miss runs the handler, but the if only fires game over when lives hit 0."
+    },
+    {
+      "q": "Blocks inside ONE handler still run…",
+      "choices": ["in order, top to bottom", "randomly", "all at once"],
+      "answer": 0,
+      "why": "World 1 forever! Events decide WHEN a handler runs; inside it, order still rules."
+    }
+  ],
+  "levels": [
+    {
+      "id": "world6-1",
+      "name": "Take Control",
+      "startLane": 3,
+      "ticks": 4,
+      "inputs": [{ "tick": 0, "key": "left" }, { "tick": 1, "key": "left" }],
+      "check": { "laneEqual": 1 },
+      "allowedBlocks": ["when_left", "when_right", "move_left", "move_right"],
+      "par": 4,
+      "hint": "NEW! Put ⬅️ move hero left INSIDE 🎯 when ⬅️ is pressed. Do the same for right. The test taps ⬅️ twice!"
+    },
+    {
+      "id": "world6-2",
+      "name": "Say Hello",
+      "startLane": 3,
+      "ticks": 2,
+      "check": { "messageEquals": "GO!" },
+      "allowedBlocks": ["when_start", "say_msg", "move_left", "move_right"],
+      "par": 2,
+      "hint": "🎯 when the game starts → 💬 say GO! Every good game greets the player."
+    },
+    {
+      "id": "world6-3",
+      "name": "Catch!",
+      "startLane": 3,
+      "ticks": 10,
+      "rain": [{ "tick": 0, "lane": 3 }],
+      "check": { "scoreAtLeast": 1 },
+      "allowedBlocks": ["when_catch", "score_add", "say_msg"],
+      "par": 2,
+      "hint": "A gem is falling right on your hero! 🎯 when you CATCH a gem → 🏆 score + 1"
+    },
+    {
+      "id": "world6-4",
+      "name": "Ouch!",
+      "startLane": 3,
+      "ticks": 10,
+      "lives": 3,
+      "rain": [{ "tick": 0, "lane": 0 }],
+      "check": { "livesEqual": 2 },
+      "allowedBlocks": ["when_miss", "life_lose", "say_msg"],
+      "par": 2,
+      "hint": "That gem falls far away — you'll miss it. Make a miss cost a life: 🎯 when you MISS → 💔 lose a life"
+    },
+    {
+      "id": "world6-5",
+      "name": "Chase the Rain",
+      "startLane": 3,
+      "ticks": 12,
+      "rain": [{ "tick": 0, "lane": 2 }, { "tick": 2, "lane": 4 }, { "tick": 4, "lane": 1 }],
+      "inputs": [
+        { "tick": 0, "key": "left" },
+        { "tick": 7, "key": "right" }, { "tick": 8, "key": "right" },
+        { "tick": 9, "key": "left" }, { "tick": 9, "key": "left" }, { "tick": 10, "key": "left" }
+      ],
+      "check": { "scoreAtLeast": 3 },
+      "allowedBlocks": ["when_left", "when_right", "when_catch", "move_left", "move_right", "score_add"],
+      "par": 6,
+      "hint": "Three gems, three lanes! You need BOTH arrow events AND the catch event wired up for the test player to score."
+    },
+    {
+      "id": "world6-6",
+      "name": "Cheer Them On",
+      "startLane": 3,
+      "ticks": 12,
+      "rain": [{ "tick": 0, "lane": 3 }, { "tick": 2, "lane": 3 }],
+      "check": { "scoreAtLeast": 2, "messageEquals": "NICE!" },
+      "allowedBlocks": ["when_catch", "score_add", "say_msg", "when_start"],
+      "par": 3,
+      "hint": "One handler can do TWO things: 🏆 score + 1 AND 💬 say NICE! Order still matters inside a handler."
+    },
+    {
+      "id": "world6-7",
+      "name": "Three Lives",
+      "startLane": 3,
+      "ticks": 12,
+      "lives": 3,
+      "rain": [{ "tick": 0, "lane": 0 }, { "tick": 2, "lane": 6 }],
+      "check": { "livesEqual": 1, "messageEquals": "OOPS!" },
+      "allowedBlocks": ["when_miss", "life_lose", "say_msg", "when_catch", "score_add"],
+      "par": 3,
+      "hint": "Two gems fall out of reach — each miss should cost a life AND say OOPS!"
+    },
+    {
+      "id": "world6-8",
+      "name": "Game Over",
+      "startLane": 3,
+      "ticks": 16,
+      "lives": 3,
+      "rain": [{ "tick": 0, "lane": 0 }, { "tick": 2, "lane": 0 }, { "tick": 4, "lane": 6 }],
+      "check": { "overEquals": true, "livesEqual": 0 },
+      "allowedBlocks": ["when_miss", "life_lose", "arcade_if", "game_over", "say_msg"],
+      "par": 4,
+      "hint": "Every miss costs a life — but only the LAST one ends the game. Use 🤔 if 💔 no lives left? → 🛑 game over"
+    },
+    {
+      "id": "world6-9",
+      "name": "Winner!",
+      "startLane": 3,
+      "ticks": 14,
+      "winScore": 3,
+      "rain": [{ "tick": 0, "lane": 3 }, { "tick": 2, "lane": 3 }, { "tick": 4, "lane": 3 }],
+      "check": { "scoreAtLeast": 3, "messageEquals": "YOU WIN!" },
+      "allowedBlocks": ["when_catch", "score_add", "arcade_if", "say_msg"],
+      "par": 4,
+      "hint": "Score, THEN check: 🤔 if 🏆 score high enough? → 💬 say YOU WIN! (3 gems wins this one)"
+    },
+    {
+      "id": "world6-10",
+      "name": "Boss: Your Whole Game",
+      "startLane": 3,
+      "ticks": 18,
+      "lives": 3,
+      "rain": [
+        { "tick": 0, "lane": 3 }, { "tick": 2, "lane": 5 }, { "tick": 4, "lane": 5 },
+        { "tick": 6, "lane": 0 }, { "tick": 8, "lane": 0 }, { "tick": 10, "lane": 0 }
+      ],
+      "inputs": [{ "tick": 7, "key": "right" }, { "tick": 8, "key": "right" }],
+      "check": { "scoreAtLeast": 3, "overEquals": true, "livesEqual": 0 },
+      "allowedBlocks": ["when_start", "when_left", "when_right", "when_catch", "when_miss", "move_left", "move_right", "score_add", "say_msg", "life_lose", "arcade_if", "game_over"],
+      "par": 13,
+      "hint": "Boss! Wire up EVERYTHING: greet the player, move on both arrows, score + cheer on catches, lose a life on misses, and game over when lives run out 🏁"
+    }
+  ]
+}

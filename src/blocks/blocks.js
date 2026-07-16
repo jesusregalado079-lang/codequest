@@ -153,9 +153,102 @@ export function defineBlocks(iconMode) {
     return `for (var i = 0; i < gems; i++) {\n${gen.statementToCode(block, 'DO')}}\n`;
   };
 
+  // ---- World 6: events (Gem Rain arcade) ----
+  // Each "when" block becomes a named handler function the game calls when
+  // that thing happens — real callbacks, no magic.
+  const EVENTS = [
+    { type: 'when_start', icon: '🎬', label: 'when the game starts', fn: 'onStart' },
+    { type: 'when_left', icon: '⬅️', label: 'when ⬅️ is pressed', fn: 'onLeft' },
+    { type: 'when_right', icon: '➡️', label: 'when ➡️ is pressed', fn: 'onRight' },
+    { type: 'when_catch', icon: '💎', label: 'when you CATCH a gem', fn: 'onCatch' },
+    { type: 'when_miss', icon: '💔', label: 'when you MISS a gem', fn: 'onMiss' },
+    { type: 'when_tick', icon: '⏰', label: 'every moment', fn: 'onTick' },
+  ];
+  for (const e of EVENTS) {
+    Blockly.Blocks[e.type] = {
+      init() {
+        this.jsonInit({
+          type: e.type,
+          message0: iconMode ? `🎯 ${e.icon}` : `🎯 ${e.label}`,
+          message1: '%1',
+          args1: [{ type: 'input_statement', name: 'BODY' }],
+          colour: 120,
+        });
+      },
+    };
+    javascriptGenerator.forBlock[e.type] = (block, gen) =>
+      `function ${e.fn}() {\n${gen.statementToCode(block, 'BODY')}}\n`;
+  }
+
+  const ARCADE_ACTIONS = [
+    { type: 'move_left', icon: '⬅️', text: 'move hero left', colour: 210, code: 'movePlayer(-1);\n' },
+    { type: 'move_right', icon: '➡️', text: 'move hero right', colour: 210, code: 'movePlayer(1);\n' },
+    { type: 'score_add', icon: '🏆', text: 'score + 1', colour: 330, code: 'addScore();\n' },
+    { type: 'life_lose', icon: '💔', text: 'lose a life', colour: 0, code: 'loseLife();\n' },
+    { type: 'game_over', icon: '🛑', text: 'game over', colour: 0, code: 'gameOver();\n' },
+  ];
+  for (const a of ARCADE_ACTIONS) {
+    Blockly.Blocks[a.type] = {
+      init() {
+        this.jsonInit({
+          type: a.type,
+          message0: iconMode ? a.icon : `${a.icon} ${a.text}`,
+          previousStatement: null,
+          nextStatement: null,
+          colour: a.colour,
+        });
+      },
+    };
+    javascriptGenerator.forBlock[a.type] = () => a.code;
+  }
+
+  // say block: pick a message, no typing needed on a touch screen
+  Blockly.Blocks['say_msg'] = {
+    init() {
+      this.jsonInit({
+        type: 'say_msg',
+        message0: iconMode ? '💬 %1' : '💬 say %1',
+        args0: [{
+          type: 'field_dropdown',
+          name: 'TEXT',
+          options: [['GO!', 'GO!'], ['NICE!', 'NICE!'], ['OOPS!', 'OOPS!'], ['YOU WIN!', 'YOU WIN!']],
+        }],
+        previousStatement: null,
+        nextStatement: null,
+        colour: 60,
+      });
+    },
+  };
+  javascriptGenerator.forBlock['say_msg'] = (block) =>
+    `setMessage('${block.getFieldValue('TEXT')}');\n`;
+
+  // same if-shape kids know from World 3, with game questions
+  Blockly.Blocks['arcade_if'] = {
+    init() {
+      this.jsonInit({
+        type: 'arcade_if',
+        message0: iconMode ? '🤔 %1' : '🤔 if %1',
+        args0: [{
+          type: 'field_dropdown',
+          name: 'COND',
+          options: [['💔 no lives left?', 'noLives'], ['🏆 score high enough?', 'scoreHigh']],
+        }],
+        message1: iconMode ? '✅ %1' : 'do %1',
+        args1: [{ type: 'input_statement', name: 'DO' }],
+        previousStatement: null,
+        nextStatement: null,
+        colour: 180,
+      });
+    },
+  };
+  javascriptGenerator.forBlock['arcade_if'] = (block, gen) =>
+    `if (${block.getFieldValue('COND')}()) {\n${gen.statementToCode(block, 'DO')}}\n`;
+
   javascriptGenerator.STATEMENT_PREFIX = 'highlightBlock(%1);\n';
   javascriptGenerator.addReservedWords(
-    'highlightBlock,moveForward,turnLeft,turnRight,collectGem,pathAhead,onGem,star,moon,gems'
+    'highlightBlock,moveForward,turnLeft,turnRight,collectGem,pathAhead,onGem,star,moon,gems,' +
+    'movePlayer,addScore,loseLife,setMessage,gameOver,noLives,scoreHigh,' +
+    'onStart,onLeft,onRight,onCatch,onMiss,onTick'
   );
 }
 

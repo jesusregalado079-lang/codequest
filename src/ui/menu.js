@@ -1,5 +1,5 @@
 // Menu: profile picker, world map, parents corner. Plain DOM, no framework.
-import { WORLDS, worldUnlocked, levelUnlocked } from '../levels/index.js';
+import { WORLDS, worldUnlocked, levelUnlocked, levelUrl } from '../levels/index.js';
 import {
   getProfiles, getActiveProfile, setActiveProfile, createProfile,
   deleteProfile, streakToday, exportData, importData,
@@ -140,7 +140,7 @@ function showMap() {
         <span class="stars">${starCount ? '⭐'.repeat(starCount) : unlocked ? '· · ·' : ''}</span>
       </button>`);
       b.title = lvl.name;
-      b.onclick = () => { sounds.tap(); location.href = `play.html?level=${lvl.id}`; };
+      b.onclick = () => { sounds.tap(); location.href = levelUrl(world, lvl); };
       grid.append(b);
     });
     if (world.quiz) {
@@ -164,7 +164,7 @@ function showMap() {
     }
     app.append(card);
   });
-  app.append(el(`<div class="card coming">World 6 · Game Builder (events) 🕹️ — coming soon!</div>`));
+  app.append(el(`<div class="card coming">World 7 · Type Real Code (JavaScript) ⌨️ — coming soon!</div>`));
   const parents = el(`<p><button class="link-btn" id="parents">for grown-ups</button></p>`);
   parents.querySelector('#parents').onclick = showParents;
   app.append(parents);

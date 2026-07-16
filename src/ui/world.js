@@ -1,6 +1,6 @@
 // World lesson pages: ?world=world2&view=intro (start of world)
 // or view=recap (end of world — review + jump back to any level).
-import { getWorld, WORLDS, levelUnlocked, worldUnlocked } from '../levels/index.js';
+import { getWorld, WORLDS, levelUnlocked, worldUnlocked, levelUrl } from '../levels/index.js';
 import { getActiveProfile } from '../progress.js';
 import { sounds } from './sounds.js';
 
@@ -46,7 +46,7 @@ if (view === 'intro') {
   card.querySelector('#start').onclick = () => {
     sounds.tap();
     const firstUndone = world.levels.find((l) => !(profile.stars[l.id] > 0)) ?? world.levels[0];
-    location.href = `play.html?level=${firstUndone.id}`;
+    location.href = levelUrl(world, firstUndone);
   };
   card.querySelector('#back').onclick = () => { location.href = 'index.html'; };
   app.append(card);
@@ -68,7 +68,7 @@ if (view === 'intro') {
       <span class="stars">${stars ? '⭐'.repeat(stars) : ''}</span>
     </button>`);
     b.title = lvl.name;
-    b.onclick = () => { sounds.tap(); location.href = `play.html?level=${lvl.id}`; };
+    b.onclick = () => { sounds.tap(); location.href = levelUrl(world, lvl); };
     grid.append(b);
   });
   const actions = card.querySelector('.recap-actions');
