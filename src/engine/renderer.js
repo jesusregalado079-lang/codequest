@@ -1,13 +1,23 @@
 // Canvas renderer + animator. Draws the level and replays a world's event
 // list with tweened movement. All art is emoji/vector — no image assets.
+import { drawHero, getArmor } from '../ui/hero.js';
 
 const DIR_ANGLE = [-Math.PI / 2, 0, Math.PI / 2, Math.PI]; // N E S W
 
+const DEFAULT_THEME = {
+  floorA: '#cdf0ba',
+  floorB: '#bfe8a8',
+  wallDark: '#5b4a3f',
+  wallLight: '#6d5a4c',
+};
+
 export class Renderer {
-  constructor(canvas, levelDef) {
+  constructor(canvas, levelDef, { theme, armor } = {}) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.level = levelDef;
+    this.theme = { ...DEFAULT_THEME, ...theme };
+    this.armor = getArmor(armor);
     this.playing = false;
     this.reset();
   }
@@ -24,7 +34,7 @@ export class Renderer {
         if (c === 'G') this.gems.add(`${x},${y}`);
       })
     );
-    this.charDraw = { x: this.char.x, y: this.char.y, angle: DIR_ANGLE[this.char.dir], squash: 1 };
+    this.charDraw = { x: this.char.x, y: this.char.y, angle: DIR_ANGLE[this.char.dir], squash: 1, bob: 0 };
     this.resize();
   }
 
@@ -50,14 +60,14 @@ export class Renderer {
         const py = y * tile;
         if (c === ' ') return;
         if (c === '#') {
-          ctx.fillStyle = '#5b4a3f';
+          ctx.fillStyle = this.theme.wallDark;
           ctx.fillRect(px, py, tile, tile);
-          ctx.fillStyle = '#6d5a4c';
+          ctx.fillStyle = this.theme.wallLight;
           ctx.fillRect(px + 2, py + 2, tile - 4, tile / 2 - 2);
           return;
         }
         // floor (., S, G, E)
-        ctx.fillStyle = (x + y) % 2 ? '#bfe8a8' : '#cdf0ba';
+        ctx.fillStyle = (x + y) % 2 ? this.theme.floorB : this.theme.floorA;
         ctx.fillRect(px, py, tile, tile);
         if (c === 'E') {
           ctx.font = `${tile * 0.7}px serif`;
@@ -75,41 +85,24 @@ export class Renderer {
       const [x, y] = key.split(',').map(Number);
       ctx.fillText('💎', x * tile + tile / 2, y * tile + tile / 2 + 1);
     }
-    // character
+    // character: blocky hero + a direction pointer at the tile edge
     const c = this.charDraw;
     const cx = c.x * tile + tile / 2;
     const cy = c.y * tile + tile / 2;
+    drawHero(ctx, cx, cy, tile * 0.9, this.armor, { squash: c.squash, bob: c.bob });
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.scale(c.squash, c.squash);
-    // body
-    ctx.fillStyle = '#4a90d9';
-    ctx.beginPath();
-    ctx.arc(0, 0, tile * 0.36, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#2c5e94';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    // direction beak
     ctx.rotate(c.angle);
     ctx.fillStyle = '#ffd75e';
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(tile * 0.36, -tile * 0.12);
-    ctx.lineTo(tile * 0.52, 0);
-    ctx.lineTo(tile * 0.36, tile * 0.12);
+    ctx.moveTo(tile * 0.38, -tile * 0.11);
+    ctx.lineTo(tile * 0.53, 0);
+    ctx.lineTo(tile * 0.38, tile * 0.11);
     ctx.closePath();
     ctx.fill();
-    // eyes (always face "forward")
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(tile * 0.12, -tile * 0.12, tile * 0.09, 0, Math.PI * 2);
-    ctx.arc(tile * 0.12, tile * 0.12, tile * 0.09, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.arc(tile * 0.16, -tile * 0.12, tile * 0.045, 0, Math.PI * 2);
-    ctx.arc(tile * 0.16, tile * 0.12, tile * 0.045, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -133,6 +126,7 @@ export class Renderer {
       if (ev.type === 'move') this.tween(stepDuration(), (t) => {
         this.charDraw.x = ev.from.x + (ev.to.x - ev.from.x) * t;
         this.charDraw.y = ev.from.y + (ev.to.y - ev.from.y) * t;
+        this.charDraw.bob = t < 1 ? t : 0; // little hop while walking
       }, next);
       else if (ev.type === 'turn') {
         const from = this.charDraw.angle;

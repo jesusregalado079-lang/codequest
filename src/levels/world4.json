@@ -12,10 +12,26 @@
       "In real JavaScript this is a function: function star() { ... } and star() — check &lt;/&gt;!"
     ],
     "blocks": [
-      { "icon": "🧩⭐", "name": "teach ⭐ star move", "text": "put blocks inside to save them as your ⭐ move. It sits on the side — it doesn't run on its own!" },
-      { "icon": "⭐", "name": "do star move", "text": "runs everything you taught ⭐ — one small block, one big move" },
-      { "icon": "🧩🌙", "name": "teach 🌙 moon move", "text": "a second move for later levels — some puzzles need two!" },
-      { "icon": "🔁🤔", "name": "old friends", "text": "loops and ifs work INSIDE your moves, and your moves work inside loops. Combine everything!" }
+      {
+        "icon": "🧩⭐",
+        "name": "teach ⭐ star move",
+        "text": "put blocks inside to save them as your ⭐ move. It sits on the side — it doesn't run on its own!"
+      },
+      {
+        "icon": "⭐",
+        "name": "do star move",
+        "text": "runs everything you taught ⭐ — one small block, one big move"
+      },
+      {
+        "icon": "🧩🌙",
+        "name": "teach 🌙 moon move",
+        "text": "a second move for later levels — some puzzles need two!"
+      },
+      {
+        "icon": "🔁🤔",
+        "name": "old friends",
+        "text": "loops and ifs work INSIDE your moves, and your moves work inside loops. Combine everything!"
+      }
     ],
     "goal": "Spot the repeating pattern, teach it as a move, then call it. Fewer blocks, smarter robot!"
   },
@@ -28,49 +44,81 @@
   "quiz": [
     {
       "q": "What does 🧩 teach ⭐ do by itself?",
-      "choices": ["runs the blocks right away", "nothing yet — it just saves the move", "deletes the blocks"],
+      "choices": [
+        "runs the blocks right away",
+        "nothing yet — it just saves the move",
+        "deletes the blocks"
+      ],
       "answer": 1,
       "why": "Teaching only SAVES the move. It runs when you call ⭐."
     },
     {
       "q": "⭐ is taught as [⬆️⬆️💎]. The program runs ⭐⭐. How many squares does the robot walk?",
-      "choices": ["2", "6", "4"],
+      "choices": [
+        "2",
+        "6",
+        "4"
+      ],
       "answer": 2,
       "why": "Each ⭐ call runs the whole move: 2 steps + grab, twice = 4 steps."
     },
     {
       "q": "Why teach a move instead of copying the same blocks again and again?",
-      "choices": ["you build it once and reuse it anywhere", "it makes the robot walk faster", "it looks prettier"],
+      "choices": [
+        "you build it once and reuse it anywhere",
+        "it makes the robot walk faster",
+        "it looks prettier"
+      ],
       "answer": 0,
       "why": "Reuse! Fix or improve the move in ONE place and every call gets better."
     },
     {
       "q": "You teach ⭐ a great move but never place a ⭐ call block. What happens?",
-      "choices": ["it runs once anyway", "the program breaks", "nothing — nobody called it"],
+      "choices": [
+        "it runs once anyway",
+        "the program breaks",
+        "nothing — nobody called it"
+      ],
       "answer": 2,
       "why": "A function only runs when called. Defining is just teaching."
     },
     {
       "q": "In real JavaScript, teaching ⭐ looks like…",
-      "choices": ["function star() { ... }", "for (let i = 0; i < 3; i++)", "if (onGem()) { ... }"],
+      "choices": [
+        "function star() { ... }",
+        "for (let i = 0; i < 3; i++)",
+        "if (onGem()) { ... }"
+      ],
       "answer": 0,
       "why": "That's a function definition — you saw it in the &lt;/&gt; panel!"
     },
     {
       "q": "🔁 repeat 3 times [⬆️⬆️] — how many squares does the robot walk?",
-      "choices": ["6", "3", "9"],
+      "choices": [
+        "6",
+        "3",
+        "9"
+      ],
       "answer": 0,
       "why": "World 2 check: the loop runs both moves 3 times — 2 × 3 = 6."
     },
     {
       "q": "🤔 if 💎 on gem? do [collect] — the robot is NOT on a gem. What happens?",
-      "choices": ["it collects nothing and keeps going", "it crashes", "it collects a gem anyway"],
+      "choices": [
+        "it collects nothing and keeps going",
+        "it crashes",
+        "it collects a gem anyway"
+      ],
       "answer": 0,
       "why": "World 3 check: answer NO means the if blocks are skipped."
     },
     {
       "q": "The program is ⭐🌙⭐. Which move runs LAST?",
-      "choices": ["🌙 moon", "⭐ star", "they run together"],
+      "choices": [
+        "🌙 moon",
+        "⭐ star",
+        "they run together"
+      ],
       "answer": 1,
       "why": "World 1 rule still rules: blocks run in order, one at a time."
     }
@@ -79,92 +127,243 @@
     {
       "id": "world4-1",
       "name": "Teach a Move",
-      "grid": ["#########", "#S.G.G.G#", "#########"],
+      "grid": [
+        "#########",
+        "#S.G.G.G#",
+        "#########"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["def_star", "call_star", "move_forward", "collect_gem"],
+      "allowedBlocks": [
+        "def_star",
+        "call_star",
+        "move_forward",
+        "collect_gem"
+      ],
       "par": 7,
       "hint": "NEW! Put ⬆️⬆️💎 inside 🧩 teach ⭐. Then just call ⭐⭐⭐ — three gems, one move!"
     },
     {
       "id": "world4-2",
       "name": "The Side-Dance",
-      "grid": ["######", "#S..G#", "#.##.#", "#.##.#", "#G..G#", "######"],
+      "grid": [
+        "######",
+        "#S..G#",
+        "#.##.#",
+        "#.##.#",
+        "#G..G#",
+        "######"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["def_star", "call_star", "move_forward", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "def_star",
+        "call_star",
+        "move_forward",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 9,
       "hint": "Remember this square? Teach ⭐ one whole side (walk 3, grab, turn), then call it 3 times."
     },
     {
       "id": "world4-3",
       "name": "Star in a Loop",
-      "grid": ["######", "#SGGG#", "####G#", "####G#", "#GGGG#", "######"],
+      "grid": [
+        "######",
+        "#SGGG#",
+        "####G#",
+        "####G#",
+        "#GGGG#",
+        "######"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["def_star", "call_star", "repeat", "move_forward", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "def_star",
+        "call_star",
+        "repeat",
+        "move_forward",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 9,
       "hint": "Mind-bender: put a LOOP inside your ⭐ move! Teach ⭐ = repeat 3 [move, grab], then ⭐ turn ⭐ turn ⭐."
     },
     {
       "id": "world4-4",
       "name": "Two Moves",
-      "grid": ["#########", "#S.G#####", "###..G###", "#####..G#", "#########"],
+      "grid": [
+        "#########",
+        "#S.G#####",
+        "###..G###",
+        "#####..G#",
+        "#########"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["def_star", "call_star", "def_moon", "call_moon", "move_forward", "turn_left", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "def_star",
+        "call_star",
+        "def_moon",
+        "call_moon",
+        "move_forward",
+        "turn_left",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 13,
       "hint": "Two moves! Teach ⭐ the scoop (walk walk grab) and 🌙 the sidestep (turn right, step, turn left). Then ⭐🌙⭐🌙⭐."
     },
     {
       "id": "world4-5",
       "name": "Zig & Scoop",
-      "grid": ["##########", "##########", "##########", "########G#", "#######..#", "###.GGG.##", "##..######", "#S.#######", "##########"],
+      "grid": [
+        "##########",
+        "##########",
+        "##########",
+        "########G#",
+        "#######..#",
+        "###.GGG.##",
+        "##..######",
+        "#S.#######",
+        "##########"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["def_star", "call_star", "repeat", "move_forward", "turn_left", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "def_star",
+        "call_star",
+        "repeat",
+        "move_forward",
+        "turn_left",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 13,
       "hint": "Teach ⭐ the stair-climb (step, turn left, step, turn right). Climb twice, scoop the hallway, climb twice more!"
     },
     {
       "id": "world4-6",
       "name": "Smart Star",
-      "grid": ["#########", "#S.G.GG.#", "#########"],
+      "grid": [
+        "#########",
+        "#S.G.GG.#",
+        "#########"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["def_star", "call_star", "if_do", "move_forward", "collect_gem"],
+      "allowedBlocks": [
+        "def_star",
+        "call_star",
+        "if_do",
+        "move_forward",
+        "collect_gem"
+      ],
       "par": 10,
       "hint": "Teach ⭐ a SMART move: step, then if on gem — grab. Call it 6 times and it handles any hallway!"
     },
     {
       "id": "world4-7",
       "name": "Double Scoop",
-      "grid": ["#########", "#SGG#####", "###.GG###", "#####.GG#", "#########"],
+      "grid": [
+        "#########",
+        "#SGG#####",
+        "###.GG###",
+        "#####.GG#",
+        "#########"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["def_star", "call_star", "def_moon", "call_moon", "move_forward", "turn_left", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "def_star",
+        "call_star",
+        "def_moon",
+        "call_moon",
+        "move_forward",
+        "turn_left",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 14,
       "hint": "Gem PAIRS this time. Teach ⭐ the double-scoop and 🌙 the sidestep — then alternate."
     },
     {
       "id": "world4-8",
       "name": "Star Power",
-      "grid": ["######", "#SG.G#", "####G#", "####.#", "#.G.G#", "######"],
+      "grid": [
+        "######",
+        "#SG.G#",
+        "####G#",
+        "####.#",
+        "#.G.G#",
+        "######"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["def_star", "call_star", "repeat", "if_do", "move_forward", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "def_star",
+        "call_star",
+        "repeat",
+        "if_do",
+        "move_forward",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 10,
       "hint": "Everything at once: teach ⭐ = repeat 3 [step, if on gem grab]. One smart side, called 3 times."
     },
     {
       "id": "world4-9",
       "name": "Backwards Star",
-      "grid": ["######", "#S##G#", "#G##G#", "#G##G#", "#GGGG#", "######"],
+      "grid": [
+        "######",
+        "#S##G#",
+        "#G##G#",
+        "#G##G#",
+        "#GGGG#",
+        "######"
+      ],
       "startDir": 2,
-      "allowedBlocks": ["def_star", "call_star", "repeat", "move_forward", "turn_left", "collect_gem"],
+      "allowedBlocks": [
+        "def_star",
+        "call_star",
+        "repeat",
+        "move_forward",
+        "turn_left",
+        "collect_gem"
+      ],
       "par": 9,
       "hint": "Same trick, other direction — you start facing DOWN. Your ⭐ works no matter which way you're going!"
     },
     {
       "id": "world4-10",
       "name": "Boss: Function Master",
-      "grid": ["#############", "#############", "#############", "########..GE#", "#######..####", "###.G.G.#####", "##..#########", "#S.##########", "#############"],
+      "grid": [
+        "#############",
+        "#############",
+        "#############",
+        "########..GE#",
+        "#######..####",
+        "###.G.G.#####",
+        "##..#########",
+        "#S.##########",
+        "#############"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["def_star", "call_star", "def_moon", "call_moon", "repeat", "if_do", "move_forward", "turn_left", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "def_star",
+        "call_star",
+        "def_moon",
+        "call_moon",
+        "repeat",
+        "if_do",
+        "move_forward",
+        "turn_left",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 17,
       "hint": "Boss! Teach ⭐ the stair-climb and 🌙 the smart step (move, if on gem grab). Climb, sweep, climb, sweep to the flag 🏁"
     }
-  ]
+  ],
+  "theme": {
+    "floorA": "#ddeffa",
+    "floorB": "#cbe5f5",
+    "wallDark": "#5c7b99",
+    "wallLight": "#6d8fae"
+  },
+  "place": "Frost Peaks"
 }

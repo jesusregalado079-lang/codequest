@@ -35,7 +35,7 @@ const workspace = Blockly.inject('blockly', {
 });
 
 const canvas = document.getElementById('stage');
-const renderer = new Renderer(canvas, level);
+const renderer = new Renderer(canvas, level, { theme: world.theme, armor: profile?.armor });
 window.addEventListener('resize', () => renderer.resize());
 
 // </> panel: kids see their blocks as the real JavaScript they generate.

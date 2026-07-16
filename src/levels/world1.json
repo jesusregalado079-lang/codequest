@@ -10,10 +10,26 @@
       "If something goes wrong, change your steps and try again — real coders call that debugging!"
     ],
     "blocks": [
-      { "icon": "⬆️", "name": "move forward", "text": "the robot walks one square in the direction it's facing" },
-      { "icon": "↪️", "name": "turn left", "text": "the robot spins to its left (it stays on the same square)" },
-      { "icon": "↩️", "name": "turn right", "text": "the robot spins to its right" },
-      { "icon": "💎", "name": "collect gem", "text": "grabs the gem — but only if the robot is standing on it!" }
+      {
+        "icon": "⬆️",
+        "name": "move forward",
+        "text": "the robot walks one square in the direction it's facing"
+      },
+      {
+        "icon": "↪️",
+        "name": "turn left",
+        "text": "the robot spins to its left (it stays on the same square)"
+      },
+      {
+        "icon": "↩️",
+        "name": "turn right",
+        "text": "the robot spins to its right"
+      },
+      {
+        "icon": "💎",
+        "name": "collect gem",
+        "text": "grabs the gem — but only if the robot is standing on it!"
+      }
     ],
     "goal": "Collect every 💎 in each level. On the boss level, reach the 🏁 too!"
   },
@@ -27,92 +43,197 @@
     {
       "id": "world1-1",
       "name": "First Steps",
-      "grid": ["#####", "#S.G#", "#####"],
+      "grid": [
+        "#####",
+        "#S.G#",
+        "#####"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["move_forward", "collect_gem"],
+      "allowedBlocks": [
+        "move_forward",
+        "collect_gem"
+      ],
       "par": 3,
       "hint": "Walk to the gem, then grab it! Try: move, move, collect 💎"
     },
     {
       "id": "world1-2",
       "name": "The Long Hallway",
-      "grid": ["#######", "#S...G#", "#######"],
+      "grid": [
+        "#######",
+        "#S...G#",
+        "#######"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["move_forward", "collect_gem"],
+      "allowedBlocks": [
+        "move_forward",
+        "collect_gem"
+      ],
       "par": 5,
       "hint": "It's further this time. Count the steps to the gem! 🐾"
     },
     {
       "id": "world1-3",
       "name": "Turn Right",
-      "grid": ["#####", "#S..#", "###.#", "###G#", "#####"],
+      "grid": [
+        "#####",
+        "#S..#",
+        "###.#",
+        "###G#",
+        "#####"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["move_forward", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "move_forward",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 6,
       "hint": "Walk to the corner, then use ↩️ turn right before walking down."
     },
     {
       "id": "world1-4",
       "name": "Turn Left",
-      "grid": ["#####", "###G#", "###.#", "#S..#", "#####"],
+      "grid": [
+        "#####",
+        "###G#",
+        "###.#",
+        "#S..#",
+        "#####"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["move_forward", "turn_left", "collect_gem"],
+      "allowedBlocks": [
+        "move_forward",
+        "turn_left",
+        "collect_gem"
+      ],
       "par": 6,
       "hint": "This corner bends the other way — use ↪️ turn left!"
     },
     {
       "id": "world1-5",
       "name": "Two Gems",
-      "grid": ["#######", "#S.G.G#", "#######"],
+      "grid": [
+        "#######",
+        "#S.G.G#",
+        "#######"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["move_forward", "collect_gem"],
+      "allowedBlocks": [
+        "move_forward",
+        "collect_gem"
+      ],
       "par": 6,
       "hint": "Collect the first gem BEFORE walking to the second one."
     },
     {
       "id": "world1-6",
       "name": "Zigzag",
-      "grid": ["#######", "#S..###", "###.###", "###..G#", "#######"],
+      "grid": [
+        "#######",
+        "#S..###",
+        "###.###",
+        "###..G#",
+        "#######"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["move_forward", "turn_left", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "move_forward",
+        "turn_left",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 9,
       "hint": "Right turn, then a left turn. Follow the path with your finger first!"
     },
     {
       "id": "world1-7",
       "name": "Gem Corner",
-      "grid": ["######", "#S.G##", "###.##", "###G.#", "######"],
+      "grid": [
+        "######",
+        "#S.G##",
+        "###.##",
+        "###G.#",
+        "######"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["move_forward", "turn_left", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "move_forward",
+        "turn_left",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 7,
       "hint": "Grab the first gem on your way — don't walk past it!"
     },
     {
       "id": "world1-8",
       "name": "The Big U",
-      "grid": ["#######", "#S###G#", "#.###.#", "#.....#", "#######"],
+      "grid": [
+        "#######",
+        "#S###G#",
+        "#.###.#",
+        "#.....#",
+        "#######"
+      ],
       "startDir": 2,
-      "allowedBlocks": ["move_forward", "turn_left", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "move_forward",
+        "turn_left",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 11,
       "hint": "Down, across, and back up — like the letter U!"
     },
     {
       "id": "world1-9",
       "name": "Treasure Tour",
-      "grid": ["#######", "#S.G..#", "#####.#", "#G..G.#", "#######"],
+      "grid": [
+        "#######",
+        "#S.G..#",
+        "#####.#",
+        "#G..G.#",
+        "#######"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["move_forward", "turn_left", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "move_forward",
+        "turn_left",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 15,
       "hint": "Three gems! Plan your whole route before you press play. 🗺️"
     },
     {
       "id": "world1-10",
       "name": "Boss: The Great Escape",
-      "grid": ["#######", "#S..G.#", "####.##", "##G..##", "##.####", "##E####", "#######"],
+      "grid": [
+        "#######",
+        "#S..G.#",
+        "####.##",
+        "##G..##",
+        "##.####",
+        "##E####",
+        "#######"
+      ],
       "startDir": 1,
-      "allowedBlocks": ["move_forward", "turn_left", "turn_right", "collect_gem"],
+      "allowedBlocks": [
+        "move_forward",
+        "turn_left",
+        "turn_right",
+        "collect_gem"
+      ],
       "par": 14,
       "hint": "Boss level! Collect BOTH gems, then reach the flag 🏁 to escape!"
     }
-  ]
+  ],
+  "theme": {
+    "floorA": "#cdf0ba",
+    "floorB": "#bfe8a8",
+    "wallDark": "#5b4a3f",
+    "wallLight": "#6d5a4c"
+  },
+  "place": "Sunny Meadow"
 }

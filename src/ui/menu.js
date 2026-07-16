@@ -5,6 +5,8 @@ import {
   deleteProfile, streakToday, exportData, importData,
 } from '../progress.js';
 import { sounds } from './sounds.js';
+import { ARMOR, armorUnlocked, getArmor, drawHero } from './hero.js';
+import { setArmor } from '../progress.js';
 
 const app = document.getElementById('app');
 const AVATARS = ['🦊', '🐸', '🦄', '🤖', '🐱', '🐼', '🦁', '🐙'];
@@ -101,10 +103,15 @@ function showMap() {
     ? `<span class="streak">🔥 ${p.streak.count} day${p.streak.count > 1 ? 's' : ''}${streakToday(p) ? '' : ' — play today to keep it!'}</span>`
     : `<span class="streak">Play a level to start your streak! 🔥</span>`;
   const hello = el(`<div class="card hello-bar">
-    <div class="who"><span class="avatar">${p.avatar}</span>${esc(p.name)}</div>
+    <div class="who"><span class="hero-slot"></span><span class="avatar">${p.avatar}</span>${esc(p.name)}</div>
     ${flame}
-    <button class="link-btn" id="switch">switch player</button>
+    <span>
+      <button class="link-btn" id="outfits">👕 outfits</button>
+      <button class="link-btn" id="switch">switch player</button>
+    </span>
   </div>`);
+  hello.querySelector('.hero-slot').append(heroCanvas(p.armor, 44));
+  hello.querySelector('#outfits').onclick = () => { sounds.tap(); showOutfits(); };
   hello.querySelector('#switch').onclick = showProfiles;
   app.append(hello);
 
@@ -161,6 +168,47 @@ function showMap() {
   const parents = el(`<p><button class="link-btn" id="parents">for grown-ups</button></p>`);
   parents.querySelector('#parents').onclick = showParents;
   app.append(parents);
+}
+
+// ---------- outfits ----------
+function heroCanvas(armorId, size = 76) {
+  const cv = document.createElement('canvas');
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = size * dpr;
+  cv.height = size * dpr;
+  cv.style.width = `${size}px`;
+  cv.style.height = `${size}px`;
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  drawHero(ctx, size / 2, size * 0.58, size * 0.82, getArmor(armorId));
+  return cv;
+}
+
+function showOutfits() {
+  const p = getActiveProfile();
+  if (!p) return showProfiles();
+  app.innerHTML = header();
+  const card = el(`<div class="card">
+    <h2>👕 Outfits</h2>
+    <p>Beat a world's boss 👑 to unlock its armor!</p>
+    <div class="outfit-grid"></div>
+    <p><button class="link-btn" id="back">← back to the map</button></p>
+  </div>`);
+  const grid = card.querySelector('.outfit-grid');
+  for (const a of ARMOR) {
+    const unlocked = armorUnlocked(a, p);
+    const wearing = (p.armor ?? 'starter') === a.id;
+    const b = el(`<button class="outfit ${unlocked ? '' : 'locked'} ${wearing ? 'selected' : ''}"></button>`);
+    b.append(heroCanvas(a.id));
+    b.append(el(`<span class="outfit-name">${a.name}</span>`));
+    b.append(el(`<small>${wearing ? '✅ wearing it!' : unlocked ? 'tap to wear' : `🔒 ${a.unlockText}`}</small>`));
+    if (unlocked && !wearing) {
+      b.onclick = () => { sounds.collect(); setArmor(a.id); showOutfits(); };
+    }
+    grid.append(b);
+  }
+  card.querySelector('#back').onclick = showMap;
+  app.append(card);
 }
 
 // ---------- parents corner ----------

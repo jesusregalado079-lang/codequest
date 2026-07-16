@@ -37,6 +37,7 @@ export function createProfile(name, avatar, mode) {
     name,
     avatar,
     mode, // 'sprout' (5-7) or 'explorer' (8-10)
+    armor: 'starter', // equipped outfit id (see ui/hero.js)
     stars: {}, // levelId -> 1..3
     streak: { count: 0, last: null },
   };
@@ -50,6 +51,14 @@ export function deleteProfile(id) {
   const s = load();
   s.profiles = s.profiles.filter((p) => p.id !== id);
   if (s.active === id) s.active = s.profiles[0]?.id ?? null;
+  save(s);
+}
+
+export function setArmor(id) {
+  const s = load();
+  const p = s.profiles.find((x) => x.id === s.active);
+  if (!p) return;
+  p.armor = id;
   save(s);
 }
 
@@ -84,6 +93,7 @@ export function importData(json) {
     name: String(p?.name ?? 'Explorer').slice(0, 14),
     avatar: String(p?.avatar ?? '🦊').slice(0, 4),
     mode: p?.mode === 'sprout' ? 'sprout' : 'explorer',
+    armor: typeof p?.armor === 'string' ? p.armor.slice(0, 20) : 'starter',
     stars: Object.fromEntries(
       Object.entries(p?.stars ?? {}).filter(
         ([, v]) => Number.isInteger(v) && v >= 1 && v <= 3
