@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 
 export default defineConfig({
+  base: './', // relative URLs — works at domain root and GitHub Pages subpath
   build: {
     rollupOptions: {
       input: {
