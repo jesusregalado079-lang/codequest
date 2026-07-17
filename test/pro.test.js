@@ -4,6 +4,7 @@
 // Run: npm test
 import assert from 'node:assert';
 import chapters from '../src/pro/chapters/index.js';
+import beginnerUnits from '../src/pro/beginner/foundations.js';
 
 const proAssert = (cond, msg) => { if (!cond) throw new Error(msg || 'assertion failed'); };
 
@@ -54,4 +55,31 @@ for (const ch of chapters) {
   }
 }
 
+// ---- Beginner tier: reading + multiple-choice, no code ----
+let beginnerLessons = 0;
+let beginnerQuestions = 0;
+for (const unit of beginnerUnits) {
+  assert.ok(unit.id && unit.title && unit.tagline, `beginner unit ${unit.id} missing fields`);
+  assert.ok(unit.badge?.name && unit.badge?.emoji, `beginner unit ${unit.id} missing badge`);
+  assert.ok(unit.lessons.length >= 1, `beginner unit ${unit.id} has no lessons`);
+  for (const l of unit.lessons) {
+    beginnerLessons++;
+    assert.ok(!seenIds.has(l.id), `duplicate lesson id ${l.id}`);
+    seenIds.add(l.id);
+    assert.ok(l.title && l.reading, `${l.id} missing title/reading`);
+    assert.ok([5, 10, 15].includes(l.xp), `${l.id} xp must be 5/10/15`);
+    assert.ok(l.questions.length >= 1, `${l.id} needs at least one question`);
+    for (const q of l.questions) {
+      beginnerQuestions++;
+      assert.ok(q.q && q.why, `${l.id} question missing q/why`);
+      assert.ok(q.choices.length >= 2, `${l.id} question needs 2+ choices`);
+      assert.ok(
+        Number.isInteger(q.answer) && q.answer >= 0 && q.answer < q.choices.length,
+        `${l.id} question answer index out of range`
+      );
+    }
+  }
+}
+
 console.log(`pro ok: ${chapters.length} chapters, ${lessonCount} lessons, ${testCount} solution tests pass`);
+console.log(`beginner ok: ${beginnerLessons} lessons, ${beginnerQuestions} questions valid`);
