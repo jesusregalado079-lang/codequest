@@ -1,6 +1,7 @@
 // CodeQuest Pro — whole SPA, hash-routed. Plain DOM, no framework.
 import chapters from '../chapters/index.js';
 import beginnerUnits from '../beginner/foundations.js';
+import expertChapters from '../expert/index.js';
 import { run } from '../engine/runner.js';
 import { setHue } from './aether.js';
 import {
@@ -18,7 +19,15 @@ const tierXp = (units) =>
 
 // one accent hue per chapter — drives frame gradients, ticks, and lesson accents
 const HUES = [204, 262, 36, 152, 326, 184, 58, 12];
-const hueOf = (ch) => HUES[chapters.indexOf(ch)] ?? 204;
+const EXPERT_HUES = [280, 330, 190, 45, 165, 8];
+const isExpert = (ch) => expertChapters.includes(ch);
+function hueOf(ch) {
+  const i = chapters.indexOf(ch);
+  if (i >= 0) return HUES[i];
+  const j = expertChapters.indexOf(ch);
+  if (j >= 0) return EXPERT_HUES[j] ?? 280;
+  return 204;
+}
 
 const FLAME_SVG =
   '<svg width="11" height="13" viewBox="0 0 11 13" aria-hidden="true"><path d="M5.5 0C6 2.5 8.5 3.5 8.5 6.5a3 3 0 0 1-6 0C2.5 5 3 4.5 3.5 3.5 4 5 5 5.5 5 6.5 5 4 4.5 2 5.5 0Z" fill="currentColor" transform="translate(0,1.5) scale(1,1.6)"/></svg>';
@@ -86,11 +95,11 @@ function router() {
     return showBeginnerList();
   }
 
-  // Expert tier: not built yet
+  // Expert tier: its own chapter mosaic
   if (seg === 'expert') {
-    document.body.dataset.view = 'chapter';
-    setHue(12);
-    return showExpert();
+    document.body.dataset.view = 'grid';
+    setHue(280);
+    return showExpertGrid();
   }
 
   // Intermediate tier: the chapter mosaic
@@ -100,8 +109,8 @@ function router() {
     return showChapters();
   }
 
-  // Intermediate chapter / lesson (ch1 … ch8)
-  const ch = chapters.find((c) => c.id === seg);
+  // Any code chapter / lesson — intermediate (ch1…ch8) or expert (x1…x6)
+  const ch = [...chapters, ...expertChapters].find((c) => c.id === seg);
   if (ch) {
     setHue(hueOf(ch));
     const i = Number(li);
@@ -139,6 +148,8 @@ function showTiers() {
   const bDone = beginner.lessons.filter((l) => isComplete(l.id)).length;
   const iDone = chapters.reduce((n, ch) => n + chapterProgress(ch).done, 0);
   const iTotal = chapters.reduce((n, ch) => n + ch.lessons.length, 0);
+  const xDone = expertChapters.reduce((n, ch) => n + chapterProgress(ch).done, 0);
+  const xTotal = expertChapters.reduce((n, ch) => n + ch.lessons.length, 0);
 
   const tiers = [
     {
@@ -152,9 +163,9 @@ function showTiers() {
       progress: `${iDone} / ${iTotal} lessons`, locked: false,
     },
     {
-      href: '#/expert', hue: 12, kicker: 'Coming soon',
-      title: 'Expert', desc: 'Algorithms, patterns, and systems thinking. In the works.',
-      progress: 'Coming soon', locked: true,
+      href: '#/expert', hue: 280, kicker: 'Go deep',
+      title: 'Expert', desc: 'Recursion, data structures, algorithms, Big-O, and reasoning about code.',
+      progress: `${xDone} / ${xTotal} lessons`, locked: false,
     },
   ];
 
@@ -305,50 +316,36 @@ function showBeginnerLesson(i) {
   }
 }
 
-/* ---------- Expert tier (stub) ---------- */
+/* ---------- code-chapter mosaic (shared by Intermediate + Expert) ---------- */
 
-function showExpert() {
-  app.innerHTML = `
+// Render a mosaic of chapters into rows of 3. `label` is shown as the tier name.
+function chapterMosaic(list, label) {
+  const rows = [];
+  for (let k = 0; k < list.length; k += 3) rows.push(list.slice(k, k + 3));
+  return `
     <header class="pro-header">
       <a class="back" href="#/">← All levels</a>
-      ${statusBar()}
-    </header>
-    <main class="chapter-page" style="--hue:12">
-      <div class="tier-tag">Expert</div>
-      <h1>Coming soon</h1>
-      <p class="chapter-lead">The Expert tier — data structures, algorithms, Big-O in practice,
-      design patterns, and reading real-world code — is on the way. Finish
-      <a href="#/intermediate">Intermediate</a> and you'll be ready for it.</p>
-    </main>`;
-}
-
-/* ---------- chapter list (Intermediate) ---------- */
-
-function showChapters() {
-  app.innerHTML = `
-    <header class="pro-header">
-      <a class="back" href="#/">← All levels</a>
-      <h1 class="tier-h1">Intermediate</h1>
+      <h1 class="tier-h1">${esc(label)}</h1>
       ${statusBar()}
     </header>
     <main class="chapter-grid">
-      ${[chapters.slice(0, 3), chapters.slice(3, 6), chapters.slice(6)]
+      ${rows
         .map(
           (row) =>
             `<div class="frame-row">${row
               .map((ch) => {
-                const n = chapters.indexOf(ch);
+                const n = list.indexOf(ch);
                 const { done, total } = chapterProgress(ch);
                 const earned = badgeEarned(ch);
                 const pct = Math.round((done / total) * 100);
                 return `
-              <a class="frame${earned ? ' complete' : ''}" href="#/${ch.id}" style="--hue:${HUES[n]}">
+              <a class="frame${earned ? ' complete' : ''}" href="#/${ch.id}" style="--hue:${hueOf(ch)}">
                 <div class="frame-bg"></div>
                 <span class="ghost-num">${String(n + 1).padStart(2, '0')}</span>
                 <i class="tick tl"></i><i class="tick br"></i>
                 <div class="frame-body">
                   <div class="frame-kicker">
-                    <span>Ch ${String(n + 1).padStart(2, '0')}</span>
+                    <span>${label === 'Expert' ? 'Unit' : 'Ch'} ${String(n + 1).padStart(2, '0')}</span>
                     <span class="ch-badge">${earned ? '●' : '○'} ${esc(ch.badge.name)}</span>
                   </div>
                   <h2>${esc(ch.title)}</h2>
@@ -366,16 +363,24 @@ function showChapters() {
     </main>`;
 }
 
+function showChapters() {
+  app.innerHTML = chapterMosaic(chapters, 'Intermediate');
+}
+
+function showExpertGrid() {
+  app.innerHTML = chapterMosaic(expertChapters, 'Expert');
+}
+
 /* ---------- chapter view (intro + lesson list) ---------- */
 
 function showChapter(ch) {
   app.innerHTML = `
     <header class="pro-header">
-      <a class="back" href="#/intermediate">← Intermediate</a>
+      <a class="back" href="#/${isExpert(ch) ? 'expert' : 'intermediate'}">← ${isExpert(ch) ? 'Expert' : 'Intermediate'}</a>
       ${statusBar()}
     </header>
     <main class="chapter-page" style="--hue:${hueOf(ch)}">
-      <div class="tier-tag">Intermediate</div>
+      <div class="tier-tag">${isExpert(ch) ? 'Expert' : 'Intermediate'}</div>
       <h1>${esc(ch.title)}</h1>
       <div class="reading intro">${md(ch.intro)}</div>
       <ol class="lesson-list">
