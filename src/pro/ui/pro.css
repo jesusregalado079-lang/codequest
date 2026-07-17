@@ -24,7 +24,11 @@
 /* Base colour lives on html only. Body must stay transparent: it is not a
    stacking context, so an opaque body background would paint over the
    negative-z-index backdrop layers below and hide them entirely. */
-html { background: var(--bg); }
+html {
+  background: var(--bg);
+  overflow-x: hidden; /* backstop: never let a stray wide child zoom the page out */
+  -webkit-text-size-adjust: 100%; /* stop iOS Safari auto-inflating text */
+}
 
 html, body {
   margin: 0;
@@ -88,7 +92,16 @@ h1, h2, h3 { line-height: 1.2; }
 button { font-family: inherit; font-size: 1rem; cursor: pointer; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
 
-#app { max-width: 1440px; margin: 0 auto; padding: 24px clamp(14px, 3vw, 40px) 80px; }
+/* Safe-area insets keep the header clear of the iPhone notch/clock — the page
+   uses black-translucent + viewport-fit=cover, so without this the top row
+   slides under the status bar and can't be tapped. */
+#app {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding:
+    calc(24px + env(safe-area-inset-top)) calc(clamp(14px, 3vw, 40px) + env(safe-area-inset-right))
+    80px calc(clamp(14px, 3vw, 40px) + env(safe-area-inset-left));
+}
 
 /* ---------- header / status ---------- */
 .pro-header {
@@ -113,7 +126,8 @@ button { font-family: inherit; font-size: 1rem; cursor: pointer; }
 .statusbar {
   display: flex;
   align-items: center;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 8px 14px;
   margin-left: auto;
   font-size: 0.85rem;
   font-family: var(--mono);
@@ -261,6 +275,17 @@ button { font-family: inherit; font-size: 1rem; cursor: pointer; }
   .frame { min-height: 150px; }
   .frame:hover { flex-grow: 1; }
   .ghost-num { font-size: 4.5rem; }
+}
+
+/* phones: keep the header + nav from overflowing a narrow viewport */
+@media (max-width: 560px) {
+  .pro-header h1 { font-size: 1.2rem; width: 100%; }
+  .statusbar { margin-left: 0; width: 100%; font-size: 0.8rem; }
+  .xpbar { flex: 1 1 80px; width: auto; min-width: 60px; }
+  .lesson-header { gap: 8px 14px; }
+  .lesson-pos { order: 3; width: 100%; }
+  .run-btn, .hint-btn { flex: 1 1 auto; justify-content: center; }
+  .award-label { width: 100%; margin-left: 0; text-align: right; }
 }
 
 /* ---------- chapter page ---------- */
