@@ -1,5 +1,5 @@
 // Menu: profile picker, world map, parents corner. Plain DOM, no framework.
-import { WORLDS, worldUnlocked, levelUnlocked, levelUrl } from '../levels/index.js';
+import { WORLDS, worldUnlocked, levelUnlocked, levelUrl, expertUnlocked } from '../levels/index.js';
 import {
   getProfiles, getActiveProfile, setActiveProfile, createProfile,
   deleteProfile, streakToday, exportData, importData,
@@ -7,7 +7,7 @@ import {
 import { sounds } from './sounds.js';
 import { listLevels, deleteLevel } from '../custom-levels.js';
 import { ARMOR, armorUnlocked, getArmor, drawHero } from './hero.js';
-import { setArmor } from '../progress.js';
+import { setArmor, setExpert } from '../progress.js';
 
 const app = document.getElementById('app');
 const AVATARS = ['🦊', '🐸', '🦄', '🤖', '🐱', '🐼', '🦁', '🐙'];
@@ -116,6 +116,27 @@ function showMap() {
   hello.querySelector('#switch').onclick = showProfiles;
   app.append(hello);
 
+  // Expert mode is earned, not offered — it only appears once a whole world
+  // is behind them, so nobody meets a blank code box on day one.
+  if (expertUnlocked(p)) {
+    const on = Boolean(p.expert);
+    const card = el(`<div class="card expert ${on ? 'on' : ''}">
+      <b>⌨️ Expert mode: ${on ? 'ON' : 'off'}</b>
+      <p>${on
+        ? 'No blocks — you type every level yourself, like a real programmer. The 🧱 buttons still help with the tricky symbols.'
+        : 'Think you\'re ready to ditch the blocks? Type every level by hand instead. You can switch back any time.'}</p>
+      <button class="big-btn toggle" style="${on ? 'background:#e07b00;box-shadow:0 4px 0 #a85c00' : ''}">
+        ${on ? 'Go back to blocks 🧩' : 'Turn on Expert mode ⌨️'}
+      </button>
+    </div>`);
+    card.querySelector('.toggle').onclick = () => {
+      sounds.win();
+      setExpert(!on);
+      showMap();
+    };
+    app.append(card);
+  }
+
   WORLDS.forEach((world, wi) => {
     if (!worldUnlocked(wi, p)) {
       const gate = world.unlockAfter
@@ -145,7 +166,7 @@ function showMap() {
         <span class="stars">${starCount ? '⭐'.repeat(starCount) : unlocked ? '· · ·' : ''}</span>
       </button>`);
       b.title = lvl.name;
-      b.onclick = () => { sounds.tap(); location.href = levelUrl(world, lvl); };
+      b.onclick = () => { sounds.tap(); location.href = levelUrl(world, lvl, p); };
       grid.append(b);
     });
     if (world.quiz) {

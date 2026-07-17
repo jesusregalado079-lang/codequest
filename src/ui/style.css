@@ -198,6 +198,52 @@ table.parents td, table.parents th { padding: 6px 14px; border-bottom: 1px solid
 .quiz-choice.wrong { border-color: #e05d5d; background: #fbe4e4; }
 .quiz-why { font-weight: 600; text-align: center; }
 
+/* ---------- tutorial coach + expert mode ---------- */
+.coach {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(660px, 94vw);
+  background: #23404f;
+  color: #fff;
+  padding: 14px 16px;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  font-size: 1rem;
+  line-height: 1.45;
+  animation: coach-in 0.3s ease;
+}
+@keyframes coach-in { from { transform: translate(-50%, 20px); opacity: 0; } }
+.coach b { color: #ffd75e; }
+.coach-next {
+  flex: none;
+  font-weight: 800;
+  padding: 8px 14px;
+  background: #58c15d;
+  color: #fff;
+  border-radius: 12px;
+}
+.coach-skip { flex: none; background: none; color: #fff; opacity: 0.5; font-size: 1rem; padding: 4px 6px; }
+
+.coach-spot {
+  outline: 4px solid #ffd75e !important;
+  outline-offset: 2px;
+  border-radius: 16px;
+  animation: coach-pulse 1.2s ease-in-out infinite;
+}
+@keyframes coach-pulse {
+  50% { outline-color: rgba(255, 215, 94, 0.25); }
+}
+
+.card.expert { border: 3px dashed #c7d8e4; }
+.card.expert.on { border-color: #e07b00; background: rgba(255, 244, 230, 0.9); }
+.card.expert p { opacity: 0.75; max-width: 46ch; margin: 6px auto 12px; }
+
 /* ---------- Workshop + Level Maker (World 8) ---------- */
 .made-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .level-btn.made { width: 108px; height: 88px; background: #fff3dc; box-shadow: 0 4px 0 #e0b95e; }

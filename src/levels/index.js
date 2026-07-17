@@ -12,11 +12,16 @@ export const WORLDS = [world1, world2, world3, world4, world5, world6, world7, w
 
 // each world flavour has its own page: arcade = game, typed = code editor,
 // everything else = the block puzzle page
-export function levelUrl(world, level) {
+export function levelUrl(world, level, profile) {
   if (world.sandbox) return 'build.html';
-  if (world.arcade) return `game.html?mission=${level.id}`;
-  if (world.typed) return `code.html?level=${level.id}`;
+  if (world.arcade) return `game.html?mission=${level.id}`; // events need the game page
+  if (world.typed || profile?.expert) return `code.html?level=${level.id}`;
   return `play.html?level=${level.id}`;
+}
+
+// Expert mode is earned: it opens once a whole world has been finished.
+export function expertUnlocked(profile) {
+  return WORLDS.some((w) => w.levels && (profile.stars[w.levels.at(-1).id] ?? 0) > 0);
 }
 
 export function getWorld(id) {

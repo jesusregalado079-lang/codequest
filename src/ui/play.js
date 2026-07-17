@@ -1,7 +1,7 @@
 // Game screen: Blockly workspace + canvas stage + run/reset loop.
 import * as Blockly from 'blockly';
 import { javascriptGenerator } from 'blockly/javascript';
-import { WORLDS, findLevel, worldUnlocked, levelUnlocked, getWorld } from '../levels/index.js';
+import { WORLDS, findLevel, worldUnlocked, levelUnlocked, getWorld, levelUrl } from '../levels/index.js';
 import { getLevel, decodeLevel, toPlayable } from '../custom-levels.js';
 import { loadLevel, isWin } from '../engine/world.js';
 import { runProgram } from '../engine/runner.js';
@@ -9,6 +9,7 @@ import { Renderer } from '../engine/renderer.js';
 import { defineBlocks, toolboxFor, cleanCode } from '../blocks/blocks.js';
 import { getActiveProfile, completeLevel } from '../progress.js';
 import { sounds } from './sounds.js';
+import { startCoach } from './coach.js';
 
 const profile = getActiveProfile();
 if (!profile) location.replace('index.html');
@@ -33,6 +34,9 @@ if (!custom && profile
   && !(worldUnlocked(WORLDS.indexOf(world), profile) && levelUnlocked(world, levelIndex, profile))) {
   location.replace('index.html');
 }
+
+// expert kids type everything — never hand them blocks for a curriculum level
+if (!custom && profile?.expert) location.replace(`code.html?level=${level.id}`);
 
 document.getElementById('level-name').textContent =
   custom ? `${level.name} — by ${custom.author}` : `${levelIndex + 1}. ${level.name}`;
@@ -174,13 +178,56 @@ function showWin(stars, blockCount) {
     if (custom) return void (location.href = 'index.html');
     location.href = isLast
       ? `world.html?world=${world.id}&view=recap`
-      : `play.html?level=${world.levels[levelIndex + 1].id}`;
+      : levelUrl(world, world.levels[levelIndex + 1], profile);
   };
   document.getElementById('again').onclick = () => {
     winOverlay.classList.add('hidden');
     renderer.reset();
   };
   winOverlay.classList.remove('hidden');
+}
+
+// ---------- level 1 tutorial ----------
+// Only the very first level, only once. It teaches the game itself: drag,
+// snap, peek at the real code, run.
+const tutorialKey = `codequest-tutorial-${profile?.id}`;
+if (level.id === 'world1-1' && !localStorage.getItem(tutorialKey)) {
+  const blocks = (type) =>
+    workspace.getAllBlocks(false).filter((b) => !b.isShadow() && (!type || b.type === type));
+  let ran = false;
+  runBtn.addEventListener('click', () => { ran = true; });
+
+  const steps = [
+    {
+      text: '👋 Hi! This is your robot. Your job: tell it how to reach the 💎.<br>' +
+        'First, <b>drag the ⬆️ move forward block</b> out of the grey strip into the big white space →',
+      spot: () => document.querySelector('.blockly-panel'),
+      done: () => blocks('move_forward').length >= 1,
+    },
+    {
+      text: '🎉 That\'s a program! Now drag <b>another ⬆️ move forward</b> and drop it just under the first one — ' +
+        'they snap together like LEGO 🧱',
+      done: () => blocks('move_forward').length >= 2,
+    },
+    {
+      text: 'Last block: drag <b>💎 collect gem</b> onto the bottom of your stack. ' +
+        'Walk, walk, grab — that\'s the plan!',
+      done: () => blocks('collect_gem').length >= 1,
+    },
+    ...(profile?.mode === 'sprout' ? [] : [{
+      text: '🤯 Secret: tap the <b>&lt;/&gt;</b> button up there. Those blocks ARE real JavaScript — ' +
+        'the same code grown-up programmers write. Tap it any time!',
+      spot: () => document.getElementById('code-toggle'),
+      done: () => !codePanel.classList.contains('hidden'),
+    }]),
+    {
+      text: 'Now the fun part — press <b>▶ Run</b> and watch your robot follow your orders!',
+      spot: () => document.getElementById('run'),
+      done: () => ran,
+    },
+  ];
+
+  startCoach(steps, { onDone: () => localStorage.setItem(tutorialKey, '1') });
 }
 
 if ('serviceWorker' in navigator && !import.meta.env.DEV) navigator.serviceWorker.register('sw.js');

@@ -50,10 +50,23 @@ const SNIPPETS = {
   vardec: { label: '🎒 var', text: 'var gems = 0;\n' },
   varadd: { label: '🎒 +1', text: 'gems = gems + 1;\n' },
   loopvar: { label: '🔁 gems', text: 'for (var i = 0; i < gems; i++) {\n  \n}\n' },
+  func_moon: { label: '🧩 moon', text: 'function moon() {\n  \n}\n' },
+  call_moon: { label: '🌙 moon()', text: 'moon();\n' },
 };
 
+// Expert mode types the block worlds. Those levels list blocks, not snippets,
+// so the toolbox a level already declares becomes its snippet palette.
+const BLOCK_SNIPPETS = {
+  move_forward: ['move'], turn_left: ['left'], turn_right: ['right'], collect_gem: ['collect'],
+  repeat: ['loop'], if_do: ['if_gem'], if_else: ['if_path'],
+  def_star: ['func'], call_star: ['call'], def_moon: ['func_moon'], call_moon: ['call_moon'],
+  backpack_add: ['vardec', 'varadd'], repeat_count: ['loopvar'],
+};
+const snippetIds = level.snippets
+  ?? [...new Set((level.allowedBlocks ?? []).flatMap((b) => BLOCK_SNIPPETS[b] ?? []))];
+
 const snipBox = document.getElementById('snippets');
-for (const id of level.snippets ?? []) {
+for (const id of snippetIds) {
   const s = SNIPPETS[id];
   if (!s) continue;
   const b = document.createElement('button');
@@ -117,7 +130,9 @@ runBtn.onclick = () => {
       if (isWin(world_)) {
         fails = 0;
         const lines = codeLines();
-        const stars = lines <= level.par ? 3 : lines <= level.par + 3 ? 2 : 1;
+        // world 7's par is a line budget; a block world's par counts blocks,
+        // so in expert mode solving it by hand is the whole achievement
+        const stars = !world.typed ? 3 : lines <= level.par ? 3 : lines <= level.par + 3 ? 2 : 1;
         completeLevel(level.id, stars);
         sounds.win();
         showWin(stars, lines);
@@ -156,8 +171,9 @@ document.getElementById('back').onclick = () => { location.href = 'index.html'; 
 const winOverlay = document.getElementById('win');
 function showWin(stars, lines) {
   document.getElementById('win-stars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
-  document.getElementById('win-msg').textContent =
-    stars === 3
+  document.getElementById('win-msg').textContent = !world.typed
+    ? `⌨️ Expert mode: you typed that level by hand — ${lines} lines, no blocks.`
+    : stars === 3
       ? `Real JavaScript, ${lines} lines, written by you.`
       : `It works — ${lines} lines. A tighter program fits in ${level.par}.`;
   const next = document.getElementById('next');
@@ -166,7 +182,7 @@ function showWin(stars, lines) {
   next.onclick = () => {
     location.href = isLast
       ? `world.html?world=${world.id}&view=recap`
-      : levelUrl(world, world.levels[levelIndex + 1]);
+      : levelUrl(world, world.levels[levelIndex + 1], profile);
   };
   document.getElementById('again').onclick = () => {
     winOverlay.classList.add('hidden');

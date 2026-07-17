@@ -223,7 +223,7 @@ function showWin(stars, blockCount) {
   next.onclick = () => {
     location.href = isLast
       ? `world.html?world=${world.id}&view=recap`
-      : levelUrl(world, world.levels[missionIndex + 1]);
+      : levelUrl(world, world.levels[missionIndex + 1], profile);
   };
   document.getElementById('again').onclick = startPlay;
   winOverlay.classList.remove('hidden');
