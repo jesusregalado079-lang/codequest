@@ -163,18 +163,25 @@ button { font-family: inherit; font-size: 1rem; cursor: pointer; }
 }
 .tier-sprite {
   flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 56px;
   display: grid;
   place-items: center;
-  color: hsl(var(--hue) 72% 62%);
-  background: hsl(var(--hue) 60% 50% / 0.12);
-  border: 1px solid hsl(var(--hue) 60% 55% / 0.4);
+  overflow: hidden;
+  background: hsl(var(--hue) 60% 50% / 0.14);
+  border: 1px solid hsl(var(--hue) 60% 55% / 0.45);
   border-radius: 10px;
   animation: sprite-in 0.35s ease;
 }
-.tier-sprite svg { width: 24px; height: 24px; }
-@keyframes sprite-in { from { opacity: 0; transform: scale(0.6) rotate(-8deg); } }
+.tier-sprite .sprite-img {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  image-rendering: pixelated; /* keep the pixel art crisp */
+  display: block;
+}
+@keyframes sprite-in { from { opacity: 0; transform: scale(0.6) translateY(4px); } }
 
 .seg {
   display: flex;

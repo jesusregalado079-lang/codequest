@@ -34,14 +34,12 @@ const FLAME_SVG =
 const PLAY_SVG =
   '<svg width="11" height="12" viewBox="0 0 12 14" aria-hidden="true"><path d="M1 1l10 6-10 6z" fill="currentColor"/></svg>';
 
-// one small sprite per tier, shown at the top and swapped as you switch tiers
+// one small sprite per tier (pixel-art fighter, powers up left→right), shown at
+// the top and swapped as you switch tiers
 const SPRITES = {
-  beginner: // sprout — start from the ground up
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V10"/><path d="M12 12C12 8 9 6 4 6c0 4 3 6 8 6Z" fill="currentColor" fill-opacity=".22"/><path d="M12 14c0-3 3-5 8-5 0 3-3 5-8 5Z" fill="currentColor" fill-opacity=".22"/></svg>',
-  intermediate: // code brackets — write real code
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6l-5 6 5 6"/><path d="M16 6l5 6-5 6"/><path d="M13.5 4l-3 16"/></svg>',
-  expert: // stacked layers — go deep
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5Z" fill="currentColor" fill-opacity=".22"/><path d="M3 12l9 5 9-5"/><path d="M3 16l9 5 9-5"/></svg>',
+  beginner: '<img class="sprite-img" src="media/tier-beginner.png" alt="" width="78" height="200">',
+  intermediate: '<img class="sprite-img" src="media/tier-intermediate.png" alt="" width="77" height="200">',
+  expert: '<img class="sprite-img" src="media/tier-expert.png" alt="" width="78" height="200">',
 };
 const TIER_HUE = { beginner: 150, intermediate: 204, expert: 280 };
 const TIER_KEY = 'codequest-pro-tier';
