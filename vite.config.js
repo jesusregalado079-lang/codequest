@@ -13,6 +13,7 @@ export default defineConfig({
         game: resolve(import.meta.dirname, 'game.html'),
         code: resolve(import.meta.dirname, 'code.html'),
         build: resolve(import.meta.dirname, 'build.html'),
+        pro: resolve(import.meta.dirname, 'pro.html'),
       },
     },
   },
