@@ -45,6 +45,7 @@ defineBlocks(profile.mode === 'sprout');
 const workspace = Blockly.inject('blockly', {
   toolbox: toolboxFor(level.allowedBlocks),
   renderer: 'zelos', // Scratch-style big blocks, best for touch
+  media: 'media/', // ship Blockly's icons ourselves — no third-party fetch
   trashcan: true,
   scrollbars: true,
   sounds: false,

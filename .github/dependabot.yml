@@ -1,0 +1,14 @@
+# Watch our two dependencies (Blockly, js-interpreter) and the deploy workflow
+# for security updates. The deploy runs the test suite, so a bad bump can't
+# silently reach the kids' iPad.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
