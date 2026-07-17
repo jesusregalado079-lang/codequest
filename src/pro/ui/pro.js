@@ -34,6 +34,39 @@ const FLAME_SVG =
 const PLAY_SVG =
   '<svg width="11" height="12" viewBox="0 0 12 14" aria-hidden="true"><path d="M1 1l10 6-10 6z" fill="currentColor"/></svg>';
 
+// one small sprite per tier, shown at the top and swapped as you switch tiers
+const SPRITES = {
+  beginner: // sprout — start from the ground up
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21V10"/><path d="M12 12C12 8 9 6 4 6c0 4 3 6 8 6Z" fill="currentColor" fill-opacity=".22"/><path d="M12 14c0-3 3-5 8-5 0 3-3 5-8 5Z" fill="currentColor" fill-opacity=".22"/></svg>',
+  intermediate: // code brackets — write real code
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6l-5 6 5 6"/><path d="M16 6l5 6-5 6"/><path d="M13.5 4l-3 16"/></svg>',
+  expert: // stacked layers — go deep
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5Z" fill="currentColor" fill-opacity=".22"/><path d="M3 12l9 5 9-5"/><path d="M3 16l9 5 9-5"/></svg>',
+};
+const TIER_HUE = { beginner: 150, intermediate: 204, expert: 280 };
+const TIER_KEY = 'codequest-pro-tier';
+const lastTier = () => {
+  try { return localStorage.getItem(TIER_KEY) || 'beginner'; } catch { return 'beginner'; }
+};
+const rememberTier = (t) => { try { localStorage.setItem(TIER_KEY, t); } catch {} };
+
+// top-of-page tier switcher: current sprite + three tabs
+function tierSwitcher(active) {
+  const tabs = [['beginner', 'Beginner'], ['intermediate', 'Intermediate'], ['expert', 'Expert']];
+  return `
+    <div class="tier-switch" style="--hue:${TIER_HUE[active]}">
+      <span class="tier-sprite">${SPRITES[active]}</span>
+      <div class="seg" role="tablist">
+        ${tabs
+          .map(
+            ([id, label]) =>
+              `<a class="seg-btn${id === active ? ' on' : ''}" href="#/${id}" style="--hue:${TIER_HUE[id]}" role="tab" aria-selected="${id === active}">${label}</a>`
+          )
+          .join('')}
+      </div>
+    </div>`;
+}
+
 /* ---------- markdown-lite renderer (SCHEMA.md subset) ---------- */
 
 const esc = (s) =>
@@ -76,14 +109,13 @@ function router() {
   const [seg, li] = location.hash.replace(/^#\/?/, '').split('/');
   scrollTo(0, 0);
 
-  // top-level tier chooser
+  // root → land on whichever tier you last used (no separate chooser page)
   if (!seg) {
-    document.body.dataset.view = 'tiers';
-    setHue(204);
-    return showTiers();
+    location.hash = `/${lastTier()}`;
+    return;
   }
 
-  // Beginner tier: unit list + reading/quiz lessons
+  // Beginner tier: switcher + lesson list (reading/quiz lessons)
   if (seg === 'beginner') {
     setHue(150);
     const i = Number(li);
@@ -91,19 +123,22 @@ function router() {
       document.body.dataset.view = 'lesson';
       return showBeginnerLesson(i);
     }
-    document.body.dataset.view = 'chapter';
+    rememberTier('beginner');
+    document.body.dataset.view = 'grid';
     return showBeginnerList();
   }
 
-  // Expert tier: its own chapter mosaic
+  // Expert tier: switcher + chapter mosaic
   if (seg === 'expert') {
+    rememberTier('expert');
     document.body.dataset.view = 'grid';
     setHue(280);
     return showExpertGrid();
   }
 
-  // Intermediate tier: the chapter mosaic
+  // Intermediate tier: switcher + chapter mosaic
   if (seg === 'intermediate') {
+    rememberTier('intermediate');
     document.body.dataset.view = 'grid';
     setHue(204);
     return showChapters();
@@ -142,66 +177,23 @@ function statusBar() {
     </div>`;
 }
 
-/* ---------- tier chooser (home) ---------- */
+/* ---------- shared tier page shell (header + switcher + body) ---------- */
 
-function showTiers() {
-  const bDone = beginner.lessons.filter((l) => isComplete(l.id)).length;
-  const iDone = chapters.reduce((n, ch) => n + chapterProgress(ch).done, 0);
-  const iTotal = chapters.reduce((n, ch) => n + ch.lessons.length, 0);
-  const xDone = expertChapters.reduce((n, ch) => n + chapterProgress(ch).done, 0);
-  const xTotal = expertChapters.reduce((n, ch) => n + ch.lessons.length, 0);
-
-  const tiers = [
-    {
-      href: '#/beginner', hue: 150, kicker: 'Start here',
-      title: 'Beginner', desc: 'Plain-English definitions. No typing — just the ideas behind code.',
-      progress: `${bDone} / ${beginner.lessons.length} lessons`, locked: false,
-    },
-    {
-      href: '#/intermediate', hue: 204, kicker: 'Write real code',
-      title: 'Intermediate', desc: 'Type real JavaScript, run it, pass the tests. 8 chapters.',
-      progress: `${iDone} / ${iTotal} lessons`, locked: false,
-    },
-    {
-      href: '#/expert', hue: 280, kicker: 'Go deep',
-      title: 'Expert', desc: 'Recursion, data structures, algorithms, Big-O, and reasoning about code.',
-      progress: `${xDone} / ${xTotal} lessons`, locked: false,
-    },
-  ];
-
+function tierPage(active, bodyHtml) {
   app.innerHTML = `
     <header class="pro-header">
       <h1>CodeQuest <span class="pro-mark">Pro</span></h1>
       ${statusBar()}
     </header>
-    <p class="tier-lead">Pick where you are. You can move between levels any time.</p>
-    <main class="tier-grid">
-      ${tiers
-        .map(
-          (t) => `
-        <a class="tier-card${t.locked ? ' locked' : ''}" href="${t.href}" style="--hue:${t.hue}">
-          <div class="frame-bg"></div>
-          <div class="tier-kicker">${esc(t.kicker)}</div>
-          <h2>${esc(t.title)}</h2>
-          <p class="tier-desc">${esc(t.desc)}</p>
-          <div class="tier-foot">${esc(t.progress)}${t.locked ? '' : ' <span class="go">→</span>'}</div>
-        </a>`
-        )
-        .join('')}
-    </main>`;
+    ${tierSwitcher(active)}
+    ${bodyHtml}`;
 }
 
 /* ---------- Beginner tier ---------- */
 
 function showBeginnerList() {
-  app.innerHTML = `
-    <header class="pro-header">
-      <a class="back" href="#/">← All levels</a>
-      ${statusBar()}
-    </header>
+  const body = `
     <main class="chapter-page" style="--hue:150">
-      <div class="tier-tag">Beginner</div>
-      <h1>${esc(beginner.title)}</h1>
       <p class="chapter-lead">${esc(beginner.tagline)}</p>
       <ol class="lesson-list">
         ${beginner.lessons
@@ -219,6 +211,7 @@ function showBeginnerList() {
           .join('')}
       </ol>
     </main>`;
+  tierPage('beginner', body);
 }
 
 function showBeginnerLesson(i) {
@@ -318,16 +311,11 @@ function showBeginnerLesson(i) {
 
 /* ---------- code-chapter mosaic (shared by Intermediate + Expert) ---------- */
 
-// Render a mosaic of chapters into rows of 3. `label` is shown as the tier name.
-function chapterMosaic(list, label) {
+// Just the grid of chapter frames, rows of 3. `unitWord` labels the kicker.
+function chapterGrid(list, unitWord) {
   const rows = [];
   for (let k = 0; k < list.length; k += 3) rows.push(list.slice(k, k + 3));
   return `
-    <header class="pro-header">
-      <a class="back" href="#/">← All levels</a>
-      <h1 class="tier-h1">${esc(label)}</h1>
-      ${statusBar()}
-    </header>
     <main class="chapter-grid">
       ${rows
         .map(
@@ -345,7 +333,7 @@ function chapterMosaic(list, label) {
                 <i class="tick tl"></i><i class="tick br"></i>
                 <div class="frame-body">
                   <div class="frame-kicker">
-                    <span>${label === 'Expert' ? 'Unit' : 'Ch'} ${String(n + 1).padStart(2, '0')}</span>
+                    <span>${unitWord} ${String(n + 1).padStart(2, '0')}</span>
                     <span class="ch-badge">${earned ? '●' : '○'} ${esc(ch.badge.name)}</span>
                   </div>
                   <h2>${esc(ch.title)}</h2>
@@ -364,11 +352,11 @@ function chapterMosaic(list, label) {
 }
 
 function showChapters() {
-  app.innerHTML = chapterMosaic(chapters, 'Intermediate');
+  tierPage('intermediate', chapterGrid(chapters, 'Ch'));
 }
 
 function showExpertGrid() {
-  app.innerHTML = chapterMosaic(expertChapters, 'Expert');
+  tierPage('expert', chapterGrid(expertChapters, 'Unit'));
 }
 
 /* ---------- chapter view (intro + lesson list) ---------- */
