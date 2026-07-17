@@ -1,13 +1,25 @@
 # 🚀 CodeQuest
 
+Two coding courses, one static site, no accounts and no server:
+
+| | Who | Where |
+|---|---|---|
+| **CodeQuest** | kids 5–10 — drag blocks that *are* JavaScript | [`/`](https://jesusregalado079-lang.github.io/codequest/) |
+| **CodeQuest Pro** | adults — read, type real code, no blocks | [`/pro.html`](https://jesusregalado079-lang.github.io/codequest/pro.html) |
+
+Open either in Safari → Share → **Add to Home Screen** and it behaves like a
+native app, offline included.
+
+They share a repo, a build and a test gate — nothing else. Different runtimes,
+different storage keys, different look. See [CodeQuest Pro](#-codequest-pro) below.
+
+---
+
+# 🐾 CodeQuest (kids)
+
 A game that teaches kids to actually code — from "the robot walks one square" to
 typing real JavaScript by hand. Built for two kids (ages 5–7 and 8–10) sharing
 one iPad.
-
-**Live:** https://jesusregalado079-lang.github.io/codequest/
-
-No accounts, no login, no server, no cost. Open it in Safari → Share → **Add to
-Home Screen** and it behaves like a native app, offline included.
 
 ---
 
@@ -44,13 +56,14 @@ live, from the very first level. Nothing here is pretend.
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm test         # every level solvable, quizzes valid, error messages helpful
+npm run dev      # http://localhost:5173  (Pro: /pro.html)
+npm test         # kids: every level solvable, quizzes valid, errors helpful
+                 # pro:  every lesson solution passes its own tests
 npm run build
 ```
 
 Push to `main` → GitHub Actions runs the tests, builds, and deploys to Pages.
-A red test blocks the deploy.
+A red test blocks the deploy — for *either* app.
 
 ---
 
@@ -134,7 +147,85 @@ World 4 because building is the reward for learning, not for finishing).
 - Safari evicts storage for sites untouched ~7 days. Home-screen web apps are
   exempt — which is why Add to Home Screen matters.
 
+---
+
+# ⌨️ CodeQuest Pro
+
+The adult track. Same repo, opposite premise: no blocks, no grid, no robot — you
+read, you type real JavaScript, you run it. Built for someone teaching themselves
+toward computer engineering, who would rather read a chapter than watch a video.
+
+**Live:** https://jesusregalado079-lang.github.io/codequest/pro.html
+
+| Ch | Title | Concept |
+|---|---|---|
+| 1 | Values & Variables | types, `const`/`let`, expressions |
+| 2 | Making Decisions | comparisons, truthiness, `if`/`else`, guard clauses |
+| 3 | Loops & Repetition | `while`/`for`, accumulators, off-by-one |
+| 4 | Functions | params/returns, arrows, scope, closures, purity |
+| 5 | Arrays & Objects | collections, references, destructuring |
+| 6 | Working With Text & Data | string methods, parsing, JSON |
+| 7 | Thinking in Higher Order | callbacks, `map`/`filter`/`reduce`, comparators |
+| 8 | The Engineer's Toolkit | binary & IEEE 754, Big-O, debugging, reading code |
+
+48 lessons, 6 per chapter, each ending in a capstone. Every lesson is
+**reading first**: several paragraphs of prose explaining the mental model,
+*then* a typed challenge, then tests. Three hints per lesson, escalating from a
+nudge to an all-but-typing-it walkthrough, each costing 2 XP. Payoffs are XP, a
+rank ladder (Newcomer → Engineer-in-Training), a badge per chapter, and a streak.
+
+**How Pro differs from the kid app — this matters:**
+
+|  | Kids | Pro |
+|---|---|---|
+| Runtime | js-interpreter, **ES5 only** | real `eval` in a **Worker**, modern JS |
+| Runaway loops | interpreter step cap | worker terminated after 2 s |
+| CSP | `script-src 'self'` | adds `'unsafe-eval'` + `worker-src` |
+| Storage | `codequest-v1` | `codequest-pro-v1` |
+| Look | bright, blocky, canvas hero | OLED dark, serif prose, particle backdrop |
+
+```
+pro.html                    the whole track (hash-routed SPA)
+src/pro/SCHEMA.md           ← the authoring contract. Read before writing content.
+src/pro/chapters/chN.js     all content: reading, task, starter, tests, hints, solution
+src/pro/engine/runner.js    run(userCode, tests) → {logs, results, timedOut, userError}
+src/pro/engine/runner-worker.js   user code + each test concatenated, one shared assert()
+src/pro/ui/pro.js           routing, markdown-lite renderer, editor, hints, payoffs
+src/pro/ui/aether.js        canvas particle backdrop; hue follows the chapter
+src/pro/progress.js         XP, ranks, hints used, badges, streak
+```
+
+## Adding a Pro chapter
+
+1. Read `src/pro/SCHEMA.md` — it defines the lesson shape and the execution model
+   (tests see your top-level bindings; `assert(cond, msg)` is in scope).
+2. Write `src/pro/chapters/chN.js`, register it in `chapters/index.js`.
+3. Give it a hue in `HUES` in `src/pro/ui/pro.js` — it colours the frame, the
+   accents and the backdrop.
+4. `npm test` proves every solution passes its own tests and that the starter
+   code *doesn't* (a lesson you can't fail teaches nothing).
+
+## Pro gotchas
+
+- **`body` must stay transparent.** The base colour lives on `html`. Body isn't a
+  stacking context, so an opaque `body` background paints *over* the negative-z
+  backdrop layers (`body::before` washes, `#aether`, `body::after` grain) and
+  hides all of them. This bug shipped once already; it looks like "the CSS did
+  nothing".
+- **Modern JS is fine here, and only here.** Pro never touches js-interpreter.
+  Don't copy Pro's `const`/arrow snippets into kid lessons — see the ES5 gotcha
+  above.
+- **The backdrop dims where you read** (`body[data-view]`: grid → chapter →
+  lesson). A particle field behind ten paragraphs of prose fights the text.
+- **Tests must not depend on timers, the DOM, or randomness** — they run
+  concatenated after the user's code in a worker with no page access.
+
+---
+
 ## Credit
 
 Designed and built with Claude Code. Character, armor and world art are original
-canvas drawings — no third-party game assets or trademarks.
+canvas drawings — no third-party game assets or trademarks. Pro's chapter frames
+and particle backdrop are original vanilla-JS/CSS takes on two 21st.dev community
+components (`dynamic-frame-layout`, `aether-flow-hero`) — no code or dependencies
+from either.
