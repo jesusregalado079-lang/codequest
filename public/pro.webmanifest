@@ -1,0 +1,15 @@
+{
+  "name": "CodeQuest Pro",
+  "short_name": "CodeQuest Pro",
+  "description": "Read, type real JavaScript, run it, level up.",
+  "start_url": "./pro.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#10141b",
+  "theme_color": "#10141b",
+  "icons": [
+    { "src": "apple-touch-icon-pro.png", "sizes": "180x180", "type": "image/png", "purpose": "any" },
+    { "src": "media/pro-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

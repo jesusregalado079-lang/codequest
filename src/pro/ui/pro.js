@@ -99,11 +99,6 @@ function showChapters() {
       <h1>CodeQuest <span class="pro-mark">Pro</span></h1>
       ${statusBar()}
     </header>
-    <section class="hero">
-      <img class="hero-img" src="media/pro-bg.jpg" width="455" height="494"
-           alt="CodeQuest Pro emblem — three gold pyramids inside a ring of blue energy" />
-      <p class="hero-tagline">Read. Type real code. Run it. Level up.</p>
-    </section>
     <main class="chapter-grid">
       ${[chapters.slice(0, 3), chapters.slice(3, 6), chapters.slice(6)]
         .map(
