@@ -22,7 +22,7 @@ self.addEventListener('fetch', (e) => {
       caches.open(CACHE).then(async (cache) => {
         try {
           const res = await fetch(e.request);
-          if (res.ok) cache.put(e.request, res.clone());
+          if (res.ok && !res.redirected) cache.put(e.request, res.clone());
           return res;
         } catch {
           return (await cache.match(e.request)) || (await cache.match('index.html'));
@@ -38,7 +38,7 @@ self.addEventListener('fetch', (e) => {
       const cached = await cache.match(e.request);
       const fresh = fetch(e.request)
         .then((res) => {
-          if (res.ok) cache.put(e.request, res.clone());
+          if (res.ok && !res.redirected) cache.put(e.request, res.clone());
           return res;
         })
         .catch(() => cached);

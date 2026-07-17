@@ -27,6 +27,13 @@ function save(state) {
 }
 
 const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
+// Local calendar day before today. Uses date arithmetic (not now-24h) so the
+// two DST-transition days, which are 23h/25h long, don't skip or repeat a day.
+const yesterday = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toLocaleDateString('en-CA');
+};
 
 export function isComplete(lessonId) {
   return lessonId in load().completed;
@@ -38,8 +45,7 @@ export function completeLesson(lessonId, xp) {
   s.completed[lessonId] = xp;
   const t = today();
   if (s.streak.last !== t) {
-    const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
-    s.streak.count = s.streak.last === yesterday ? s.streak.count + 1 : 1;
+    s.streak.count = s.streak.last === yesterday() ? s.streak.count + 1 : 1;
     s.streak.last = t;
   }
   save(s);
@@ -72,8 +78,7 @@ export function rank(xp = totalXp()) {
 export function streakCount() {
   const { count, last } = load().streak;
   if (!last) return 0;
-  const yesterday = new Date(Date.now() - 86400000).toLocaleDateString('en-CA');
-  return last === today() || last === yesterday ? count : 0;
+  return last === today() || last === yesterday() ? count : 0;
 }
 
 export function chapterProgress(chapter) {

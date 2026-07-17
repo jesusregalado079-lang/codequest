@@ -6,7 +6,7 @@ function fmt(v) {
   try {
     return JSON.stringify(v) ?? String(v);
   } catch {
-    return String(v);
+    try { return String(v); } catch { return '[unprintable]'; } // never let logging throw
   }
 }
 

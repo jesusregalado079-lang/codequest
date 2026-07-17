@@ -12,11 +12,6 @@ import {
 const app = document.getElementById('app');
 const beginner = beginnerUnits[0]; // one Foundations unit for now
 
-// XP earned across every tier, to show a tier's own progress
-const tierXp = (units) =>
-  units.reduce((sum, u) => sum + u.lessons.filter((l) => isComplete(l.id))
-    .reduce((s, l) => s + l.xp, 0), 0);
-
 // one accent hue per chapter — drives frame gradients, ticks, and lesson accents
 const HUES = [204, 262, 36, 152, 326, 184, 58, 12];
 const EXPERT_HUES = [280, 330, 190, 45, 165, 8];
@@ -44,7 +39,10 @@ const SPRITES = {
 const TIER_HUE = { beginner: 150, intermediate: 204, expert: 280 };
 const TIER_KEY = 'codequest-pro-tier';
 const lastTier = () => {
-  try { return localStorage.getItem(TIER_KEY) || 'beginner'; } catch { return 'beginner'; }
+  try {
+    const t = localStorage.getItem(TIER_KEY);
+    return t in TIER_HUE ? t : 'beginner'; // guard: never redirect to an invalid tier
+  } catch { return 'beginner'; }
 };
 const rememberTier = (t) => { try { localStorage.setItem(TIER_KEY, t); } catch {} };
 
@@ -117,7 +115,7 @@ function router() {
   if (seg === 'beginner') {
     setHue(150);
     const i = Number(li);
-    if (li !== undefined && beginner.lessons[i]) {
+    if (li !== undefined && li !== '' && beginner.lessons[i]) {
       document.body.dataset.view = 'lesson';
       return showBeginnerLesson(i);
     }
@@ -147,7 +145,7 @@ function router() {
   if (ch) {
     setHue(hueOf(ch));
     const i = Number(li);
-    if (li !== undefined && ch.lessons[i]) {
+    if (li !== undefined && li !== '' && ch.lessons[i]) {
       document.body.dataset.view = 'lesson';
       return showLesson(ch, i);
     }
