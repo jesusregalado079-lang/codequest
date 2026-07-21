@@ -219,6 +219,39 @@ button { font-family: inherit; font-size: 1rem; cursor: pointer; }
 }
 .chapter-lead { color: var(--muted); max-width: 66ch; margin: 0 0 8px; }
 
+/* ---------- Studies (external resources) ---------- */
+.studies-link {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.study-group { margin-top: 28px; max-width: 72ch; }
+.study-group > h2 { font-size: 1.2rem; letter-spacing: -0.01em; margin: 0 0 4px; }
+.study-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.study-card {
+  display: block;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 2px solid hsl(48 80% 55%);
+  color: var(--text);
+  transition: border-color 0.2s, background 0.2s;
+}
+.study-card:hover { border-color: hsl(48 80% 55% / 0.7); background: var(--panel-2); text-decoration: none; }
+.study-by {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: hsl(48 60% 62%);
+}
+.study-name { font-size: 1.05rem; font-weight: 600; margin: 3px 0 5px; }
+.study-name .ext { color: var(--muted); font-size: 0.85em; }
+.study-note { color: var(--muted); font-size: 0.92rem; line-height: 1.5; }
+.study-source { font-size: 0.85rem; color: var(--muted); margin-top: 12px; }
+
 /* ---------- Beginner lesson (reading + multiple choice) ---------- */
 .beginner-lesson { max-width: 72ch; }
 .beginner-lesson h1 { font-size: 1.55rem; margin-top: 0; letter-spacing: -0.02em; }

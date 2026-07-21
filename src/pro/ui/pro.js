@@ -2,6 +2,7 @@
 import chapters from '../chapters/index.js';
 import beginnerUnits from '../beginner/foundations.js';
 import expertChapters from '../expert/index.js';
+import studies from '../resources.js';
 import { run } from '../engine/runner.js';
 import { setHue } from './aether.js';
 import {
@@ -124,6 +125,13 @@ function router() {
     return showBeginnerList();
   }
 
+  // Studies: curated external study links
+  if (seg === 'resources') {
+    document.body.dataset.view = 'chapter';
+    setHue(48);
+    return showResources();
+  }
+
   // Expert tier: switcher + chapter mosaic
   if (seg === 'expert') {
     rememberTier('expert');
@@ -179,10 +187,54 @@ function tierPage(active, bodyHtml) {
   app.innerHTML = `
     <header class="pro-header">
       <h1>CodeQuest <span class="pro-mark">Pro</span></h1>
+      <a class="studies-link" href="#/resources">Studies ↗</a>
       ${statusBar()}
     </header>
     ${tierSwitcher(active)}
     ${bodyHtml}`;
+}
+
+/* ---------- Studies (curated external links) ---------- */
+
+function showResources() {
+  const groups = studies
+    .map(
+      (g) => `
+      <section class="study-group">
+        <h2>${esc(g.title)}</h2>
+        <p class="chapter-lead">${esc(g.blurb)}</p>
+        <div class="study-list">
+          ${g.links
+            .map(
+              (l) => `
+            <a class="study-card" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
+              <div class="study-by">${esc(l.by)}</div>
+              <div class="study-name">${esc(l.name)} <span class="ext">↗</span></div>
+              <div class="study-note">${esc(l.note)}</div>
+            </a>`
+            )
+            .join('')}
+        </div>
+        ${
+          g.source
+            ? `<p class="study-source">Source: <a href="${esc(g.source.url)}" target="_blank" rel="noopener noreferrer">${esc(g.source.label)}</a></p>`
+            : ''
+        }
+      </section>`
+    )
+    .join('');
+
+  app.innerHTML = `
+    <header class="pro-header">
+      <a class="back" href="#/">← Back to lessons</a>
+      ${statusBar()}
+    </header>
+    <main class="chapter-page" style="--hue:48">
+      <div class="tier-tag">Studies</div>
+      <h1>Extra Studies</h1>
+      <p class="chapter-lead">Hand-picked resources to study alongside the course. External links open in a new tab.</p>
+      ${groups}
+    </main>`;
 }
 
 /* ---------- Beginner tier ---------- */
