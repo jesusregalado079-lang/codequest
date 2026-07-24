@@ -12,7 +12,7 @@ if (!world?.quiz) location.replace('index.html');
 const worldNumber = WORLDS.indexOf(world) + 1;
 
 // quiz unlocks only after the world's boss is beaten
-if (profile && world && !(profile.stars[world.levels.at(-1).id] > 0)) {
+if (profile && world && !(profile.stars[world.levels[world.levels.length - 1].id] > 0)) {
   location.replace('index.html');
 }
 

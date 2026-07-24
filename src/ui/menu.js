@@ -170,7 +170,7 @@ function showMap() {
       grid.append(b);
     });
     if (world.quiz) {
-      const bossDone = (p.stars[world.levels.at(-1).id] ?? 0) > 0;
+      const bossDone = (p.stars[world.levels[world.levels.length - 1].id] ?? 0) > 0;
       const quizStars = p.stars[`${world.id}-quiz`] ?? 0;
       const qb = el(`<button class="level-btn quiz ${bossDone ? '' : 'locked'}">
         ${bossDone ? '📝' : '🔒'}
@@ -179,7 +179,7 @@ function showMap() {
       qb.onclick = () => { sounds.tap(); location.href = `quiz.html?world=${world.id}`; };
       grid.append(qb);
     }
-    const recapReady = (p.stars[world.levels.at(-1).id] ?? 0) > 0;
+    const recapReady = (p.stars[world.levels[world.levels.length - 1].id] ?? 0) > 0;
     if (recapReady) {
       const r = el(`<p><button class="link-btn">🎓 review: what you learned</button></p>`);
       r.querySelector('button').onclick = () => {

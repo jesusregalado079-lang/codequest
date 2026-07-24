@@ -21,7 +21,7 @@ export function levelUrl(world, level, profile) {
 
 // Expert mode is earned: it opens once a whole world has been finished.
 export function expertUnlocked(profile) {
-  return WORLDS.some((w) => w.levels && (profile.stars[w.levels.at(-1).id] ?? 0) > 0);
+  return WORLDS.some((w) => w.levels && (profile.stars[w.levels[w.levels.length - 1].id] ?? 0) > 0);
 }
 
 export function getWorld(id) {
@@ -44,7 +44,7 @@ export function worldUnlocked(worldIndex, profile) {
   const world = WORLDS[worldIndex];
   if (world.unlockAfter) return (profile.stars[world.unlockAfter] ?? 0) > 0;
   const prev = WORLDS[worldIndex - 1];
-  return (profile.stars[prev.levels.at(-1).id] ?? 0) > 0;
+  return (profile.stars[prev.levels[prev.levels.length - 1].id] ?? 0) > 0;
 }
 
 export function levelUnlocked(world, levelIndex, profile) {
