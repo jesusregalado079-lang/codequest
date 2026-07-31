@@ -10,7 +10,7 @@
     "test": "node test/engine.test.js && node test/pro.test.js"
   },
   "dependencies": {
-    "blockly": "^13.1.1",
+    "blockly": "^13.2.0",
     "js-interpreter": "^6.0.2"
   },
   "devDependencies": {
