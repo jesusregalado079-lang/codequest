@@ -8,6 +8,7 @@ import { setHue } from './aether.js';
 import {
   isComplete, completeLesson, hintsUsed, revealHint,
   totalXp, rank, streakCount, chapterProgress, badgeEarned,
+  isStudyDone, toggleStudyDone,
 } from '../progress.js';
 
 const app = document.getElementById('app');
@@ -198,21 +199,26 @@ function tierPage(active, bodyHtml) {
 
 function showResources() {
   const groups = studies
-    .map(
-      (g) => `
+    .map((g) => {
+      const doneCount = g.links.filter((l) => isStudyDone(l.url)).length;
+      return `
       <section class="study-group">
-        <h2>${esc(g.title)}</h2>
+        <h2>${esc(g.title)} <span class="study-group-progress">${doneCount}/${g.links.length} studied</span></h2>
         <p class="chapter-lead">${esc(g.blurb)}</p>
         <div class="study-list">
           ${g.links
-            .map(
-              (l) => `
-            <a class="study-card" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
-              <div class="study-by">${esc(l.by)}</div>
-              <div class="study-name">${esc(l.name)} <span class="ext">↗</span></div>
-              <div class="study-note">${esc(l.note)}</div>
-            </a>`
-            )
+            .map((l) => {
+              const done = isStudyDone(l.url);
+              return `
+            <div class="study-card${done ? ' done' : ''}">
+              <button class="study-check" data-url="${esc(l.url)}" aria-pressed="${done}" aria-label="Mark ${esc(l.name)} as ${done ? 'not studied' : 'studied'}">${done ? '✓' : ''}</button>
+              <a class="study-link" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
+                <div class="study-by">${esc(l.by)}</div>
+                <div class="study-name">${esc(l.name)} <span class="ext">↗</span></div>
+                <div class="study-note">${esc(l.note)}</div>
+              </a>
+            </div>`;
+            })
             .join('')}
         </div>
         ${
@@ -220,8 +226,8 @@ function showResources() {
             ? `<p class="study-source">Source: <a href="${esc(g.source.url)}" target="_blank" rel="noopener noreferrer">${esc(g.source.label)}</a></p>`
             : ''
         }
-      </section>`
-    )
+      </section>`;
+    })
     .join('');
 
   app.innerHTML = `
@@ -232,9 +238,16 @@ function showResources() {
     <main class="chapter-page" style="--hue:48">
       <div class="tier-tag">Studies</div>
       <h1>Extra Studies</h1>
-      <p class="chapter-lead">Hand-picked resources to study alongside the course. External links open in a new tab.</p>
+      <p class="chapter-lead">Hand-picked resources to study alongside the course. External links open in a new tab. Check one off once you've done it — that's saved on this device.</p>
       ${groups}
     </main>`;
+
+  app.querySelectorAll('.study-check').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      toggleStudyDone(btn.dataset.url);
+      showResources();
+    });
+  });
 }
 
 /* ---------- Beginner tier ---------- */

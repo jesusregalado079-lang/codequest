@@ -228,18 +228,39 @@ button { font-family: inherit; font-size: 1rem; cursor: pointer; }
   white-space: nowrap;
 }
 .study-group { margin-top: 28px; max-width: 72ch; }
-.study-group > h2 { font-size: 1.2rem; letter-spacing: -0.01em; margin: 0 0 4px; }
+.study-group > h2 { font-size: 1.2rem; letter-spacing: -0.01em; margin: 0 0 4px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.study-group-progress { font-family: var(--mono); font-size: 0.7rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
 .study-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
 .study-card {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   padding: 14px 16px;
   background: var(--panel);
   border: 1px solid var(--line);
   border-left: 2px solid hsl(48 80% 55%);
-  color: var(--text);
   transition: border-color 0.2s, background 0.2s;
 }
-.study-card:hover { border-color: hsl(48 80% 55% / 0.7); background: var(--panel-2); text-decoration: none; }
+.study-card:hover { border-color: hsl(48 80% 55% / 0.7); background: var(--panel-2); }
+.study-card.done { border-left-color: hsl(140 60% 45%); }
+.study-check {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: hsl(140 60% 55%);
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.study-check:hover { border-color: hsl(140 60% 55% / 0.7); }
+.study-card.done .study-check { background: hsl(140 60% 45% / 0.18); border-color: hsl(140 60% 45% / 0.6); }
+.study-link { display: block; flex: 1; min-width: 0; color: var(--text); }
+.study-link:hover { text-decoration: none; }
 .study-by {
   font-family: var(--mono);
   font-size: 0.7rem;

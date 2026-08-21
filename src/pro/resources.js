@@ -39,4 +39,42 @@ export default [
       },
     ],
   },
+  {
+    title: 'Top 5 Cybersecurity Certs for Beginners (2026)',
+    blurb:
+      'Beginner-friendly certs recommended for a first cybersecurity résumé — paid, not free like the group above. Note: a commenter on the source post pushed back on TryHackMe certs specifically ("no way we\'re out here recommending THM") — some in the industry rate CompTIA Security+ and BTL1 as more widely recognized than TryHackMe\'s newer certs. Worth weighing before paying.',
+    source: { label: '@withlove.sandra · Instagram carousel', url: 'https://www.instagram.com/p/DcQ5uFZFisu/' },
+    links: [
+      {
+        name: 'Security Analyst Level 1 (SAL1)',
+        by: 'TryHackMe',
+        url: 'https://tryhackme.com/certification/security-analyst-level-1',
+        note: '~20-30hrs, hands-on labs. $349 (voucher + 3mo premium), or $297 with existing premium. Valid 3 years.',
+      },
+      {
+        name: 'Blue Team Level 1 (BTL1)',
+        by: 'Security Blue Team',
+        url: 'https://securityblue.team/btl1',
+        note: '~30-40hrs, SOC/blue-team focused. £399 (~$490), includes 4mo access + one free retake.',
+      },
+      {
+        name: 'Security+',
+        by: 'CompTIA',
+        url: 'https://www.comptia.org/certifications/security',
+        note: '~50-60hrs, the industry-standard vendor-neutral baseline. Widely recognized by employers; DoD 8570.01-M approved.',
+      },
+      {
+        name: 'Google Cybersecurity Certificate',
+        by: 'Google (Coursera)',
+        url: 'https://grow.google/certificates/cybersecurity/',
+        note: '~6 months at 10hrs/week. No experience required. Coursera subscription pricing, not free.',
+      },
+      {
+        name: 'Certified Junior Cybersecurity Associate (CJCA)',
+        by: 'Hack The Box',
+        url: 'https://academy.hackthebox.com/preview/certifications/htb-certified-junior-cybersecurity-associate',
+        note: '~20-30hrs, hands-on exam in a live range. ~$490 (Silver Annual subscription includes one voucher).',
+      },
+    ],
+  },
 ];

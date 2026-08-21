@@ -11,7 +11,7 @@ const RANKS = [
   [1000, 'Engineer-in-Training'],
 ];
 
-const empty = () => ({ completed: {}, hintsUsed: {}, streak: { count: 0, last: null } });
+const empty = () => ({ completed: {}, hintsUsed: {}, streak: { count: 0, last: null }, studyDone: {} });
 
 function load() {
   try {
@@ -79,6 +79,17 @@ export function streakCount() {
   const { count, last } = load().streak;
   if (!last) return 0;
   return last === today() || last === yesterday() ? count : 0;
+}
+
+export function isStudyDone(url) {
+  return !!load().studyDone[url];
+}
+
+export function toggleStudyDone(url) {
+  const s = load();
+  if (s.studyDone[url]) delete s.studyDone[url];
+  else s.studyDone[url] = true;
+  save(s);
 }
 
 export function chapterProgress(chapter) {
