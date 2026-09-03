@@ -704,3 +704,74 @@ button { font-family: inherit; font-size: 1rem; cursor: pointer; }
   .frame:hover, .frame:focus-visible { flex-grow: 1; }
   .xp-pop, .badge-emoji, .hint, .badge-card, .rank-banner { animation: none; }
 }
+
+/* ---------- Career Path: phase metadata, deliverables, lanes ---------- */
+.study-group.lane > h2 { color: hsl(210 90% 72%); }
+.study-metarow { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; }
+.study-meta, .study-lane, .study-hrs, .study-codex {
+  font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 3px; border: 1px solid var(--line-strong); color: var(--muted);
+}
+.study-lane { border-color: hsl(210 90% 65% / 0.6); color: hsl(210 90% 72%); }
+.study-hrs { border: 0; padding: 0; margin-left: 6px; text-transform: none; letter-spacing: 0; }
+.study-codex { border-color: hsl(210 90% 65% / 0.5); color: hsl(210 90% 72%); margin-left: 6px; }
+.study-outputs-h { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); margin: 18px 0 0; }
+.study-outputs .study-card { border-left-color: hsl(140 60% 45% / 0.45); padding-top: 10px; padding-bottom: 10px; }
+.study-outputs .study-card.done { border-left-color: hsl(140 60% 45%); }
+.study-static { cursor: default; }
+.study-static .study-name { font-size: 0.95rem; font-weight: 500; margin: 2px 0; }
+.study-outputs .study-card.done .study-name { color: var(--muted); text-decoration: line-through; text-decoration-color: hsl(140 60% 45% / 0.6); }
+
+/* ---------- Career Path: sub-nav ---------- */
+.career-nav { display: flex; gap: 4px; }
+.career-nav a { font-family: var(--mono); font-size: 0.78rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 4px 10px; border-radius: 4px; border: 1px solid transparent; }
+.career-nav a:hover { color: var(--accent); border-color: var(--line-strong); text-decoration: none; }
+
+/* ---------- Career Path: progress page ---------- */
+.prog-page h1 { margin-bottom: 4px; }
+.prog-h2 { font-size: 1.2rem; letter-spacing: -0.01em; margin: 32px 0 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.prog-overall { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 18px 0 10px; }
+.prog-big { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 12px 14px; }
+.prog-big b { display: block; font-size: 1.6rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.prog-big b small { font-size: 0.95rem; color: var(--muted); font-weight: 500; }
+.prog-big span { display: block; font-size: 0.8rem; color: var(--muted); margin-top: 3px; }
+.prog-bar { height: 8px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.prog-bar.big { height: 12px; margin-bottom: 8px; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, hsl(152 60% 45%), hsl(152 70% 60%)); border-radius: 999px; transition: width .3s ease; }
+.prog-list { display: flex; flex-direction: column; gap: 8px; max-width: 72ch; }
+.prog-row { display: grid; grid-template-columns: 40px 1fr 56px; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid hsl(152 60% 45% / 0.5); background: var(--panel); border-radius: 6px; color: var(--text); }
+.prog-row:hover { text-decoration: none; border-color: var(--line-strong); background: var(--panel-2); }
+.prog-row.lane { border-left-color: hsl(210 90% 65% / 0.6); }
+.prog-row.current { border-left-color: var(--gold); background: hsl(48 80% 55% / 0.06); }
+.prog-row.complete { border-left-color: var(--green); }
+.prog-n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: hsl(152 60% 45% / 0.18); color: hsl(152 70% 70%); font-variant-numeric: tabular-nums; }
+.prog-row.lane .prog-n { background: hsl(210 90% 65% / 0.18); color: hsl(210 90% 75%); }
+.prog-row.current .prog-n { background: hsl(48 80% 55% / 0.22); color: var(--gold); }
+.prog-row.complete .prog-n { background: hsl(140 60% 45% / 0.22); color: var(--green); }
+.prog-title { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.prog-here { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); border: 1px solid hsl(48 80% 55% / 0.6); padding: 1px 6px; border-radius: 3px; }
+.prog-meta { font-size: 0.8rem; color: var(--muted); margin: 2px 0 6px; font-variant-numeric: tabular-nums; }
+.prog-pct { text-align: right; font-family: var(--mono); font-size: 0.9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.prog-row.complete .prog-pct { color: var(--green); }
+
+.ms-list { display: flex; flex-direction: column; gap: 6px; max-width: 72ch; }
+.ms-row { display: grid; grid-template-columns: 26px 1fr; gap: 12px; align-items: start; padding: 10px 12px; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; }
+.ms-row.big { border-color: var(--line-strong); }
+.ms-row.reached { border-color: hsl(140 60% 45% / 0.6); }
+.ms-check { width: 22px; height: 22px; border-radius: 5px; border: 1px solid var(--line-strong); display: grid; place-items: center; color: var(--green); font-weight: 700; font-size: 0.85rem; margin-top: 2px; }
+.ms-row.reached .ms-check { background: hsl(140 60% 45% / 0.18); border-color: hsl(140 60% 45% / 0.6); }
+.ms-when { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.ms-label { font-weight: 600; }
+.ms-row.big .ms-label { color: var(--gold); }
+.ms-row.reached .ms-label { color: var(--green); }
+.ms-ev { font-size: 0.85rem; color: var(--muted); }
+
+.gate-panel { margin-top: 14px; max-width: 72ch; border: 1px solid hsl(48 80% 55% / 0.4); border-radius: 6px; padding: 14px 16px; background: var(--panel); }
+.gate-panel.open { border-color: hsl(140 60% 45% / 0.7); }
+.gate-first { font-weight: 600; margin-bottom: 6px; }
+.gate-ul { margin: 0 0 12px; padding-left: 18px; color: var(--text); font-size: 0.92rem; }
+.gate-ul li { margin-bottom: 4px; }
+@media (max-width: 720px) {
+  .prog-row { grid-template-columns: 34px 1fr 48px; }
+  .career-nav { order: 3; width: 100%; }
+}

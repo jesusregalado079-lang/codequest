@@ -3,7 +3,7 @@ import chapters from '../chapters/index.js';
 import beginnerUnits from '../beginner/foundations.js';
 import expertChapters from '../expert/index.js';
 import studies from '../resources.js';
-import careerPath from '../career-path.js';
+import careerPath, { milestones, gate } from '../career-path.js';
 import { run } from '../engine/runner.js';
 import { setHue } from './aether.js';
 import {
@@ -141,6 +141,13 @@ function router() {
     return showCareerPath();
   }
 
+  // Career Path progress: where you are, computed from the same checkboxes
+  if (seg === 'career-progress') {
+    document.body.dataset.view = 'chapter';
+    setHue(152);
+    return showCareerProgress();
+  }
+
   // Expert tier: switcher + chapter mosaic
   if (seg === 'expert') {
     rememberTier('expert');
@@ -206,13 +213,39 @@ function tierPage(active, bodyHtml) {
 
 /* ---------- shared: study-group cards (used by Studies and Career Path) ---------- */
 
+// Progress keys: resources are keyed by URL; deliverables ("outputs") by `out:<key>`;
+// gate conditions by `gate:<key>`. All go through the same isStudyDone/toggleStudyDone.
+const outKey = (o) => `out:${o.key}`;
+const gateKey = (c) => `gate:${c.key}`;
+
+function groupItems(g) {
+  // Every checkable thing in a group, in display order.
+  const links = g.links.map((l) => ({ key: l.url, hours: l.hours || 0 }));
+  const outs = (g.outputs || []).map((o) => ({ key: outKey(o), hours: 0 }));
+  return [...links, ...outs];
+}
+
+function groupStats(g) {
+  const items = groupItems(g);
+  const done = items.filter((i) => isStudyDone(i.key));
+  const hoursTotal = items.reduce((s, i) => s + i.hours, 0);
+  const hoursDone = done.reduce((s, i) => s + i.hours, 0);
+  return { done: done.length, total: items.length, hoursDone, hoursTotal, pct: items.length ? Math.round((done.length / items.length) * 100) : 0 };
+}
+
 function renderStudyGroups(groups) {
   return groups
     .map((g) => {
-      const doneCount = g.links.filter((l) => isStudyDone(l.url)).length;
+      const st = groupStats(g);
+      const meta = [
+        g.lane ? '<span class="study-lane">income lane</span>' : '',
+        g.months ? `<span class="study-meta">months ${esc(g.months)}</span>` : '',
+        g.hours ? `<span class="study-meta">~${g.hours[0]}–${g.hours[1]} hrs</span>` : '',
+      ].join('');
       return `
-      <section class="study-group">
-        <h2>${esc(g.title)} <span class="study-group-progress">${doneCount}/${g.links.length} studied</span></h2>
+      <section class="study-group${g.lane ? ' lane' : ''}">
+        <h2>${esc(g.title)} <span class="study-group-progress">${st.done}/${st.total} done</span></h2>
+        ${meta ? `<div class="study-metarow">${meta}</div>` : ''}
         <p class="chapter-lead">${esc(g.blurb)}</p>
         <div class="study-list">
           ${g.links
@@ -222,7 +255,7 @@ function renderStudyGroups(groups) {
             <div class="study-card${done ? ' done' : ''}">
               <button class="study-check" data-url="${esc(l.url)}" aria-pressed="${done}" aria-label="Mark ${esc(l.name)} as ${done ? 'not studied' : 'studied'}">${done ? '✓' : ''}</button>
               <a class="study-link" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
-                <div class="study-by">${esc(l.by)}</div>
+                <div class="study-by">${esc(l.by)}${l.hours ? ` <span class="study-hrs">~${l.hours}h</span>` : ''}${l.codex ? ' <span class="study-codex">codex addition</span>' : ''}</div>
                 <div class="study-name">${esc(l.name)} <span class="ext">↗</span></div>
                 <div class="study-note">${esc(l.note)}</div>
               </a>
@@ -230,6 +263,24 @@ function renderStudyGroups(groups) {
             })
             .join('')}
         </div>
+        ${
+          g.outputs && g.outputs.length
+            ? `<h3 class="study-outputs-h">Output you can point at</h3>
+        <div class="study-list study-outputs">
+          ${g.outputs
+            .map((o) => {
+              const k = outKey(o);
+              const done = isStudyDone(k);
+              return `
+            <div class="study-card output${done ? ' done' : ''}">
+              <button class="study-check" data-url="${esc(k)}" aria-pressed="${done}" aria-label="Mark ${esc(o.name)} as ${done ? 'not done' : 'done'}">${done ? '✓' : ''}</button>
+              <div class="study-link study-static"><div class="study-name">${esc(o.name)}</div></div>
+            </div>`;
+            })
+            .join('')}
+        </div>`
+            : ''
+        }
         ${
           g.source
             ? `<p class="study-source">Source: <a href="${esc(g.source.url)}" target="_blank" rel="noopener noreferrer">${esc(g.source.label)}</a></p>`
@@ -243,8 +294,10 @@ function renderStudyGroups(groups) {
 function wireStudyChecks(rerender) {
   app.querySelectorAll('.study-check').forEach((btn) => {
     btn.addEventListener('click', () => {
+      const y = window.scrollY;
       toggleStudyDone(btn.dataset.url);
       rerender();
+      window.scrollTo(0, y);
     });
   });
 }
@@ -269,20 +322,136 @@ function showResources() {
 
 /* ---------- Career Path (staged, sequenced roadmap) ---------- */
 
-function showCareerPath() {
-  app.innerHTML = `
+function careerHeader() {
+  return `
     <header class="pro-header">
       <a class="back" href="#/">← Back to lessons</a>
+      <nav class="career-nav">
+        <a href="#/career-path">Roadmap</a>
+        <a href="#/career-progress">Progress</a>
+      </nav>
       ${statusBar()}
-    </header>
+    </header>`;
+}
+
+function showCareerPath() {
+  app.innerHTML = `
+    ${careerHeader()}
     <main class="chapter-page" style="--hue:152">
       <div class="tier-tag">Career Path</div>
-      <h1>Baby to Cybersecurity Engineer</h1>
-      <p class="chapter-lead">Your own staged roadmap — separate from the generic Studies links above. Work through stages in order; check things off as you go, same as Studies.</p>
+      <h1>Operator to Engineer</h1>
+      <p class="chapter-lead">Eight phases from zero cybersecurity background to a security-engineer title, designed by Codex from every resource researched, with your AI-agent skill as the operating layer of every phase. Every resource links to where it lives. Check off resources and deliverables as you go — the <a href="#/career-progress">Progress page</a> reads the same checkmarks.</p>
+      <p class="chapter-lead"><strong>The one rule above everything:</strong> never outsource understanding. Every AI-generated artifact must be explainable line by line.</p>
       ${renderStudyGroups(careerPath)}
     </main>`;
 
   wireStudyChecks(showCareerPath);
+}
+
+/* ---------- Career Path · Progress ---------- */
+
+function showCareerProgress() {
+  const stats = careerPath.map((p) => ({ p, ...groupStats(p) }));
+  const totalItems = stats.reduce((s, x) => s + x.total, 0);
+  const doneItems = stats.reduce((s, x) => s + x.done, 0);
+  const hoursTotal = stats.reduce((s, x) => s + x.hoursTotal, 0);
+  const hoursDone = stats.reduce((s, x) => s + x.hoursDone, 0);
+  const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+  const hoursLeft = Math.max(0, hoursTotal - hoursDone);
+  const daysLeft = Math.ceil(hoursLeft / 2);
+  const weeksLeft = Math.ceil(daysLeft / 7);
+  const current = stats.find((x) => x.pct < 100) || null;
+  const complete = (n) => stats.find((x) => x.p.n === n)?.pct === 100;
+
+  const phaseRows = stats
+    .map(
+      (x) => `
+      <a class="prog-row${x.p.lane ? ' lane' : ''}${current && current.p.n === x.p.n ? ' current' : ''}${x.pct === 100 ? ' complete' : ''}" href="#/career-path">
+        <div class="prog-n">${x.p.n}</div>
+        <div class="prog-body">
+          <div class="prog-title">${esc(x.p.title.replace(/^Phase \d+ — /, ''))}${x.p.lane ? ' <span class="study-lane">income lane</span>' : ''}${current && current.p.n === x.p.n ? ' <span class="prog-here">you are here</span>' : ''}</div>
+          <div class="prog-meta">months ${esc(x.p.months)} · ${x.done}/${x.total} done · ${x.hoursDone}/${x.hoursTotal} study hrs</div>
+          <div class="prog-bar"><div class="prog-fill" style="width:${x.pct}%"></div></div>
+        </div>
+        <div class="prog-pct">${x.pct}%</div>
+      </a>`,
+    )
+    .join('');
+
+  const milestoneRows = milestones
+    .map((m) => {
+      const reached = m.requires.every(complete);
+      return `
+      <div class="ms-row${reached ? ' reached' : ''}${m.big ? ' big' : ''}">
+        <div class="ms-check">${reached ? '✓' : ''}</div>
+        <div class="ms-body">
+          <div class="ms-when">${esc(m.when)}</div>
+          <div class="ms-label">${esc(m.label)}</div>
+          <div class="ms-ev">${esc(m.evidence)} · needs phase${m.requires.length > 1 ? 's' : ''} ${m.requires.join(', ')} complete</div>
+        </div>
+      </div>`;
+    })
+    .join('');
+
+  const gateDone = gate.conditions.filter((c) => isStudyDone(gateKey(c))).length;
+  const gateOpen = gateDone === gate.conditions.length;
+  const gateRows = gate.conditions
+    .map((c) => {
+      const k = gateKey(c);
+      const done = isStudyDone(k);
+      return `
+      <div class="study-card output${done ? ' done' : ''}">
+        <button class="study-check" data-url="${esc(k)}" aria-pressed="${done}" aria-label="Mark gate condition as ${done ? 'not met' : 'met'}">${done ? '✓' : ''}</button>
+        <div class="study-link study-static"><div class="study-name">${esc(c.name)}</div></div>
+      </div>`;
+    })
+    .join('');
+
+  app.innerHTML = `
+    ${careerHeader()}
+    <main class="chapter-page prog-page" style="--hue:152">
+      <div class="tier-tag">Career Path · Progress</div>
+      <h1>Where you are</h1>
+      <p class="chapter-lead">Computed from the same checkmarks as the <a href="#/career-path">roadmap</a>. Saved on this device only.</p>
+
+      <section class="prog-overall">
+        <div class="prog-big">
+          <b>${pct}%</b><span>${doneItems} of ${totalItems} items done</span>
+        </div>
+        <div class="prog-big">
+          <b>${hoursDone}<small>/${hoursTotal}</small></b><span>study hours done</span>
+        </div>
+        <div class="prog-big">
+          <b>${weeksLeft}<small> wks</small></b><span>~${daysLeft} days left at 2 hrs/day</span>
+        </div>
+        <div class="prog-big">
+          <b>${current ? `Phase ${current.p.n}` : 'Done'}</b><span>${current ? esc(current.p.title.replace(/^Phase \d+ — /, '')) : 'every phase complete'}</span>
+        </div>
+      </section>
+      <div class="prog-bar big"><div class="prog-fill" style="width:${pct}%"></div></div>
+
+      <h2 class="prog-h2">Phases</h2>
+      <div class="prog-list">${phaseRows}</div>
+
+      <h2 class="prog-h2">Milestones <span class="study-group-progress">Codex timeline at 14 hrs/week</span></h2>
+      <div class="ms-list">${milestoneRows}</div>
+
+      <h2 class="prog-h2">Paid-cert gate <span class="study-group-progress">${gateDone}/${gate.conditions.length} conditions · ${gateOpen ? 'OPEN' : 'closed'}</span></h2>
+      <p class="chapter-lead">Nothing paid until all four are true. Tick them yourself — none can be read from study progress.</p>
+      <div class="study-list study-outputs">${gateRows}</div>
+      <div class="gate-panel${gateOpen ? ' open' : ''}">
+        <div class="gate-first">First paid cert: <a href="${esc(gate.firstUrl)}" target="_blank" rel="noopener noreferrer">${esc(gate.first)} ↗</a></div>
+        <p class="study-note">${esc(gate.why)}</p>
+        <p class="study-note"><strong>Buy it when the portfolio is complete and any one of these is true:</strong></p>
+        <ul class="gate-ul">${gate.triggers.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+        <p class="study-note"><strong>Possible second cert — one only, by the branch you're actually on:</strong></p>
+        <ul class="gate-ul">${gate.second.map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.name)} ↗</a> <span class="study-by">${esc(s.by)}</span> — ${esc(s.note)}</li>`).join('')}</ul>
+        <p class="study-note"><strong>Ratings Codex overruled:</strong></p>
+        <ul class="gate-ul">${gate.overruled.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>
+      </div>
+    </main>`;
+
+  wireStudyChecks(showCareerProgress);
 }
 
 /* ---------- Beginner tier ---------- */
