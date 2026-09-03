@@ -69,6 +69,12 @@ export default [
         url: 'https://www.cloudskillsboost.google/paths/419',
         note: 'Elective, any week. Free self-paced badge path — different product from the paid Coursera "Google Cybersecurity Certificate" on the Studies page.',
       },
+      {
+        name: 'CS50: Introduction to Computer Science',
+        by: 'Harvard (edX)',
+        url: 'https://cs50.harvard.edu/x/',
+        note: 'OPTIONAL, not counted in Stage 1\'s core hours. ~100-150hrs, free (verified cert costs extra). A deeper CS foundation than this stage needs — do it instead of or alongside the core path only if you want the extra rigor.',
+      },
     ],
   },
   {
@@ -117,6 +123,18 @@ export default [
         by: 'Amazon Web Services',
         url: 'https://aws.amazon.com/free/',
         note: 'Free. Cloud security project: set up over-permissive IAM, CloudTrail logging, a misconfigured S3 bucket, then fix it. Document the before/after.',
+      },
+      {
+        name: 'SQL & Relational Databases 101',
+        by: 'IBM (Cognitive Class)',
+        url: 'https://cognitiveclass.ai/',
+        note: 'Free, ~10-15hrs. Real gap flagged in the syllabus review — you\'ll need SQL to query SIEM/log data in the detection lab above.',
+      },
+      {
+        name: 'Data Analytics Job Simulation',
+        by: 'Deloitte (via Forage)',
+        url: 'https://www.theforage.com/simulations/Deloitte-Australia/data-analytics-s5zy',
+        note: 'Free, ~5-6hrs. Not a course — a resume artifact. A completed, named job simulation is a real, recognized line on a resume/LinkedIn.',
       },
     ],
   },
