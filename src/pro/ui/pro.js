@@ -3,7 +3,7 @@ import chapters from '../chapters/index.js';
 import beginnerUnits from '../beginner/foundations.js';
 import expertChapters from '../expert/index.js';
 import studies from '../resources.js';
-import careerPath, { milestones, gate } from '../career-path.js';
+import careerPath, { milestones, gate, extras } from '../career-path.js';
 import { run } from '../engine/runner.js';
 import { setHue } from './aether.js';
 import {
@@ -146,6 +146,13 @@ function router() {
     document.body.dataset.view = 'chapter';
     setHue(152);
     return showCareerProgress();
+  }
+
+  // Career Path extras: optional side content, not part of the roadmap
+  if (seg === 'career-extra') {
+    document.body.dataset.view = 'chapter';
+    setHue(152);
+    return showCareerExtra();
   }
 
   // Expert tier: switcher + chapter mosaic
@@ -406,6 +413,7 @@ function careerHeader() {
       <nav class="career-nav">
         <a href="#/career-path">Roadmap</a>
         <a href="#/career-progress">Progress</a>
+        <a href="#/career-extra">Extra</a>
       </nav>
       ${statusBar()}
     </header>`;
@@ -424,6 +432,21 @@ function showCareerPath() {
 
   wireStudyChecks(showCareerPath);
   wireMiniQuizzes();
+}
+
+/* ---------- Career Path · Extra (optional, off-path side content) ---------- */
+
+function showCareerExtra() {
+  app.innerHTML = `
+    ${careerHeader()}
+    <main class="chapter-page" style="--hue:152">
+      <div class="tier-tag">Career Path · Extra</div>
+      <h1>Extra Curriculum</h1>
+      <p class="chapter-lead">Side content only — none of this is part of the cybersecurity-engineer roadmap, none of it counts toward any phase, milestone, or the paid-cert gate. Do it only if you want a change of pace or the subject itself interests you.</p>
+      ${renderStudyGroups(extras)}
+    </main>`;
+
+  wireStudyChecks(showCareerExtra);
 }
 
 /* ---------- Career Path · Progress ---------- */

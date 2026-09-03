@@ -42,6 +42,9 @@ export default [
         { q: 'What\'s usually the biggest bottleneck in a real-world AI project — more than the algorithm itself?', choices: ['Finding a fast enough GPU', 'Data — getting enough good, relevant, well-labeled data for the task', 'The programming language used', 'The color scheme of the user interface'], answer: 1, why: 'Most real AI-project failures trace back to data quality/availability, not algorithm choice — a theme you\'ll see again building the Phase 3 detection lab.' },
         { q: 'What\'s a realistic current limitation of AI systems?', choices: ['AI can already fully replace human judgment in every domain', 'AI is good at narrow, well-defined tasks but struggles with broad common sense or judgment', 'AI systems never make mistakes once deployed', 'AI requires no human oversight after deployment'], answer: 1, why: 'Narrow competence, not general judgment, is the honest current state — exactly why "never outsource understanding" matters throughout this whole roadmap.' },
       ] },
+      { name: 'Agentic AI Explained', by: 'NVIDIA Deep Learning Institute', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 1, note: 'Free, 1hr. What agentic AI actually is — how agents plan, use tools, and act autonomously. Conceptual, not hands-on coding. Search the free-courses catalog for "Agentic AI Explained".', quiz: [
+        { q: 'What distinguishes an "agentic" AI system from a plain chatbot that just answers questions?', choices: ['Agentic systems can plan multi-step tasks and take actions using tools, not just generate text replies', 'Agentic systems are always faster to respond', 'There\'s no real difference, it\'s just marketing language', 'Agentic systems never make mistakes'], answer: 0, why: 'Agency means the system can decide what to do next and act — call a tool, read a result, decide the following step — not just produce one text response.' },
+      ] },
       { name: 'AI Boost Bites: Your Edge in the AI-Powered World', by: 'Google Skills', url: 'https://www.skills.google/paths/2480', hours: 7, note: 'Free. 43 short (~10min) video lessons + hands-on challenges: Gemini, Gemini for Workspace, Gemini Notebook, AI Studio.', quiz: [
         { q: 'The path teaches Gemini, Gemini for Workspace, Gemini Notebook, and AI Studio. What do these have in common?', choices: ['They\'re all Google\'s practical AI tools for real business tasks — content creation, research, market intelligence', 'They\'re competing companies\' products bundled for comparison', 'They\'re programming languages', 'They only work inside Google Cloud Console'], answer: 0, why: 'The path is a tactical toolkit for Google\'s own AI product suite, not abstract AI theory — each "bite" ends in a hands-on challenge applying the tool immediately.' },
         { q: 'Each lesson in this path is followed by what?', choices: ['A 3-hour reading assignment', 'A hands-on challenge applying what you just learned', 'A group discussion forum', 'Nothing — lessons are watch-only'], answer: 1, why: 'The format is built around immediate application, not passive video-watching — matches the "verify, don\'t just consume" habit from Phase 1\'s AI Fluency course.' },
@@ -211,6 +214,10 @@ export default [
     blurb:
       'Secure LLM apps, AI agents, and MCP-connected systems. Codex\'s verdict: a strong fit for your background — as a layer ON TOP OF conventional security, never a substitute. Market read: SOC, cloud, IAM, and AppSec have substantially larger entry-level markets; AI security is smaller, newer, concentrated in AI companies, consultancies, platform vendors, and large enterprises. Position as "security engineer with AI-agent and automation specialization", not "AI security expert", until there is real experience behind it.',
     links: [
+      { name: 'Securing Agents with NemoClaw and OpenShell', by: 'NVIDIA Deep Learning Institute', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 4, note: 'Free, 4hrs. Hardening AI agents against attacks — agent sandboxing and permission control. Search the free-courses catalog for "Securing Agents with NemoClaw and OpenShell".', quiz: [
+        { q: 'Why sandbox an AI agent\'s tool access instead of letting it run commands directly on the host?', choices: ['Sandboxing is only for performance reasons, not safety', 'It contains the blast radius — a manipulated or buggy agent can\'t reach beyond what the sandbox permits', 'Sandboxes make agents run faster', 'It\'s required by law in every country'], answer: 1, why: 'Same least-privilege principle from Phase 1\'s CCA-F question — a sandbox is that principle enforced at the execution layer, not just the prompt layer.' },
+        { q: 'An agent with "OpenShell"-style raw shell access reads a file containing hidden instructions to delete logs. What class of failure does this risk combine?', choices: ['Prompt injection (the hidden instructions) plus excessive agency (unrestricted shell access to act on them)', 'A hardware failure', 'A network outage', 'A licensing violation'], answer: 0, why: 'This is exactly why agent security treats injection and agency as a pair — untrusted input plus unrestricted execution power is the dangerous combination, not either alone.' },
+      ] },
       { name: 'MITRE ATLAS', by: 'MITRE', url: 'https://atlas.mitre.org/', hours: 8, codex: true, note: 'Codex addition. Free. ATT&CK\'s counterpart for adversarial threats to AI systems.' },
       { name: 'AI Risk Management Framework', by: 'NIST', url: 'https://www.nist.gov/itl/ai-risk-management-framework', hours: 8, codex: true, note: 'Codex addition. Free. The governance backbone for a client-facing AI-risk assessment.' },
       { name: 'OWASP Top 10 for LLM Applications (revisit)', by: 'OWASP', url: 'https://owasp.org/www-project-top-10-for-large-language-model-applications/', hours: 4, note: 'Free. Now build a test for each item.' },
@@ -276,3 +283,26 @@ export const gate = {
     'CISSP — a long-term outcome, not a milestone. Five-year experience requirement makes it irrelevant to initial employability.',
   ],
 };
+
+// Extra Curriculum — side content, NOT part of the cybersecurity roadmap. Robotics and
+// 3D-simulation courses found alongside the two NVIDIA DLI picks added to Phases 1 and 8.
+// Real, free, from NVIDIA's own catalog — kept here, not in the main phases, because none
+// of it advances the cybersecurity-engineer path. Do only if/when you want a change of
+// pace or the subject itself interests you.
+export const extras = [
+  {
+    title: 'NVIDIA Robotics & Simulation (optional — not part of the cybersecurity path)',
+    blurb:
+      'These are real, free NVIDIA Deep Learning Institute courses — same catalog as the two picks added to your Phases 1 and 8 — but every one below is about robotics or 3D simulation, not cybersecurity. Nothing here counts toward any phase, milestone, or the paid-cert gate. Purely optional, do it only if the subject itself interests you.',
+    links: [
+      { name: 'An Introduction to Developing With NVIDIA Omniverse', by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 2, note: 'Free, 2hrs. Building 3D applications and digital twins in Omniverse.' },
+      { name: 'Extend Omniverse Kit Applications for Building Digital Twins', by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 2, note: 'Free, 2hrs. Extending Omniverse Kit for digital-twin applications.' },
+      { name: 'Fundamentals of Working With OpenUSD', by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 2, note: 'Free, 2hrs. Universal Scene Description — the 3D file format behind Omniverse.' },
+      { name: 'Creating an Omniverse Extension With Python', by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 2, note: 'Free, 2hrs. Python scripting inside Omniverse — the one item here that at least uses Python.' },
+      { name: "A Beginner's Guide to Autonomous Robots", by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 1, note: 'Free, 1hr. What makes a robot "autonomous" — perception, planning, control, at a conceptual level.' },
+      { name: 'Generating High-Quality Motion Data for Robotics With MobilityGen', by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 2, note: 'Free, ~1.5hrs. Synthetic motion-data generation for training robotics models.' },
+      { name: 'Software-in-the-Loop Testing for Robots With OpenUSD, Isaac Sim, and ROS', by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 2, note: 'Free, 2hrs. Testing robot software in simulation before touching real hardware.' },
+      { name: 'Building AI-Powered Material Generation for Omniverse With DGX Cloud', by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 2, note: 'Free, 2hrs. Generating 3D materials/textures with AI, on DGX Cloud.' },
+    ],
+  },
+];
