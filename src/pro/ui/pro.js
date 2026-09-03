@@ -254,11 +254,14 @@ function renderStudyGroups(groups) {
               return `
             <div class="study-card${done ? ' done' : ''}">
               <button class="study-check" data-url="${esc(l.url)}" aria-pressed="${done}" aria-label="Mark ${esc(l.name)} as ${done ? 'not studied' : 'studied'}">${done ? '✓' : ''}</button>
-              <a class="study-link" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
-                <div class="study-by">${esc(l.by)}${l.hours ? ` <span class="study-hrs">~${l.hours}h</span>` : ''}${l.codex ? ' <span class="study-codex">codex addition</span>' : ''}</div>
-                <div class="study-name">${esc(l.name)} <span class="ext">↗</span></div>
-                <div class="study-note">${esc(l.note)}</div>
-              </a>
+              <div class="study-col">
+                <a class="study-link" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
+                  <div class="study-by">${esc(l.by)}${l.hours ? ` <span class="study-hrs">~${l.hours}h</span>` : ''}${l.codex ? ' <span class="study-codex">codex addition</span>' : ''}</div>
+                  <div class="study-name">${esc(l.name)} <span class="ext">↗</span></div>
+                  <div class="study-note">${esc(l.note)}</div>
+                </a>
+                ${l.quiz ? renderMiniQuiz(l.url, l.quiz) : ''}
+              </div>
             </div>`;
             })
             .join('')}
@@ -289,6 +292,80 @@ function renderStudyGroups(groups) {
       </section>`;
     })
     .join('');
+}
+
+const quizKey = (url) => `quiz:${url}`;
+
+function renderMiniQuiz(url, quiz) {
+  const passed = isStudyDone(quizKey(url));
+  return `
+    <div class="mini-quiz-wrap">
+      <button type="button" class="quiz-toggle${passed ? ' passed' : ''}" data-quiz-url="${esc(url)}">${passed ? '✓ Tested yourself — review again' : 'Test yourself ↓'}</button>
+      <div class="mini-quiz" data-quiz-for="${esc(url)}" hidden>
+        ${quiz
+          .map(
+            (q, qi) => `
+          <div class="q-card mini" data-q="${qi}">
+            <p class="q-text">${esc(q.q)}</p>
+            <div class="choices">
+              ${q.choices.map((c, ci) => `<button type="button" class="choice" data-q="${qi}" data-c="${ci}">${esc(c)}</button>`).join('')}
+            </div>
+            <div class="q-why" hidden></div>
+          </div>`,
+          )
+          .join('')}
+      </div>
+    </div>`;
+}
+
+function wireMiniQuizzes() {
+  app.querySelectorAll('.quiz-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const panel = app.querySelector(`.mini-quiz[data-quiz-for="${CSS.escape(btn.dataset.quizUrl)}"]`);
+      panel.hidden = !panel.hidden;
+    });
+  });
+
+  app.querySelectorAll('.mini-quiz').forEach((panel) => {
+    const url = panel.dataset.quizFor;
+    const cards = panel.querySelectorAll('.q-card');
+    const answered = new Array(cards.length).fill(false);
+    panel.querySelectorAll('.choice').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('.q-card');
+        const qi = Number(card.dataset.q);
+        if (answered[qi]) return;
+        const ci = Number(btn.dataset.c);
+        const question = quizByUrl(url)[qi];
+        const correct = ci === question.answer;
+
+        card.querySelectorAll('.choice').forEach((b, bi) => {
+          b.disabled = true;
+          if (bi === question.answer) b.classList.add('correct');
+          else if (bi === ci) b.classList.add('wrong');
+        });
+        const why = card.querySelector('.q-why');
+        why.innerHTML = `${correct ? '<strong class="ok">Right.</strong> ' : '<strong class="no">Not quite.</strong> '}${esc(question.why)}`;
+        why.hidden = false;
+
+        answered[qi] = true;
+        if (answered.every(Boolean) && !isStudyDone(quizKey(url))) {
+          toggleStudyDone(quizKey(url));
+          const toggleBtn = app.querySelector(`.quiz-toggle[data-quiz-url="${CSS.escape(url)}"]`);
+          toggleBtn.textContent = '✓ Tested yourself — review again';
+          toggleBtn.classList.add('passed');
+        }
+      });
+    });
+  });
+}
+
+function quizByUrl(url) {
+  for (const g of [...studies, ...careerPath]) {
+    const l = g.links.find((x) => x.url === url && x.quiz);
+    if (l) return l.quiz;
+  }
+  return [];
 }
 
 function wireStudyChecks(rerender) {
@@ -346,6 +423,7 @@ function showCareerPath() {
     </main>`;
 
   wireStudyChecks(showCareerPath);
+  wireMiniQuizzes();
 }
 
 /* ---------- Career Path · Progress ---------- */

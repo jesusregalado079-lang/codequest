@@ -775,3 +775,20 @@ button { font-family: inherit; font-size: 1rem; cursor: pointer; }
   .prog-row { grid-template-columns: 34px 1fr 48px; }
   .career-nav { order: 3; width: 100%; }
 }
+
+/* ---------- Career Path: inline "test yourself" mini-quiz ---------- */
+.mini-quiz-wrap { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.quiz-toggle {
+  font-family: var(--mono); font-size: 0.76rem; letter-spacing: 0.04em;
+  background: transparent; border: 1px solid var(--line-strong); color: var(--muted);
+  padding: 5px 10px; border-radius: 4px; cursor: pointer;
+}
+.quiz-toggle:hover { color: var(--accent); border-color: hsl(var(--hue) 70% 55%); }
+.quiz-toggle.passed { color: var(--green); border-color: hsl(140 60% 45% / 0.6); }
+.study-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mini-quiz[hidden] { display: none; }
+.mini-quiz { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.q-card.mini { padding: 12px 14px; }
+.q-card.mini .q-text { font-size: 0.92rem; margin-bottom: 8px; }
+.q-card.mini .choice { padding: 7px 10px; font-size: 0.88rem; }
+.q-card.mini .q-why { font-size: 0.86rem; }
