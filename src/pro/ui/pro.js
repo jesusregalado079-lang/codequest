@@ -3,6 +3,7 @@ import chapters from '../chapters/index.js';
 import beginnerUnits from '../beginner/foundations.js';
 import expertChapters from '../expert/index.js';
 import studies from '../resources.js';
+import careerPath from '../career-path.js';
 import { run } from '../engine/runner.js';
 import { setHue } from './aether.js';
 import {
@@ -133,6 +134,13 @@ function router() {
     return showResources();
   }
 
+  // Career Path: staged, sequenced roadmap (separate from the Studies grab-bag)
+  if (seg === 'career-path') {
+    document.body.dataset.view = 'chapter';
+    setHue(152);
+    return showCareerPath();
+  }
+
   // Expert tier: switcher + chapter mosaic
   if (seg === 'expert') {
     rememberTier('expert');
@@ -189,16 +197,17 @@ function tierPage(active, bodyHtml) {
     <header class="pro-header">
       <h1>CodeQuest <span class="pro-mark">Pro</span></h1>
       <a class="studies-link" href="#/resources">Studies ↗</a>
+      <a class="studies-link" href="#/career-path">Career Path ↗</a>
       ${statusBar()}
     </header>
     ${tierSwitcher(active)}
     ${bodyHtml}`;
 }
 
-/* ---------- Studies (curated external links) ---------- */
+/* ---------- shared: study-group cards (used by Studies and Career Path) ---------- */
 
-function showResources() {
-  const groups = studies
+function renderStudyGroups(groups) {
+  return groups
     .map((g) => {
       const doneCount = g.links.filter((l) => isStudyDone(l.url)).length;
       return `
@@ -229,7 +238,20 @@ function showResources() {
       </section>`;
     })
     .join('');
+}
 
+function wireStudyChecks(rerender) {
+  app.querySelectorAll('.study-check').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      toggleStudyDone(btn.dataset.url);
+      rerender();
+    });
+  });
+}
+
+/* ---------- Studies (curated external links) ---------- */
+
+function showResources() {
   app.innerHTML = `
     <header class="pro-header">
       <a class="back" href="#/">← Back to lessons</a>
@@ -239,15 +261,28 @@ function showResources() {
       <div class="tier-tag">Studies</div>
       <h1>Extra Studies</h1>
       <p class="chapter-lead">Hand-picked resources to study alongside the course. External links open in a new tab. Check one off once you've done it — that's saved on this device.</p>
-      ${groups}
+      ${renderStudyGroups(studies)}
     </main>`;
 
-  app.querySelectorAll('.study-check').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      toggleStudyDone(btn.dataset.url);
-      showResources();
-    });
-  });
+  wireStudyChecks(showResources);
+}
+
+/* ---------- Career Path (staged, sequenced roadmap) ---------- */
+
+function showCareerPath() {
+  app.innerHTML = `
+    <header class="pro-header">
+      <a class="back" href="#/">← Back to lessons</a>
+      ${statusBar()}
+    </header>
+    <main class="chapter-page" style="--hue:152">
+      <div class="tier-tag">Career Path</div>
+      <h1>Baby to Cybersecurity Engineer</h1>
+      <p class="chapter-lead">Your own staged roadmap — separate from the generic Studies links above. Work through stages in order; check things off as you go, same as Studies.</p>
+      ${renderStudyGroups(careerPath)}
+    </main>`;
+
+  wireStudyChecks(showCareerPath);
 }
 
 /* ---------- Beginner tier ---------- */
