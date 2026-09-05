@@ -85,6 +85,9 @@ export default [
       { name: 'SQL & Relational Databases 101', by: 'IBM (Cognitive Class)', url: 'https://cognitiveclass.ai/', hours: 12, note: 'Free, ~10-15hrs. Search the catalog for "SQL and Relational Databases 101". Needed to query SIEM/log data in Phase 3.' },
       { name: 'CS50x — selected weeks only', by: 'Harvard', url: 'https://cs50.harvard.edu/x/', hours: 60, note: 'Free OpenCourseWare, ~50-75hrs for the selected weeks. Verified certificate costs extra. Not the whole course.' },
       { name: 'Introduction to PowerShell', by: 'Microsoft Learn', url: 'https://learn.microsoft.com/en-us/training/modules/introduction-to-powershell/', hours: 20, codex: true, note: 'Codex addition. Free, ~15-25hrs across the PowerShell learning path. Windows evidence is read in PowerShell.' },
+      { name: 'Coding Interview University — Data Structures & Complexity', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#data-structures', hours: 30, note: 'Free. 360k+ star repo — real, John Washam used it to land Amazon. This slice: Big-O, arrays, linked lists, stacks, queues, hash tables, binary search, bitwise ops. Scoped to working understanding, not FAANG-interview mastery (the whole repo is 500-1000+ hrs).' },
+      { name: 'Coding Interview University — Trees, Heaps & Sorting', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#trees', hours: 20, note: 'Free. BSTs, heaps/priority queues, sorting algorithms.' },
+      { name: 'Coding Interview University — Networking & Unix CLI', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#networking', hours: 15, note: 'Free. Supplements Professor Messer above with the CS-theory side of networking, plus Unix command-line tools — pairs directly with Bandit.' },
     ],
     outputs: [
       { key: 'p2-bandit', name: 'Bandit completion proof' },
@@ -113,6 +116,8 @@ export default [
       { name: 'Velociraptor', by: 'Rapid7 (open source)', url: 'https://docs.velociraptor.app/', hours: 6, codex: true, note: 'Codex addition, optional. Endpoint investigation tool.' },
       { name: 'TryHackMe (free tier, ongoing)', by: 'TryHackMe', url: 'https://tryhackme.com', hours: 20, note: 'Keep practicing past the Linux rooms.' },
       { name: 'HTB Academy (free tier)', by: 'Hack The Box', url: 'https://academy.hackthebox.com', hours: 20, note: 'Free tier. Defensive and fundamentals modules.' },
+      { name: 'Coding Interview University — How Programs Actually Run', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#processes-and-threads', hours: 20, note: 'Free. Processes, threads, caches, endianness, floating point, Unicode — literally what Sysmon and your SIEM are logging. This is why this slice sits here, not in Phase 2.' },
+      { name: 'Coding Interview University — Graphs & String Searching', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#graphs', hours: 15, note: 'Free. Graph traversal maps directly to attack-path and ATT&CK-chain thinking; string searching maps to log hunting.' },
     ],
     outputs: [
       { key: 'p3-repo', name: 'Public detection-lab repo with reproducible setup instructions' },
@@ -158,6 +163,8 @@ export default [
       { name: 'Terraform tutorials', by: 'HashiCorp', url: 'https://developer.hashicorp.com/terraform/tutorials', hours: 20, codex: true, note: 'Codex addition. Free. Infrastructure as code for the cloud lab.' },
       { name: 'Checkov (and Trivy)', by: 'Prisma Cloud / Aqua', url: 'https://www.checkov.io/', hours: 8, codex: true, note: 'Codex addition. Free scanners for Terraform and dependencies — wire one into a CI pipeline. Trivy: trivy.dev' },
       { name: 'HTB Academy — cloud modules', by: 'Hack The Box', url: 'https://academy.hackthebox.com', hours: 12, note: 'Free tier, where available.' },
+      { name: 'Coding Interview University — Recursion, DP & Software Design', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#recursion', hours: 25, note: 'Free. Recursion, dynamic programming, design patterns, testing — the software-engineering discipline behind the Python tools and CI pipeline you\'re building this phase.' },
+      { name: 'Coding Interview University — System Design & Scalability', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#system-design-scalability-data-handling', hours: 20, note: 'Free, optional-advanced section of the repo. How real systems scale — useful if the cloud/AppSec branch is where you end up specializing.' },
     ],
     outputs: [
       { key: 'p5-repo', name: 'Public cloud-security repo with sanitized account identifiers' },
@@ -179,6 +186,7 @@ export default [
       { name: 'Job postings — local employers', by: 'LinkedIn Jobs', url: 'https://www.linkedin.com/jobs/', hours: 10, note: 'Extract the recurring requirements from 20+ local postings; build lab extensions that match them.' },
       { name: 'Job-description → skills-gap analyzer', by: 'Your GitHub', url: 'https://github.com/new', hours: 12, codex: true, note: 'Codex addition. Build it: paste a posting, get the gaps vs your portfolio. Uses the Phase 1 workbench.' },
       { name: 'TryHackMe / HTB Academy — keep going', by: 'TryHackMe · Hack The Box', url: 'https://tryhackme.com', hours: 20, note: 'Ongoing practice during the application window.' },
+      { name: 'Coding Interview University — Getting the Job', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#getting-the-job', hours: 10, note: 'Free. Resume rebuild, job search, interview process, questions to ask the interviewer, what to do once you\'ve got the job — reinforces everything else in this phase.' },
     ],
     outputs: [
       { key: 'p6-apps', name: '50–100 targeted applications' },
@@ -306,6 +314,15 @@ export const extras = [
       { name: 'Generating High-Quality Motion Data for Robotics With MobilityGen', by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 2, note: 'Free, ~1.5hrs. Synthetic motion-data generation for training robotics models.' },
       { name: 'Software-in-the-Loop Testing for Robots With OpenUSD, Isaac Sim, and ROS', by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 2, note: 'Free, 2hrs. Testing robot software in simulation before touching real hardware.' },
       { name: 'Building AI-Powered Material Generation for Omniverse With DGX Cloud', by: 'NVIDIA DLI', url: 'https://www.nvidia.com/en-us/training/self-paced-courses/', hours: 2, note: 'Free, 2hrs. Generating 3D materials/textures with AI, on DGX Cloud.' },
+    ],
+  },
+  {
+    title: 'Coding Interview University — CS Theory Bonus (optional — not part of the cybersecurity path)',
+    blurb:
+      'The rest of the Coding Interview University repo (github.com/jwasham/coding-interview-university, 360k+ stars) that didn\'t get folded into a phase — lower direct relevance to cybersecurity, kept here as pure CS-theory bonus. The core of the repo IS spread across Phases 2, 3, 5, and 6 already; this is the leftover.',
+    links: [
+      { name: 'Combinatorics, Probability & NP-Completeness', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#recursion', hours: 15, note: 'Free. Combinatorics & probability, NP/NP-Complete/approximation algorithms — theoretical CS, rarely load-bearing for security work day to day.' },
+      { name: 'Compilers, Emacs/Vim & Unix Power Tools', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#additional-learning', hours: 15, note: 'Free. How compilers work, editor mastery, deeper Unix tooling — genuinely useful long-term, not required for any phase or the paid-cert gate.' },
     ],
   },
 ];
