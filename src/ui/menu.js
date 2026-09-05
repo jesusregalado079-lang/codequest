@@ -23,8 +23,10 @@ const el = (html) => {
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 function header() {
-  return `<h1 class="logo">🚀 CodeQuest</h1>
-    <p class="tagline">Learn real coding, one adventure at a time</p>`;
+  return `<header class="quest-header"><span class="quest-wordmark">CODEQUEST · ADVENTURE CLUB</span>
+    <h1 class="logo">Small steps.<br>Big adventures.</h1>
+    <p class="tagline">Build a program. Guide your robot. Find the gems!</p>
+    <div class="quest-landscape" aria-hidden="true"><span class="quest-sun"></span><span class="quest-cloud"></span><span class="quest-mountain"></span><span class="quest-hill"></span><span class="quest-trail"></span><span class="quest-robot"><i></i><b>• •</b><em></em></span><span class="quest-gem">◆</span></div></header>`;
 }
 
 // ---------- profile picker ----------
@@ -116,6 +118,15 @@ function showMap() {
   hello.querySelector('#switch').onclick = showProfiles;
   app.append(hello);
 
+  const nextWorld = WORLDS.find((world, wi) => !world.sandbox && worldUnlocked(wi, p)
+    && world.levels.some((level, i) => levelUnlocked(world, i, p) && !(p.stars[level.id] > 0)));
+  if (nextWorld) {
+    const nextLevel = nextWorld.levels.find((level, i) => levelUnlocked(nextWorld, i, p) && !(p.stars[level.id] > 0));
+    const next = el(`<section class="next-adventure"><div><span class="quest-wordmark">YOUR NEXT ADVENTURE</span><h2>${esc(nextLevel.name)}</h2><p>${esc(nextWorld.place)} · ${esc(nextWorld.name)}</p></div><button class="big-btn">Let's play ▶</button></section>`);
+    next.querySelector('button').onclick = () => { sounds.tap(); location.href = levelUrl(nextWorld, nextLevel, p); };
+    app.append(next);
+  }
+
   // Expert mode is earned, not offered — it only appears once a whole world
   // is behind them, so nobody meets a blank code box on day one.
   if (expertUnlocked(p)) {
@@ -142,12 +153,14 @@ function showMap() {
       const gate = world.unlockAfter
         ? `finish World ${world.unlockAfter.replace(/world(\d+).*/, '$1')} to unlock!`
         : `beat World ${wi} boss to unlock!`;
-      app.append(el(`<div class="card coming">🔒 World ${wi + 1} · ${world.name} ${world.emoji} — ${gate}</div>`));
+      app.append(el(`<div class="card coming locked-world"><span class="world-stamp" aria-hidden="true">${world.emoji}</span><div><b>World ${wi + 1} · ${world.place}</b><p>🔒 ${gate}</p></div></div>`));
       return;
     }
     if (world.sandbox) return void app.append(workshopCard(world, wi, p));
-    const card = el(`<div class="card">
-      <h2>${world.emoji} World ${wi + 1} · ${world.name}</h2>
+    const completed = world.levels.filter(level => (p.stars[level.id] ?? 0) > 0).length;
+    const card = el(`<div class="card world-card world-${wi + 1}">
+      <div class="world-heading"><span class="world-stamp" aria-hidden="true">${world.emoji}</span><div><span class="quest-wordmark">WORLD ${wi + 1} · ${esc(world.place)}</span><h2>${world.name}</h2></div><span class="world-count">${completed}/${world.levels.length}<small>levels done</small></span></div>
+      <progress class="world-progress" value="${completed}" max="${world.levels.length}" aria-label="${esc(world.name)} levels completed"></progress>
       <p>${world.concept}</p>
       <p><button class="link-btn lesson-link">📖 lesson: what you'll learn</button></p>
       <div class="level-grid"></div>
@@ -166,6 +179,9 @@ function showMap() {
         <span class="stars">${starCount ? '⭐'.repeat(starCount) : unlocked ? '· · ·' : ''}</span>
       </button>`);
       b.title = lvl.name;
+      b.disabled = !unlocked;
+      b.setAttribute('aria-label', `${lvl.name}${unlocked ? `, ${starCount} stars` : ', locked'}`);
+      if (unlocked && !starCount) b.classList.add('ready');
       b.onclick = () => { sounds.tap(); location.href = levelUrl(world, lvl, p); };
       grid.append(b);
     });
@@ -177,6 +193,8 @@ function showMap() {
         <span class="stars">${quizStars ? '⭐'.repeat(quizStars) : bossDone ? 'quiz' : ''}</span>
       </button>`);
       qb.onclick = () => { sounds.tap(); location.href = `quiz.html?world=${world.id}`; };
+      qb.disabled = !bossDone;
+      qb.setAttribute('aria-label', bossDone ? 'World quiz' : 'World quiz, locked');
       grid.append(qb);
     }
     const recapReady = (p.stars[world.levels[world.levels.length - 1].id] ?? 0) > 0;
