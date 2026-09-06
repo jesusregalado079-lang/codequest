@@ -41,8 +41,10 @@ export class Renderer {
   resize() {
     const dpr = window.devicePixelRatio || 1;
     const box = this.canvas.parentElement.getBoundingClientRect();
-    const size = Math.floor(Math.min(box.width / this.cols, box.height / this.rows));
-    this.tile = Math.max(24, size);
+    // Fit the whole puzzle on small portrait screens; a hard minimum clipped
+    // large levels and made children miss gems outside the visible frame.
+    const size = Math.floor(Math.min((box.width - 20) / this.cols, (box.height - 20) / this.rows));
+    this.tile = Math.max(1, size);
     this.canvas.width = this.cols * this.tile * dpr;
     this.canvas.height = this.rows * this.tile * dpr;
     this.canvas.style.width = `${this.cols * this.tile}px`;
@@ -63,27 +65,29 @@ export class Renderer {
           ctx.fillStyle = this.theme.wallDark;
           ctx.fillRect(px, py, tile, tile);
           ctx.fillStyle = this.theme.wallLight;
-          ctx.fillRect(px + 2, py + 2, tile - 4, tile / 2 - 2);
+          ctx.fillRect(px + tile*.04, py + tile*.03, tile*.92, tile*.72);
+          ctx.fillStyle = '#ffffff24'; ctx.fillRect(px+tile*.06,py+tile*.04,tile*.86,tile*.06);
+          ctx.fillStyle = '#071c2d35'; ctx.fillRect(px+tile*.08,py+tile*.77,tile*.84,tile*.12);
           return;
         }
         // floor (., S, G, E)
         ctx.fillStyle = (x + y) % 2 ? this.theme.floorB : this.theme.floorA;
         ctx.fillRect(px, py, tile, tile);
+        ctx.strokeStyle = '#1b48451c'; ctx.strokeRect(px+.5, py+.5, tile-1, tile-1);
         if (c === 'E') {
-          ctx.font = `${tile * 0.7}px serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('🏁', px + tile / 2, py + tile / 2 + 1);
+          ctx.fillStyle = '#24445c'; ctx.fillRect(px+tile*.34,py+tile*.16,tile*.055,tile*.67);
+          ctx.fillStyle = '#fff7c0'; ctx.fillRect(px+tile*.39,py+tile*.17,tile*.4,tile*.3);
+          ctx.fillStyle = '#3d7173'; for(let r=0;r<3;r++)for(let q=0;q<4;q++)if((r+q)%2===0)ctx.fillRect(px+tile*(.39+q*.1),py+tile*(.17+r*.1),tile*.1,tile*.1);
         }
       });
     });
     // gems
-    ctx.font = `${this.tile * 0.6}px serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
     for (const key of this.gems) {
       const [x, y] = key.split(',').map(Number);
-      ctx.fillText('💎', x * tile + tile / 2, y * tile + tile / 2 + 1);
+      const gx=x*tile+tile/2, gy=y*tile+tile/2; ctx.save(); ctx.translate(gx,gy); ctx.scale(tile,tile);
+      ctx.fillStyle='#16475430'; ctx.beginPath(); ctx.ellipse(0,.32,.22,.075,0,0,Math.PI*2); ctx.fill();
+      const facet=(pts,color)=>{ctx.beginPath();pts.forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.fillStyle=color;ctx.fill();};
+      facet([[-.28,-.09],[-.14,-.27],[.14,-.27],[.28,-.09],[0,.27]],'#2396b1'); facet([[-.28,-.09],[-.14,-.27],[0,-.08],[0,.27]],'#82eee1'); facet([[-.14,-.27],[.14,-.27],[0,-.08]],'#e1ffff'); facet([[.14,-.27],[.28,-.09],[0,-.08]],'#4dcabf'); ctx.restore();
     }
     // character: blocky hero + a direction pointer at the tile edge
     const c = this.charDraw;

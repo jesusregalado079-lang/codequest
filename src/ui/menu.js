@@ -8,6 +8,7 @@ import { sounds } from './sounds.js';
 import { listLevels, deleteLevel } from '../custom-levels.js';
 import { ARMOR, armorUnlocked, getArmor, drawHero } from './hero.js';
 import { setArmor, setExpert } from '../progress.js';
+import { worldArt } from './world-art.js';
 
 const app = document.getElementById('app');
 const AVATARS = ['🦊', '🐸', '🦄', '🤖', '🐱', '🐼', '🦁', '🐙'];
@@ -23,16 +24,13 @@ const el = (html) => {
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 function header() {
-  return `<header class="quest-header"><span class="quest-wordmark">CODEQUEST · ADVENTURE CLUB</span>
-    <h1 class="logo">Small steps.<br>Big adventures.</h1>
-    <p class="tagline">Build a program. Guide your robot. Find the gems!</p>
-    <div class="quest-landscape" aria-hidden="true"><span class="quest-sun"></span><span class="quest-cloud"></span><span class="quest-mountain"></span><span class="quest-hill"></span><span class="quest-trail"></span><span class="quest-robot"><i></i><b>• •</b><em></em></span><span class="quest-gem">◆</span></div></header>`;
+  return `<nav class="game-brand"><span class="brand-gem">◆</span><span>CODE<span class="brand-gold">QUEST</span><small>THE CODING ADVENTURE</small></span><span class="brand-badge">EXPLORER EDITION</span></nav><header class="quest-header"><div class="hero-copy"><span class="quest-wordmark">A WORLD WAITING FOR YOU</span><h1 class="logo">Little coder.<br><span>Legendary quests.</span></h1><p class="tagline">Make your robot move.<br>Collect gems. Unlock new worlds.</p><span class="hero-tag">Your adventure starts below ↓</span></div><div class="hero-scene">${worldArt(0,{hero:true})}</div><span class="scene-caption">SUNNY MEADOW <span>◆ WORLD 1</span></span></header>`;
 }
 
 // ---------- profile picker ----------
 function showProfiles() {
   app.innerHTML = header();
-  const card = el(`<div class="card"><h2>Who's playing?</h2><div class="profile-row"></div></div>`);
+  const card = el(`<div class="card player-select"><span class="quest-wordmark">PICK YOUR EXPLORER</span><h2>Ready for your next quest?</h2><p>Choose your player to jump in.</p><div class="profile-row"></div></div>`);
   const row = card.querySelector('.profile-row');
   for (const p of getProfiles()) {
     const b = el(`<button class="profile-btn"><span class="avatar">${p.avatar}</span>${esc(p.name)}</button>`);
@@ -43,6 +41,7 @@ function showProfiles() {
   add.onclick = () => { sounds.tap(); showCreate(); };
   row.append(add);
   app.append(card);
+  app.append(el(`<section class="world-peek"><div class="section-heading"><h2>So much to discover</h2><span>Code your way to every world</span></div><div class="discovery-grid">${[0,2,3].map((i,n)=>`<div class="discovery-card">${worldArt(i)}<div><small>WORLD ${i+1}</small><h3>${esc(WORLDS[i].place)}</h3><span>${['Move your robot','Make clever choices','Create your own moves'][n]}</span></div></div>`).join('')}</div></section>`));
 }
 
 function showCreate() {
@@ -117,6 +116,8 @@ function showMap() {
   hello.querySelector('#outfits').onclick = () => { sounds.tap(); showOutfits(); };
   hello.querySelector('#switch').onclick = showProfiles;
   app.append(hello);
+  const stars = Object.values(p.stars).reduce((sum,n) => sum + n, 0);
+  app.append(el(`<div class="quest-inventory"><span><b>★ ${stars}</b> stars earned</span><span><b>${ARMOR.filter(a=>armorUnlocked(a,p)).length}/${ARMOR.length}</b> outfits unlocked</span><span><b>${esc(getArmor(p.armor).name)}</b> equipped</span></div>`));
 
   const nextWorld = WORLDS.find((world, wi) => !world.sandbox && worldUnlocked(wi, p)
     && world.levels.some((level, i) => levelUnlocked(world, i, p) && !(p.stars[level.id] > 0)));
@@ -153,12 +154,13 @@ function showMap() {
       const gate = world.unlockAfter
         ? `finish World ${world.unlockAfter.replace(/world(\d+).*/, '$1')} to unlock!`
         : `beat World ${wi} boss to unlock!`;
-      app.append(el(`<div class="card coming locked-world"><span class="world-stamp" aria-hidden="true">${world.emoji}</span><div><b>World ${wi + 1} · ${world.place}</b><p>🔒 ${gate}</p></div></div>`));
+      app.append(el(`<div class="card coming locked-world"><div class="locked-art">${worldArt(wi)}</div><div class="locked-copy"><span class="quest-wordmark">WORLD ${wi+1}</span><h2>${esc(world.place)}</h2><p>🔒 ${gate}</p></div></div>`));
       return;
     }
     if (world.sandbox) return void app.append(workshopCard(world, wi, p));
     const completed = world.levels.filter(level => (p.stars[level.id] ?? 0) > 0).length;
     const card = el(`<div class="card world-card world-${wi + 1}">
+      <div class="world-panorama">${worldArt(wi,{hero:true})}<span class="world-place">${esc(world.place)}</span></div>
       <div class="world-heading"><span class="world-stamp" aria-hidden="true">${world.emoji}</span><div><span class="quest-wordmark">WORLD ${wi + 1} · ${esc(world.place)}</span><h2>${world.name}</h2></div><span class="world-count">${completed}/${world.levels.length}<small>levels done</small></span></div>
       <progress class="world-progress" value="${completed}" max="${world.levels.length}" aria-label="${esc(world.name)} levels completed"></progress>
       <p>${world.concept}</p>

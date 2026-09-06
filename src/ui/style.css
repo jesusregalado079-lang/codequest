@@ -1,4 +1,5 @@
 @import './adventure.css';
+@import './expedition.css';
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 html, body {
