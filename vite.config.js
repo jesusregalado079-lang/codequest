@@ -14,6 +14,7 @@ export default defineConfig({
         code: resolve(import.meta.dirname, 'code.html'),
         build: resolve(import.meta.dirname, 'build.html'),
         pro: resolve(import.meta.dirname, 'pro.html'),
+        expedited: resolve(import.meta.dirname, 'expedited.html'),
       },
     },
   },
