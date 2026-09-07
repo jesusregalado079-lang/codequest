@@ -159,6 +159,9 @@ export default [
       { name: 'Terraform tutorials', by: 'HashiCorp', url: 'https://developer.hashicorp.com/terraform/tutorials', hours: 20, codex: true, note: 'Codex addition. Free. Infrastructure as code for the cloud lab.' },
       { name: 'Checkov (and Trivy)', by: 'Prisma Cloud / Aqua', url: 'https://www.checkov.io/', hours: 20, codex: true, note: 'Free tools. Build the Python IAM/configuration auditor alongside infrastructure scanning in CI. Separate collection, policy checks, and reporting; test safe, unsafe, missing-data, and API-error fixtures without live credentials. Show a failing check and passing remediation. Allocation includes tool development and regression tests; advanced CIU reading is in extras.' },
       { name: 'HTB Academy — cloud modules', by: 'Hack The Box', url: 'https://academy.hackthebox.com', hours: 12, note: 'Free tier, where available.' },
+      { name: 'AWS Certified Cloud Practitioner', by: 'AWS', url: 'https://aws.amazon.com/certification/certified-cloud-practitioner/', hours: 25, note: '$100 exam. Re-added after real signal from two independent creators: Symoné Berry\'s tier list and Daniel Cho\'s "certs that actually made me money" video both credited this one for landing early roles. Take the exam after the hands-on IAM/CloudTrail/S3 lab above — it validates the skill you\'ll already have, not a substitute for building it.', quiz: [
+        { q: 'What does the AWS Cloud Practitioner cert actually validate, in the context of this phase?', choices: ['Deep hands-on engineering skill across all AWS services', 'Foundational cloud vocabulary and concepts — a badge for knowledge you\'re already building hands-on in this phase\'s IAM/CloudTrail/S3 lab', 'The ability to write Terraform from scratch', 'Nothing — it\'s purely decorative'], answer: 1, why: 'It\'s an entry-level, vocabulary-and-concepts exam — real signal for a resume, but the actual skill comes from the hands-on lab work you\'re already doing in this phase.' },
+      ] },
     ],
     outputs: [
       { key: 'p5-repo', name: 'Public cloud-security repo with sanitized account identifiers' },
@@ -281,7 +284,7 @@ export const gate = {
     'Network+ — not automatically next after Security+. Buy only if networking stays weak or postings demand it; otherwise prove it through labs, or go straight to CCNA.',
     'BTL1 — valuable, but not before the gate. Its hands-on content overlaps the Phase 3 detection lab.',
     'ISC2 CC — unnecessary if you can build equivalent fundamentals and are heading to Security+. Only if a local employer explicitly recognizes it.',
-    'AWS Cloud Practitioner — correctly low priority. Cloud vocabulary is free to learn.',
+    'AWS Cloud Practitioner — originally deprioritized here since cloud vocabulary is free to learn; re-added to Phase 5 (Jesse\'s call) after real signal from two independent creators crediting it for early roles. $100 is low enough that the earlier objection doesn\'t hold much weight either way.',
     'A+ — stays skipped for this track unless a help-desk role uses it as a screen.',
     'OSCP — excellent, but premature and misaligned with a cloud / automation / AI-security direction.',
     'CISSP — a long-term outcome, not a milestone. Five-year experience requirement makes it irrelevant to initial employability.',
@@ -358,6 +361,13 @@ export const extras = [
       { name: 'Coding Interview University — System Design & Scalability', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#system-design-scalability-data-handling', hours: 20, note: 'Free, optional-advanced section of the repo. How real systems scale — useful if the cloud/AppSec branch is where you end up specializing.' },
       { name: 'Combinatorics, Probability & NP-Completeness', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#recursion', hours: 15, note: 'Free. Combinatorics & probability, NP/NP-Complete/approximation algorithms — theoretical CS, rarely load-bearing for security work day to day.' },
       { name: 'Compilers, Emacs/Vim & Unix Power Tools', by: 'jwasham (GitHub)', url: 'https://github.com/jwasham/coding-interview-university#additional-learning', hours: 15, note: 'Free. How compilers work, editor mastery, deeper Unix tooling — genuinely useful long-term, not required for any phase or the paid-cert gate.' },
+    ],
+  },
+  {
+    title: 'CISSP — future landmark, not active path (years away)',
+    blurb: 'Added as a visible reference point, not something to work toward now. CISSP requires 5 years of paid security experience (2 with an approved waiver) to fully certify — you earn this on the job, years into the career, not by studying for it early. Keeping it here so it\'s trackable as a landmark instead of invisible.',
+    links: [
+      { name: 'CISSP', by: 'ISC2', url: 'https://www.isc2.org/certifications/cissp', hours: 70, note: '$749 exam + $125/yr maintenance. Requires 5 years paid security experience (2 with a qualifying waiver) — you can pass the exam early as an "Associate of ISC2" while accumulating the experience. Every source in this research agreed: its name alone carries weight with recruiters, used for senior positions and promotions. Do not start studying for this until you\'re well into Phase 6 or beyond.' },
     ],
   },
 ];
