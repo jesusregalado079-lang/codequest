@@ -279,6 +279,7 @@ export const gate = {
     { name: 'AWS Solutions Architect Associate', by: 'AWS', url: 'https://aws.amazon.com/certification/certified-solutions-architect-associate/', note: 'cloud-security progression · $150' },
     { name: 'RHCSA', by: 'Red Hat', url: 'https://www.redhat.com/en/services/certification/rhcsa', note: 'Linux-heavy engineering roles · $500' },
     { name: 'SC-200', by: 'Microsoft', url: 'https://learn.microsoft.com/en-us/credentials/certifications/security-operations-analyst/', note: 'only for Sentinel / Defender / Entra shops' },
+    { name: 'AZ-104', by: 'Microsoft', url: 'https://learn.microsoft.com/en-us/credentials/certifications/azure-administrator/', note: 'Azure-heavy shops, hands-on admin (not just AZ-900 vocab) · $165, 4-8wk prep' },
   ],
   overruled: [
     'Network+ — not automatically next after Security+. Buy only if networking stays weak or postings demand it; otherwise prove it through labs, or go straight to CCNA.',
