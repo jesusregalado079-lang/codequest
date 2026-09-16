@@ -2,14 +2,15 @@
 // what you paint is exactly what you'll play.
 import { getWorld } from '../levels/index.js';
 import { Renderer } from '../engine/renderer.js';
-import { getActiveProfile, completeLevel } from '../progress.js';
+import { requireUnlockedProfile, completeLevel } from '../progress.js';
 import {
   blankGrid, setCell, saveLevel, getLevel, findProblems, toPlayable, W, H,
 } from '../custom-levels.js';
 import { sounds } from './sounds.js';
 
-const profile = getActiveProfile();
-if (!profile) location.replace('index.html');
+const profile = requireUnlockedProfile();
+// No unlocked profile: the guard is already redirecting, so stop evaluating this page module here.
+if (!profile) throw new Error('CodeQuest: redirecting to the profile picker');
 
 const world = getWorld('world8');
 const editId = new URLSearchParams(location.search).get('edit');

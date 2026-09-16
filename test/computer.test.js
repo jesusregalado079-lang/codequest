@@ -15,7 +15,7 @@ const progress = await import('../src/progress.js');
 const {
   load, getProfiles, createProfile, setPictureCode, checkPictureCode, setTrack,
   setParentPin, hasParentPin, checkParentPin, resetParentPin, importData,
-  recentPinResets, markUnlocked, isUnlocked, clearUnlocked,
+  recentPinResets, markUnlocked, isUnlocked, clearUnlocked, requireUnlockedProfile,
 } = progress;
 
 // Legacy saves gain every new field without losing their original profile data.
@@ -28,6 +28,15 @@ assert.deepStrictEqual(state.profiles[0].pictureCode, null);
 assert.strictEqual(state.profiles[0].cq.track, null);
 assert.deepStrictEqual(state.profiles[0].cq.owned, []);
 assert.deepStrictEqual(state.parent, { pinHash: null, pinSalt: null, failCount: 0, lockUntil: 0, resets: [] });
+
+localStorage.setItem('codequest-v1', JSON.stringify({
+  profiles: [{ id: 'guided-legacy', name: 'Guided', avatar: '🦊', mode: 'explorer', cq: { track: 'guided' } }],
+  active: 'guided-legacy',
+}));
+state = load();
+assert.strictEqual(state.profiles[0].cq.track, 'guided');
+assert.strictEqual(state.profiles[0].cq.windows, null);
+assert.deepStrictEqual(state.profiles[0].cq.lessons, {});
 
 const kid = createProfile('Kid', '🤖', 'explorer', ['dragon', 'rocket', 'pizza']);
 assert.deepStrictEqual(getProfiles().find((p) => p.id === kid.id).pictureCode, ['dragon', 'rocket', 'pizza']);
@@ -101,7 +110,7 @@ assert.deepStrictEqual(recentPinResets(recentNow), [new Date(recentNow - day).to
 
 await setParentPin('1357');
 importData(JSON.stringify({
-  profiles: [{ id: 'imported', name: 'Imported', avatar: '🦊', pictureCode: ['nope'], cq: { track: 'wrong' } }],
+  profiles: [{ id: 'imported', name: 'Imported', avatar: '🦊', pictureCode: ['nope'], cq: { track: 'wrong', windows: 'bad', lessons: { g1: { phase: 'nope', activeMs: NaN }, junk: { phase: 'done' } } } }],
   active: 'imported',
   parent: { pinHash: null },
 }));
@@ -109,6 +118,8 @@ state = load();
 assert.strictEqual(state.profiles[0].pictureCode, null);
 assert.strictEqual(state.profiles[0].cq.track, null);
 assert.deepStrictEqual(state.profiles[0].cq.owned, []);
+assert.strictEqual(state.profiles[0].cq.windows, null);
+assert.deepStrictEqual(state.profiles[0].cq.lessons, { g1: { ...state.profiles[0].cq.lessons.g1, phase: 'warmup', activeMs: 0 } });
 assert.strictEqual((await checkParentPin('1357')).ok, true);
 
 markUnlocked('imported');
@@ -116,5 +127,30 @@ assert(isUnlocked('imported'));
 assert(!isUnlocked('other'));
 clearUnlocked();
 assert(!isUnlocked('imported'));
+
+let redirected = null;
+globalThis.location = { replace: (target) => { redirected = target; } };
+assert.strictEqual(requireUnlockedProfile(), null);
+assert.strictEqual(redirected, 'index.html');
+markUnlocked('imported');
+assert.strictEqual(requireUnlockedProfile().id, 'imported');
+const normalSession = globalThis.sessionStorage;
+globalThis.sessionStorage = {
+  getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); }, removeItem() { throw new Error('blocked'); },
+};
+markUnlocked('memory-only');
+assert(isUnlocked('memory-only'));
+clearUnlocked();
+assert(!isUnlocked('memory-only'));
+globalThis.sessionStorage = normalSession;
+globalThis.sessionStorage = {
+  getItem() { return null; }, setItem() { throw new Error('blocked'); }, removeItem() { throw new Error('blocked'); },
+};
+markUnlocked('memory-null');
+assert(isUnlocked('memory-null'));
+clearUnlocked();
+assert(!isUnlocked('memory-null'));
+globalThis.sessionStorage = normalSession;
+delete globalThis.location;
 
 console.log('ok — Computer Quest storage migration, picture codes, parent PIN, tracks, import, and session unlock pass');

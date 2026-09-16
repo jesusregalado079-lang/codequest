@@ -6,12 +6,13 @@ import { WORLDS, findLevel, worldUnlocked, levelUnlocked, levelUrl } from '../le
 import { runGame, createLiveGame } from '../engine/arcade-runner.js';
 import { COLS, ROWS } from '../engine/arcade.js';
 import { defineBlocks, toolboxFor, cleanCode } from '../blocks/blocks.js';
-import { getActiveProfile, completeLevel } from '../progress.js';
+import { requireUnlockedProfile, completeLevel } from '../progress.js';
 import { drawHero, getArmor } from './hero.js';
 import { sounds } from './sounds.js';
 
-const profile = getActiveProfile();
-if (!profile) location.replace('index.html');
+const profile = requireUnlockedProfile();
+// No unlocked profile: the guard is already redirecting, so stop evaluating this page module here.
+if (!profile) throw new Error('CodeQuest: redirecting to the profile picker');
 
 const missionId = new URLSearchParams(location.search).get('mission');
 const found = findLevel(missionId) ?? { world: WORLDS[5], level: WORLDS[5].levels[0], index: 0 };

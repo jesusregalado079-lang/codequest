@@ -752,6 +752,8 @@ Time: ~35-40 min · New ideas: search results and ads, spotting tricks, private 
 **Loot — Scam-Spotter Helmet** (armor · helmet)
 *"See through disguises. Pop-up Mimics, the fake chests that bite, glow red."*
 
+**Practice Mission:** With a grown-up nearby, search for one fact about a different animal, save it with its source as a new file in Animals, then do a new shuffled round of Spot It cards. *(Added 2026-09-16: S5 was missing a Practice Mission.)*
+
 **After S5 he can:**
 - create, save, find, copy, move, rename, and reopen files
 - use Alt+Tab, snap, Ctrl+C/X/V/Z/S/A

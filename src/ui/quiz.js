@@ -1,11 +1,12 @@
 // End-of-world quiz: one question at a time, instant feedback with the "why",
 // stars saved as <worldId>-quiz. Tests this world AND earlier ones.
 import { getWorld, WORLDS } from '../levels/index.js';
-import { getActiveProfile, completeLevel } from '../progress.js';
+import { requireUnlockedProfile, completeLevel } from '../progress.js';
 import { sounds } from './sounds.js';
 
-const profile = getActiveProfile();
-if (!profile) location.replace('index.html');
+const profile = requireUnlockedProfile();
+// No unlocked profile: the guard is already redirecting, so stop evaluating this page module here.
+if (!profile) throw new Error('CodeQuest: redirecting to the profile picker');
 
 const world = getWorld(new URLSearchParams(location.search).get('world'));
 if (!world?.quiz) location.replace('index.html');

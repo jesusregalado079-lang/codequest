@@ -5,12 +5,13 @@ import { WORLDS, findLevel, worldUnlocked, levelUnlocked, levelUrl } from '../le
 import { loadLevel, isWin } from '../engine/world.js';
 import { runProgram } from '../engine/runner.js';
 import { Renderer } from '../engine/renderer.js';
-import { getActiveProfile, completeLevel } from '../progress.js';
+import { requireUnlockedProfile, completeLevel } from '../progress.js';
 import { friendlyError } from './errors.js';
 import { sounds } from './sounds.js';
 
-const profile = getActiveProfile();
-if (!profile) location.replace('index.html');
+const profile = requireUnlockedProfile();
+// No unlocked profile: the guard is already redirecting, so stop evaluating this page module here.
+if (!profile) throw new Error('CodeQuest: redirecting to the profile picker');
 
 const levelId = new URLSearchParams(location.search).get('level');
 const found = findLevel(levelId) ?? { world: WORLDS[6], level: WORLDS[6].levels[0], index: 0 };

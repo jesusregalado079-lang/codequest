@@ -97,7 +97,20 @@ for (const facing of ['left', 'right']) for (const blocking of [false, true]) fo
   assert.ok(shield.length && sword.length, 'Both hand items have art');
   assert.ok(shield.every((i) => facing === 'right' ? i > torso : i < torso), `${facing}: shield must use left-hand depth`);
   assert.ok(sword.every((i) => facing === 'left' ? i > torso : i < torso), `${facing}: sword must use right-hand depth`);
-  assert.notDeepEqual(drawing({ facing, walk: 0.25 }), drawing({ facing }), 'Profile limbs swing');
+}
+// The near arm itself swings in profile: with a tee there is nothing between the torso box and the head but that arm.
+for (const facing of ['left', 'right']) {
+  const tee = { ...DEFAULT_LOOK, shirtStyle: 'tee' };
+  const nearArm = (walk) => {
+    const calls = drawing({ facing, walk, look: tee });
+    const torso = calls.findIndex(([c, x, y, w, h]) => c === '#e8833a' && y === -24 && w === 4 && h === 12);
+    const head = calls.findIndex(([c, x, y, w, h], i) => i > torso && c === '#eebc98' && y === -32 && w === 8 && h === 8);
+    assert.ok(torso >= 0 && head > torso + 3, `${facing}: torso box and head found`);
+    return calls.slice(torso + 3, head);
+  };
+  const still = nearArm(0), swung = nearArm(0.25);
+  assert.ok(still.length > 0 && swung.length > 0, `${facing}: near arm has rects`);
+  assert.notDeepEqual(swung, still, `${facing}: profile near arm swings`);
 }
 for (const facing of ['down', 'up']) {
   const calls = drawing({ facing, equipped: { mainHand: 'start-blade', offHand: 'stop-sign-shield' } });
@@ -106,6 +119,22 @@ for (const facing of ['down', 'up']) {
   assert.ok(facing === 'down' ? sword[1] < shield[1] : sword[1] > shield[1], 'Hands swap screen sides on back view');
   const torso = calls.findIndex(([c, x, y, w, h]) => c === '#e8833a' && y === -24 && w === 8 && h === 12);
   for (const c of ['#b78249', '#d94d4d']) assert.ok(indexes(calls, c).every((i) => facing === 'up' ? i < torso : i > torso));
+}
+// Face-down chin check: nothing on head rows 4-7 is darker than 0.8x the skin luminance, except the side-edge
+// shade column and hair. Every hairstyle is included so hair rects are excluded by color, not by absence.
+const luminance = (hex) => { const [r, g, b] = hex.slice(1).match(/../g).map((v) => parseInt(v, 16)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const shadeHex = (hex, factor) => '#' + hex.slice(1).match(/../g).map((v) => Math.round(parseInt(v, 16) * factor).toString(16).padStart(2, '0')).join('');
+for (const skin of LOOK_OPTIONS.skin) for (const hairStyle of LOOK_OPTIONS.hairStyle) {
+  const hair = LOOK_OPTIONS.hairColor.find((option) => option.id === DEFAULT_LOOK.hairColor).hex;
+  const hairColors = [hair, shadeHex(hair, 0.68)];
+  const calls = drawing({ facing: 'down', look: { ...DEFAULT_LOOK, skin: skin.id, hairStyle } });
+  // Head grid: columns 4-11 → x -4..3, rows 4-7 → y -28..-25 (unit 1, feet at 0).
+  const chin = calls.filter(([c, x, y, w, h]) => x < 4 && x + w > -4 && y < -24 && y + h > -28)
+    .filter(([c, x, y, w]) => !(x === 3 && w === 1) && !hairColors.includes(c));
+  assert.ok(chin.length > 0, 'Face rects exist on the chin rows');
+  chin.forEach(([c, x, y, w, h]) => {
+    assert.ok(luminance(c) >= 0.8 * luminance(skin.hex), `${skin.id}/${hairStyle}: dark chin rect ${c} at ${x},${y} ${w}x${h}`);
+  });
 }
 // Every skin tone keeps its chin clear; the only dark skin on the head is its side edge.
 for (const skin of LOOK_OPTIONS.skin) for (const facing of ['down', 'left', 'right']) {

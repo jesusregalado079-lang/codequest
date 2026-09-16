@@ -2,6 +2,7 @@ import {
   BASE_HEARTS, CHEST_ODDS, COSMETIC_LAYERS, COSMETICS, DEFAULT_LOOK, GEAR_SLOTS, GEMS,
   ITEMS, LEGENDARY_CHOICES, LESSON_AWARDS, LOOK_OPTIONS, RANKS, SETS, TRACK_LESSONS,
 } from './items.js';
+import { normalizeLessons, normalizeWindows } from './lesson-state.js';
 
 const validTracks = ['guided', 'standard'];
 const allLessons = [...TRACK_LESSONS.guided, ...TRACK_LESSONS.standard];
@@ -82,7 +83,10 @@ export function normalizeCq(value) {
   const lessonsPassed = allLessons.filter((id) => listedLessons.includes(id));
   const legendaryChoice = LEGENDARY_CHOICES.includes(source.legendaryChoice) && cosmetics.includes(source.legendaryChoice)
     ? source.legendaryChoice : null;
-  return { track, look: normalizeLook(source.look), owned, equipped, cosmetics, worn, gems, lessonsPassed, legendaryChoice };
+  return {
+    track, look: normalizeLook(source.look), owned, equipped, cosmetics, worn, gems, lessonsPassed, legendaryChoice,
+    windows: normalizeWindows(source.windows), lessons: normalizeLessons(source.lessons),
+  };
 }
 
 export function passedForTrack(cq) {

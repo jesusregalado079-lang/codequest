@@ -1,0 +1,240 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import {
+  esc, lessonText, parentStatus, parseLessonHash, phaseLabel, PHASES, plainText, questCard, shuffled, shuffledChoices,
+  todayYmd, visibleOptions, windowsFromPlatformVersion, windowsLines,
+} from '../src/cq/lesson-view.js';
+import {
+  completePractice, lessonStatus, missionStepDone, normalizeLessons, openChest, quizQuestionsToAsk, recordParentCheck,
+  recordQuizAttempt, recordSpotIt, recordWarmup, setPosition, setWindows, startLesson, tickMission, addActiveMs,
+} from '../src/cq/lesson-logic.js';
+import { chooseLegendary, normalizeCq, packComplete } from '../src/cq/character.js';
+import { LEGENDARY_CHOICES } from '../src/cq/items.js';
+import { LESSONS, getLesson, trackLessons } from '../src/cq/lessons/pack1.js';
+
+// Small LCG, scrambled so neighbouring seeds do not start in step.
+const seeded = (seed) => {
+  let state = Math.imul(seed ^ 0x9e3779b9, 2654435761) >>> 0;
+  const next = () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
+  next(); next(); next();
+  return next;
+};
+const isIdentity = (entries) => entries.every((entry, position) => entry.index === position);
+
+// ---------- text rendering ----------
+assert.equal(esc('<b a="1">&\'</b>'), '&#60;b a=&#34;1&#34;&#62;&#38;&#39;&#60;/b&#62;');
+assert.equal(esc(null), '');
+assert.equal(lessonText('Click **Start** then **Esc**.', 'Max'), 'Click <strong>Start</strong> then <strong>Esc</strong>.');
+assert.equal(lessonText('Open [your folder] and [your folder].', 'Max'),
+  'Open <span class="cq-folder">Max</span> and <span class="cq-folder">Max</span>.');
+const xssText = lessonText('<img src=x onerror=alert(1)> **<script>alert(1)</script>** [your folder]', '<svg onload=alert(2)>');
+assert.ok(!/<img|<script|<svg/.test(xssText), 'Lesson text and nickname markup are escaped');
+assert.ok(xssText.includes('<strong>&#60;script&#62;alert(1)&#60;/script&#62;</strong>'));
+assert.ok(xssText.includes('<span class="cq-folder">&#60;svg onload=alert(2)&#62;</span>'));
+// Nickname text is literal: no bold conversion, no nested substitution, no attribute break-out.
+assert.equal(lessonText('[your folder]', '**Bo** [your folder]'), '<span class="cq-folder">**Bo** [your folder]</span>');
+assert.equal(lessonText('[your folder]', '"><i>'), '<span class="cq-folder">&#34;&#62;&#60;i&#62;</span>');
+assert.equal(lessonText('$& $1 [your folder]', '$&$1'), '$&#38; $1 <span class="cq-folder">$&#38;$1</span>');
+assert.equal(lessonText('a ** b', 'x'), 'a ** b', 'A lone marker stays plain text');
+assert.equal(plainText('**Rocks** folder'), 'Rocks folder');
+// Every real lesson string renders without leaking raw ** or unescaped angle brackets.
+LESSONS.forEach((lesson) => {
+  const strings = [lesson.title, lesson.practice, lesson.parentWatch || '']
+    .concat(lesson.learn.map((card) => card.text), lesson.mission.map((step) => step.text), lesson.parentChecks)
+    .concat(...lesson.warmup.concat(lesson.quiz, lesson.chest).map((q) => [q.q, q.why || ''].concat(q.choices)));
+  strings.forEach((value) => {
+    const html = lessonText(value, 'Kid');
+    assert.ok(!html.includes('**'), `${lesson.id}: unpaired bold marker in "${value}"`);
+    assert.ok(!/<(?!\/?strong>|span class="cq-folder">|\/span>)/.test(html), `${lesson.id}: unexpected tag in "${value}"`);
+  });
+});
+
+// ---------- shuffling with original indices ----------
+const values = ['a', 'b', 'c', 'd', 'e'];
+for (let seed = 1; seed <= 200; seed++) {
+  const result = shuffled(values, seeded(seed));
+  assert.equal(result.length, values.length);
+  assert.deepEqual(result.map((entry) => entry.index).sort(), [0, 1, 2, 3, 4], 'A permutation of the original indices');
+  result.forEach((entry) => assert.equal(entry.value, values[entry.index], 'Each entry maps back to its original index'));
+}
+assert.ok(Array.from({ length: 50 }, (_, seed) => shuffled(values, seeded(seed + 7))).some((result) => !isIdentity(result)),
+  'shuffled is not the identity for every call');
+assert.equal(new Set(Array.from({ length: 200 }, (_, seed) => JSON.stringify(shuffled(values, seeded(seed + 1)).map((e) => e.index)))).size > 50, true,
+  'shuffled produces many different orders');
+[() => 0, () => 0.9999999, () => 1, () => -3, () => NaN, () => 'x'].forEach((rng) => {
+  const result = shuffled(values, rng);
+  assert.deepEqual(result.map((entry) => entry.index).sort(), [0, 1, 2, 3, 4], 'Broken rng values still give a permutation');
+});
+assert.deepEqual(shuffled([], Math.random), []);
+assert.deepEqual(shuffled(['only'], Math.random), [{ value: 'only', index: 0 }]);
+
+// Choice shuffles: 3+ choices never show the authored order, even with stuck or constant rngs.
+const three = Object.freeze(['right', 'wrong 1', 'wrong 2']);
+const orders = new Map();
+for (let seed = 1; seed <= 3000; seed++) {
+  const result = shuffledChoices(three, seeded(seed));
+  assert.ok(!isIdentity(result), 'Three choices never render in data order');
+  result.forEach((entry) => assert.equal(entry.value, three[entry.index]));
+  const key = result.map((entry) => entry.index).join('');
+  orders.set(key, (orders.get(key) || 0) + 1);
+}
+assert.equal(orders.size, 5, 'All five non-identity orders occur');
+orders.forEach((count, key) => assert.ok(count > 450 && count < 750, `Order ${key} is roughly uniform (${count}/3000)`));
+const firstShownFirst = Array.from(orders.entries()).filter(([key]) => key[0] === '0').reduce((sum, [, count]) => sum + count, 0);
+assert.ok(firstShownFirst < 900, 'The authored first answer is shown first well under half the time');
+[() => 0, () => 0.5, () => 0.9999999, () => NaN].forEach((rng) => {
+  const result = shuffledChoices(three, rng);
+  assert.ok(!isIdentity(result), 'Constant rng still avoids data order');
+  result.forEach((entry) => assert.equal(entry.value, three[entry.index]));
+});
+// Two choices: a fair coin flip (forcing a swap would always put the usually-first answer second).
+const two = ['yes', 'no'];
+const twoOrders = new Set(Array.from({ length: 100 }, (_, seed) => shuffledChoices(two, seeded(seed + 1)).map((e) => e.index).join('')));
+assert.deepEqual(Array.from(twoOrders).sort(), ['01', '10']);
+// Mapping a displayed pick back to data: clicking the displayed position that shows the answer submits the ORIGINAL index.
+LESSONS.forEach((lesson) => lesson.quiz.forEach((q) => {
+  const shown = shuffledChoices(q.choices, seeded(q.q.length));
+  const position = shown.findIndex((entry) => entry.value === q.choices[q.answer]);
+  assert.equal(shown[position].index, q.answer);
+}));
+
+// ---------- labels ----------
+assert.deepEqual(PHASES, ['warmup', 'learn', 'mission', 'quiz', 'parent', 'key', 'chest']);
+assert.deepEqual(PHASES.map(phaseLabel), ['Warm-up', 'Learn', 'Mission', 'Quiz', 'Grown-up', 'Key', 'Chest']);
+assert.equal(phaseLabel('done'), 'Loot');
+assert.equal(phaseLabel('toString'), 'Lesson');
+assert.equal(phaseLabel(undefined), 'Lesson');
+assert.equal(parentStatus('locked'), 'Locked');
+assert.equal(parentStatus('ready'), 'Ready');
+assert.equal(parentStatus('in-progress', 'quiz'), 'In progress (Quiz)');
+assert.equal(parentStatus('in-progress', 'parent'), 'In progress (Grown-up)');
+assert.equal(parentStatus('not-yet'), 'Not yet');
+assert.equal(parentStatus('passed'), 'Passed');
+assert.equal(parentStatus('done'), 'Chest opened');
+assert.equal(parentStatus('constructor'), 'Unknown');
+const g1 = getLesson('g1');
+const g2 = getLesson('g2');
+assert.deepEqual(questCard('locked', g2, 'warmup'), { state: '🔒 Pass Lesson 1 first', button: null, route: null });
+assert.equal(questCard('ready', g1).button, 'Start ▶');
+assert.equal(questCard('in-progress', g1, 'mission').button, 'Continue ▶');
+assert.ok(questCard('in-progress', g1, 'mission').state.includes('Mission'));
+assert.equal(questCard('not-yet', g1).button, 'Call a grown-up again ▶');
+assert.equal(questCard('passed', g1).button, 'Open your chest 🗝️ ▶');
+assert.deepEqual([questCard('done', g1).button, questCard('done', g1).route], ['Practice Mission ▶', 'practice']);
+// Kid-facing wording never says "guided" or "easy".
+['locked', 'ready', 'in-progress', 'not-yet', 'passed', 'done'].forEach((status) => {
+  const card = questCard(status, g2, 'quiz');
+  assert.ok(!/guided|easy/i.test(`${card.state} ${card.button}`));
+});
+const uiSource = readFileSync(new URL('../src/cq/lesson-ui.js', import.meta.url), 'utf8');
+const kidStrings = uiSource.match(/'[^'\n]*'|`[^`\n]*`/g).join(' ');
+assert.ok(!/\bguided\b|\beasy\b/i.test(kidStrings), 'Lesson screens never say guided or easy');
+
+// ---------- Windows ----------
+const options = [{ win: '11', text: 'eleven' }, { win: '10', text: 'ten' }, { win: 'both', text: 'both' }];
+assert.deepEqual(visibleOptions(options, '11'), [{ text: 'eleven', label: null }, { text: 'both', label: null }]);
+assert.deepEqual(visibleOptions(options, '10'), [{ text: 'ten', label: null }, { text: 'both', label: null }]);
+assert.deepEqual(visibleOptions(options, null), [
+  { text: 'eleven', label: 'Windows 11:' }, { text: 'ten', label: 'Windows 10:' }, { text: 'both', label: null }]);
+assert.deepEqual(visibleOptions(undefined, '10'), []);
+assert.deepEqual(windowsLines({ '11': 'middle', '10': 'left' }, '10'), [{ label: null, text: 'left' }]);
+assert.deepEqual(windowsLines({ '11': 'middle', '10': 'left' }, null), [{ label: 'Windows 11:', text: 'middle' }, { label: 'Windows 10:', text: 'left' }]);
+assert.deepEqual(windowsLines({ '11': 'middle' }, '10'), [{ label: 'Windows 11:', text: 'middle' }]);
+assert.deepEqual(windowsLines(undefined, '11'), []);
+assert.equal(windowsFromPlatformVersion('15.0.0'), '11');
+assert.equal(windowsFromPlatformVersion('13.0.0'), '11');
+assert.equal(windowsFromPlatformVersion('12.9'), '10');
+assert.equal(windowsFromPlatformVersion('10.0.0'), '10');
+assert.equal(windowsFromPlatformVersion('1'), '10');
+assert.equal(windowsFromPlatformVersion('0.3.0'), null);
+['', 'x', '11 ', '-13', '13.a', null, undefined, 13].forEach((value) => assert.equal(windowsFromPlatformVersion(value), null));
+
+// ---------- dates + routes ----------
+assert.equal(todayYmd(new Date(2026, 0, 5, 23, 59)), '2026-01-05');
+assert.equal(todayYmd(new Date(2026, 11, 31, 0, 1)), '2026-12-31');
+assert.match(todayYmd(), /^\d{4}-\d{2}-\d{2}$/);
+assert.deepEqual(parseLessonHash('#lesson/g1'), { route: 'lesson', id: 'g1' });
+assert.deepEqual(parseLessonHash('#practice/s5'), { route: 'practice', id: 's5' });
+['', '#', '#lesson/', '#lesson/g6', '#lesson/x1', '#shop/g1', '#lesson/g1/extra', '#lesson/<img>', null].forEach((hash) => assert.equal(parseLessonHash(hash), null));
+
+// ---------- the UI's call order is legal against the lesson rules (a whole pack, both tracks) ----------
+const rng = seeded(99);
+const pickShown = (choices, answer, wrongFirst = false) => {
+  const shown = shuffledChoices(choices, rng);
+  const pick = wrongFirst ? shown.find((entry) => entry.index !== answer) : shown.find((entry) => entry.index === answer);
+  return pick.index;
+};
+function playLesson(cq, lesson, day, { quizMistakes = 0 } = {}) {
+  let state = startLesson(cq, lesson, '2026-09-16T12:00:00.000Z');
+  state = setPosition(recordWarmup(state, lesson, lesson.warmup.map((q, i) => ({ q: i, choice: pickShown(q.choices, q.answer, i === 0) }))), lesson.id, 'learn', 0);
+  state = addActiveMs(state, lesson.id, 61000);
+  lesson.learn.forEach((_, i) => { if (i) state = setPosition(state, lesson.id, 'learn', i); });
+  state = setPosition(state, lesson.id, 'mission', 0);
+  lesson.mission.forEach((step, i) => {
+    if (i) state = setPosition(state, lesson.id, 'mission', i);
+    if (step.kind === 'windowsCheck') state = setWindows(state, '11');
+    else if (step.kind === 'spotIt') {
+      const order = shuffled(step.cards, rng).map((entry) => entry.index);
+      state = recordSpotIt(state, lesson, i, order.map((card, n) => ({ card, pick: n === 0 ? (step.cards[card].answer === 'ok' ? 'stop' : 'ok') : step.cards[card].answer })));
+    } else state = tickMission(state, lesson, i, true);
+    assert.ok(missionStepDone(state, lesson, i), `${lesson.id} step ${i + 1} done`);
+  });
+  state = setPosition(state, lesson.id, 'quiz', 0);
+  let attempts = 0;
+  while (normalizeLessons(state.lessons)[lesson.id].phase === 'quiz') {
+    const asks = shuffled(quizQuestionsToAsk(state, lesson), rng).map((entry) => entry.value);
+    state = recordQuizAttempt(state, lesson, asks.map((q, n) => ({ q, choice: pickShown(lesson.quiz[q].choices, lesson.quiz[q].answer, attempts === 0 && n < quizMistakes) })), '2026-09-16T12:10:00.000Z');
+    attempts += 1;
+    assert.ok(attempts < 5);
+  }
+  assert.equal(lessonStatus(state, lesson), 'in-progress');
+  const partial = lesson.parentChecks.map((_, i) => i !== 0);
+  state = recordParentCheck(state, lesson, partial, 'Needed a hint <b>', '2026-09-16T12:20:00.000Z');
+  assert.equal(lessonStatus(state, lesson), 'not-yet');
+  assert.throws(() => completePractice(state, lesson, day), /not passed/, 'Not-yet practice earns nothing; the UI sends him back to the grown-up');
+  state = recordParentCheck(state, lesson, lesson.parentChecks.map(() => true), 'All good', '2026-09-16T12:30:00.000Z');
+  assert.equal(lessonStatus(state, lesson), 'passed');
+  state = setPosition(state, lesson.id, 'chest', 0);
+  const opened = openChest(state, lesson, lesson.chest.map((_, i) => i !== 0), '2026-09-16T12:40:00.000Z', rng);
+  assert.equal(opened.loot.item, lesson.item);
+  state = opened.cq;
+  assert.equal(lessonStatus(state, lesson), 'done');
+  const practice = completePractice(state, lesson, day);
+  assert.equal(practice.gems, 10);
+  assert.equal(completePractice(practice.cq, lesson, day).gems, 0, 'Same day: come back tomorrow');
+  return { cq: practice.cq, attempts };
+}
+for (const track of ['guided', 'standard']) {
+  let cq = normalizeCq({ track, look: null });
+  const lessons = trackLessons(track);
+  lessons.forEach((lesson, i) => {
+    if (i + 1 < lessons.length) assert.equal(lessonStatus(cq, lessons[i + 1]), 'locked');
+    const played = playLesson(cq, lesson, `2026-09-${String(16 + i).padStart(2, '0')}`, { quizMistakes: 2 });
+    assert.ok(played.attempts >= 2, 'Missed questions come back in a fix-up round');
+    cq = played.cq;
+  });
+  assert.equal(cq.windows, '11');
+  assert.ok(packComplete(cq));
+  assert.equal(cq.legendaryChoice, null);
+  cq = chooseLegendary(cq, LEGENDARY_CHOICES[1]);
+  assert.equal(cq.legendaryChoice, LEGENDARY_CHOICES[1]);
+  assert.ok(cq.cosmetics.includes('title-champion'));
+  assert.equal(normalizeLessons(cq.lessons)[lessons[0].id].parent.note, 'All good');
+}
+
+// ---------- source rules for the new UI modules ----------
+const viewSource = readFileSync(new URL('../src/cq/lesson-view.js', import.meta.url), 'utf8');
+const hubSource = readFileSync(new URL('../src/cq/ui.js', import.meta.url), 'utf8');
+[uiSource, viewSource, hubSource].forEach((source) => {
+  assert.equal(/\.at\(|Object\.hasOwn|structuredClone|findLast|replaceAll|\?\?=|\|\|=|&&=/.test(source), false, 'No ES2021+ builtins');
+  assert.equal(/\balert\(|\bconfirm\(|\bprompt\(/.test(source), false, 'No alert/confirm/prompt');
+  assert.equal(/<[a-z][^>]*\son[a-z]+=/i.test(source), false, 'No inline event handlers (CSP)');
+});
+assert.ok(uiSource.includes('function showKeyScreen('), 'Key screen stays a separate function');
+assert.ok(uiSource.includes('battle inserts here in Phase 4'));
+assert.ok(!/\binnerHTML\s*=\s*[^`'"]*\+/.test(uiSource), 'innerHTML is built from escaped templates only');
+// The lesson UI module loads without a DOM (nothing runs at import time).
+const module = await import('../src/cq/lesson-ui.js');
+assert.equal(typeof module.mountLesson, 'function');
+
+console.log('ok — Computer Quest lesson view helpers, choice shuffles, labels, Windows hints, and full-pack UI call order pass');

@@ -7,12 +7,13 @@ import { loadLevel, isWin } from '../engine/world.js';
 import { runProgram } from '../engine/runner.js';
 import { Renderer } from '../engine/renderer.js';
 import { defineBlocks, toolboxFor, cleanCode } from '../blocks/blocks.js';
-import { getActiveProfile, completeLevel } from '../progress.js';
+import { requireUnlockedProfile, completeLevel } from '../progress.js';
 import { sounds } from './sounds.js';
 import { startCoach } from './coach.js';
 
-const profile = getActiveProfile();
-if (!profile) location.replace('index.html');
+const profile = requireUnlockedProfile();
+// No unlocked profile: the guard is already redirecting, so stop evaluating this page module here.
+if (!profile) throw new Error('CodeQuest: redirecting to the profile picker');
 
 const params = new URLSearchParams(location.search);
 const customId = params.get('custom');

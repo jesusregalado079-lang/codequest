@@ -2,6 +2,7 @@
 import { normalizeCq } from './cq/character.js';
 const KEY = 'codequest-v1';
 const UNLOCKED_KEY = 'codequest-unlocked';
+let memoryUnlocked = null;
 
 export const PICTURES = [
   { id: 'dragon', emoji: '🐉' }, { id: 'rocket', emoji: '🚀' },
@@ -254,15 +255,27 @@ export function recentPinResets(now = Date.now()) {
 }
 
 export function markUnlocked(id) {
+  memoryUnlocked = id;
   try { sessionStorage.setItem(UNLOCKED_KEY, id); } catch { /* unavailable storage */ }
 }
 
 export function isUnlocked(id) {
-  try { return sessionStorage.getItem(UNLOCKED_KEY) === id; } catch { return false; }
+  try {
+    const stored = sessionStorage.getItem(UNLOCKED_KEY);
+    return stored === id || (stored === null && memoryUnlocked === id);
+  } catch { return memoryUnlocked === id; }
 }
 
 export function clearUnlocked() {
+  memoryUnlocked = null;
   try { sessionStorage.removeItem(UNLOCKED_KEY); } catch { /* unavailable storage */ }
+}
+
+export function requireUnlockedProfile() {
+  const profile = getActiveProfile();
+  if (profile && isUnlocked(profile.id)) return profile;
+  if (typeof location !== 'undefined' && typeof location.replace === 'function') location.replace('index.html');
+  return null;
 }
 
 export function exportData() {

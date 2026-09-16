@@ -5,8 +5,11 @@ import {
   deleteProfile, streakToday, exportData, importData, PICTURES,
   setPictureCode, checkPictureCode, clearPictureCode, setTrack,
   markUnlocked, isUnlocked, clearUnlocked, hasParentPin, setParentPin,
-  checkParentPin, resetParentPin, recentPinResets, load,
+  checkParentPin, resetParentPin, recentPinResets, load, updateCq,
 } from '../progress.js';
+import { LESSONS, trackLessons } from '../cq/lessons/pack1.js';
+import { emptyLessonState, familyReport, lessonStatus, profileReport, setWindows } from '../cq/lesson-logic.js';
+import { parentStatus, todayYmd } from '../cq/lesson-view.js';
 import { sounds } from './sounds.js';
 import { listLevels, deleteLevel } from '../custom-levels.js';
 import { ARMOR, armorUnlocked, getArmor, drawHero } from './hero.js';
@@ -500,9 +503,21 @@ function showParentPinEnter() {
     <p><button class="link-btn" id="back">← back to the map</button></p></div>`);
   const form = card.querySelector('form');
   const message = card.querySelector('.pin-error');
+  let checking = false;
   form.onsubmit = async (event) => {
     event.preventDefault();
-    const result = await checkParentPin(card.querySelector('#pin').value);
+    if (checking) return; // One PIN check at a time: no double-counted tries, no second countdown.
+    checking = true;
+    let result;
+    try {
+      result = await checkParentPin(card.querySelector('#pin').value);
+    } catch {
+      message.textContent = 'Could not check the PIN. Please try again.';
+      return;
+    } finally {
+      checking = false;
+    }
+    if (!card.isConnected) return;
     if (result.ok) return showParents();
     message.textContent = result.lockedMs
       ? `Too many tries — wait ${Math.ceil(result.lockedMs / 1000)} seconds`
@@ -520,6 +535,8 @@ function showParentPinEnter() {
 }
 
 function startPinCountdown(card, message) {
+  if (card.dataset.countdown === 'on') return;
+  card.dataset.countdown = 'on';
   const input = card.querySelector('#pin');
   const submit = card.querySelector('.big-btn');
   input.disabled = true;
@@ -531,6 +548,7 @@ function startPinCountdown(card, message) {
     input.disabled = false;
     submit.disabled = false;
     message.textContent = '';
+    card.dataset.countdown = '';
     clearInterval(timer);
   }, 250);
 }
@@ -575,6 +593,7 @@ function showParents() {
   const card = el(`<div class="card parents-card">${notice}<h2>Grown-ups corner</h2>
     <p>Each world teaches one real programming concept — World 1 <b>sequencing</b>, World 2 <b>loops</b>, World 3 <b>conditionals</b>, World 4 <b>functions</b>, World 5 <b>variables</b> — the five fundamentals — then World 6 <b>events</b> and World 7, where the blocks come off and they type JavaScript by hand.</p>
     <table class="parents"><tr><th>Player</th><th></th></tr>${rows}</table>
+    <div class="cq-report-slot"></div>
     <p><button class="big-btn" id="change-pin" style="font-size:1rem">Change PIN</button></p>
     <p><button class="big-btn" id="export" style="font-size:1rem">Backup progress</button>
       <button class="big-btn" id="import" style="font-size:1rem;background:#4a90d9;box-shadow:0 4px 0 #2c5e94">Restore backup</button></p>
@@ -597,10 +616,11 @@ function showParents() {
     input.onchange = async () => {
       try {
         importData(await input.files[0].text());
-        showParents();
       } catch {
         card.querySelector('#import-message').textContent = 'That file is not a CodeQuest backup.';
+        return;
       }
+      showParents();
     };
     input.click();
   };
@@ -618,7 +638,105 @@ function showParents() {
       }
     };
   });
+  const report = computerQuestReport(profiles);
+  if (report) card.querySelector('.cq-report-slot').append(report);
   app.append(card);
+}
+
+// ---------- Computer Quest report (grown-ups corner, behind the PIN) ----------
+const TRACK_LABELS = { guided: '9yo quest line (guided)', standard: '10yo quest line (standard)' };
+
+function copyText(text, status, fallback) {
+  const showFallback = () => {
+    fallback.hidden = false;
+    fallback.value = text;
+    fallback.focus();
+    fallback.select();
+    status.textContent = 'Press Ctrl+C to copy';
+  };
+  status.textContent = '';
+  fallback.hidden = true;
+  try {
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') return showFallback();
+    navigator.clipboard.writeText(text).then(() => { status.textContent = 'Copied!'; }, showFallback);
+  } catch {
+    showFallback();
+  }
+}
+
+function computerQuestReport(profiles) {
+  const tracked = profiles.filter((p) => p.cq.track);
+  if (!tracked.length) return null;
+  const today = todayYmd();
+  const section = el(`<section class="cq-report" aria-labelledby="cq-report-title">
+    <h3 id="cq-report-title">💻 Computer Quest</h3>
+    <p><button type="button" class="big-btn cq-copy-all" style="font-size:1rem">Copy both boys' report</button></p>
+    <p class="cq-copy-status" aria-live="polite"></p>
+    <textarea class="cq-copy-fallback" readonly rows="8" hidden aria-label="Report text to copy"></textarea>
+    ${tracked.map((p, index) => {
+      const lessons = trackLessons(p.cq.track);
+      const rows = lessons.map((lesson) => {
+        const state = p.cq.lessons[lesson.id] || emptyLessonState();
+        const status = lessonStatus(p.cq, lesson);
+        const note = state.startedAt ? `<tr class="cq-note-row"><td colspan="5"><label class="parent-setting">Note for ${esc(lesson.id.toUpperCase())}
+          <textarea class="cq-parent-note" maxlength="500" rows="2" data-profile="${index}" data-lesson="${esc(lesson.id)}">${esc(state.parent.note)}</textarea></label>
+          <button type="button" class="link-btn cq-save-note" data-profile="${index}" data-lesson="${esc(lesson.id)}">Save note</button> <span class="cq-note-status" aria-live="polite"></span></td></tr>` : '';
+        return `<tr><td><b>${esc(lesson.id.toUpperCase())}</b> ${esc(lesson.title)}</td><td>${esc(parentStatus(status, state.phase))}</td>
+          <td>${state.quizAttempts.length}</td><td>${state.parent.checks.filter(Boolean).length}/${lesson.parentChecks.length}</td>
+          <td>${Math.round(state.activeMs / 60000)}</td></tr>${note}`;
+      }).join('');
+      return `<div class="cq-report-profile">
+        <h4>${esc(p.avatar)} ${esc(p.name)} <small>· ${esc(TRACK_LABELS[p.cq.track])}</small></h4>
+        <label class="parent-setting">Windows version <select class="cq-windows" data-profile="${index}">
+          <option value="" ${p.cq.windows === null ? 'selected' : ''}>—</option>
+          <option value="10" ${p.cq.windows === '10' ? 'selected' : ''}>Windows 10</option>
+          <option value="11" ${p.cq.windows === '11' ? 'selected' : ''}>Windows 11</option>
+        </select></label>
+        <div class="cq-table-wrap"><table class="parents cq-lesson-table"><thead><tr><th>Lesson</th><th>Status</th><th>Quiz tries</th><th>Parent checks</th><th>Minutes</th></tr></thead><tbody>${rows}</tbody></table></div>
+        <p><button type="button" class="big-btn cq-copy-one" data-profile="${index}" style="font-size:1rem">Copy ${esc(p.name)}'s report</button></p>
+      </div>`;
+    }).join('')}
+  </section>`);
+  const status = section.querySelector('.cq-copy-status');
+  const fallback = section.querySelector('.cq-copy-fallback');
+  // Reports read fresh storage so a note or Windows change made a moment ago is included.
+  const fresh = () => getProfiles().filter((p) => p.cq.track);
+  const freshProfile = (index) => getProfiles().find((p) => p.id === tracked[index].id);
+  section.querySelector('.cq-copy-all').onclick = () => copyText(familyReport(fresh(), LESSONS, today), status, fallback);
+  section.querySelectorAll('.cq-copy-one').forEach((button) => {
+    button.onclick = () => {
+      const p = freshProfile(button.dataset.profile);
+      if (p) copyText(profileReport(p, LESSONS, today), status, fallback);
+    };
+  });
+  section.querySelectorAll('.cq-windows').forEach((select) => {
+    select.onchange = () => {
+      try {
+        updateCq(tracked[select.dataset.profile].id, (cq) => setWindows(cq, select.value || null));
+        status.textContent = 'Windows version saved';
+      } catch {
+        status.textContent = 'Could not save the Windows version.';
+      }
+    };
+  });
+  section.querySelectorAll('.cq-save-note').forEach((button) => {
+    button.onclick = () => {
+      const box = section.querySelector(`.cq-parent-note[data-profile="${button.dataset.profile}"][data-lesson="${button.dataset.lesson}"]`);
+      const noteStatus = button.parentNode.querySelector('.cq-note-status');
+      const lessonId = button.dataset.lesson;
+      try {
+        // No lesson-logic setter exists for the note alone; updateCq re-normalizes the whole lesson state.
+        updateCq(tracked[button.dataset.profile].id, (cq) => {
+          const lesson = cq.lessons[lessonId] || emptyLessonState();
+          return { ...cq, lessons: { ...cq.lessons, [lessonId]: { ...lesson, parent: { ...lesson.parent, note: box.value.slice(0, 500) } } } };
+        });
+        noteStatus.textContent = 'Saved';
+      } catch {
+        noteStatus.textContent = 'Could not save';
+      }
+    };
+  });
+  return section;
 }
 
 const active = getActiveProfile();

@@ -7,13 +7,11 @@ import {
   passedForTrack, randomLook, rankFor, setProgress, takeOff, trackItems, traderStock, unequip, wear,
 } from './character.js';
 import { characterCanvas, drawCharacter, drawIcon } from './sprite.js';
+import { getLesson, trackLessons } from './lessons/pack1.js';
+import { lessonStatus } from './lesson-logic.js';
+import { mountLesson } from './lesson-ui.js';
+import { parseLessonHash, questCard } from './lesson-view.js';
 
-const LESSON_TITLES = {
-  g1: 'Meet Your Computer', g2: 'Open, Switch, Close', g3: 'Folders Are Containers',
-  g4: 'Find It and Keep It Tidy', g5: 'Keyboard Keys and the STOP Rule',
-  s1: 'Windows Map + Alt+Tab', s2: 'Files, Folders, Save and Find',
-  s3: 'Copy, Move, Rename + Ctrl+Z', s4: 'Shortcut Power + Home Row', s5: 'Search Smart, Stay Safe',
-};
 const SLOT_LABELS = { head: 'Head', body: 'Body', feet: 'Feet', mainHand: 'Hand', offHand: 'Off-hand', back: 'Back', magic1: 'Magic 1', magic2: 'Magic 2' };
 const FIELD_LABELS = { skin: 'Skin', hairStyle: 'Hair style', hairColor: 'Hair color', eyeColor: 'Eye color', shirtStyle: 'Shirt style', shirtColor: 'Shirt color', pantsColor: 'Pants', shoesColor: 'Shoes' };
 const LAYER_LABELS = { hat: 'Hats', cape: 'Capes & wings', face: 'Face', hairFx: 'Hair effects', title: 'Titles', trail: 'Trails' };
@@ -26,6 +24,7 @@ const app = document.getElementById('app');
 const active = getActiveProfile();
 let cq, draft, preview = false, facingIndex = 0, tab = 'Gear', selectedItem = null, pendingBuy = null;
 let animation = 0, message = '';
+let lessonView = null, lessonEntry = '';
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 try { const saved = sessionStorage.getItem('cq-tab'); if (TABS.includes(saved)) tab = saved; } catch { /* Private mode. */ }
 
@@ -44,8 +43,10 @@ if (!active || !isUnlocked(active.id)) {
       }
     }
     draft = { ...(cq.look || DEFAULT_LOOK) };
-    render();
+    showRoute();
     app.addEventListener('click', onClick);
+    // #lesson/<id> and #practice/<id> show a lesson screen; no hash (or '#') is the hub. Browser Back returns to the hub.
+    window.addEventListener('hashchange', showRoute);
     // Another tab may change profiles or revoke this track while the hub is open.
     window.addEventListener('storage', () => {
       if (preview) return;
@@ -53,13 +54,40 @@ if (!active || !isUnlocked(active.id)) {
       if (!profile || profile.id !== active.id || !isUnlocked(active.id)) { location.replace('index.html'); return; }
       cq = getCq(active.id);
       if (!cq.track) { location.replace('computer.html'); return; }
-      render();
+      if (lessonView) showRoute(); else render();
     });
     window.addEventListener('pagehide', () => cancelAnimationFrame(animation));
-    window.addEventListener('pageshow', (event) => { if (event.persisted) render(); });
+    window.addEventListener('pageshow', (event) => { if (event.persisted && !lessonView) render(); });
   }
 }
 
+function saveCq(change) {
+  cq = preview ? normalizeCq(change(cq)) : updateCq(active.id, change);
+  return cq;
+}
+function showRoute() {
+  const target = parseLessonHash(location.hash);
+  // Any hop other than Quests → lesson (an in-lesson link, Back/Forward) means history.back() may not reach the hub.
+  if (location.hash !== lessonEntry) lessonEntry = '';
+  const previous = lessonView ? lessonView.lessonId : null;
+  if (lessonView) { lessonView.destroy(); lessonView = null; }
+  if (!preview) cq = getCq(active.id);
+  if (target && cq.look !== null) {
+    cancelAnimationFrame(animation);
+    lessonView = mountLesson({ app, route: target.route, lessonId: target.id, nickname: active.name, getCq: () => cq, save: saveCq, sound, onExit: exitLesson });
+    return;
+  }
+  lessonEntry = '';
+  if (previous) { tab = 'Quests'; message = ''; }
+  render();
+  if (previous) focusAction('open-lesson', previous);
+}
+function exitLesson() {
+  // Opened from the Quests tab and still on that entry: step back so browser history stays hub → lesson.
+  if (lessonEntry && lessonEntry === location.hash) { lessonEntry = ''; history.back(); return; }
+  history.replaceState(null, '', location.pathname + location.search);
+  showRoute();
+}
 function sound(name) {
   try { sounds[name](); } catch { /* Audio may be disabled; actions still work. */ }
 }
@@ -87,7 +115,7 @@ function editor(creator) {
   return `<section class="cq-editor" aria-label="Hero look editor">
     <div class="cq-section-head"><div><span class="cq-eyebrow">YOUR LOOK</span><h2>${creator ? 'Make it yours' : 'Change your look'}</h2></div>${button('random', '🎲 Randomize')}</div>
     ${Object.keys(LOOK_OPTIONS).map((key) => `<fieldset><legend>${FIELD_LABELS[key]}</legend><div class="cq-options">${LOOK_OPTIONS[key].map((o, i) => {
-      const name = o.name || (o.id === 'darkbrown' ? 'Dark brown' : o.id);
+      const name = o.name || (o.id === 'darkbrown' ? 'dark brown' : o.id);
       const label = key === 'skin' ? `Skin tone ${i + 1}` : o.hex ? `${FIELD_LABELS[key]}: ${name}` : name;
       return `<button type="button" class="${o.hex ? 'cq-swatch' : 'cq-chip'}" data-action="option" data-field="${key}" data-value="${esc(o.id)}" aria-label="${esc(label)}" title="${esc(label)}" aria-pressed="${draft[key] === o.id}" ${o.hex ? `style="--swatch:${esc(o.hex)}"` : ''}>${o.hex ? '<span aria-hidden="true">✓</span>' : esc(label)}</button>`;
     }).join('')}</div></fieldset>`).join('')}
@@ -133,7 +161,7 @@ function gear() {
     <div class="cq-inventory">${cq.owned.map((id) => {
       const item = getItem(id);
       return `<button type="button" class="cq-tile" data-action="select" data-id="${esc(id)}" ${rarity(item)} aria-pressed="${selectedItem === id}">${icon(item)}<strong>${esc(item.name)}</strong><span class="cq-rarity">${Object.values(cq.equipped).includes(id) ? 'Equipped' : esc(item.rarity)}</span></button>`;
-    }).join('')}${lockedTrackItems(cq).map(({ item, lesson }) => `<article class="cq-tile cq-locked" ${rarity(item)}>${icon(item, true)}<strong>${esc(item.name)}</strong><small>Pass Lesson ${esc(lesson.toUpperCase())} · ${esc(LESSON_TITLES[lesson])} to unlock</small></article>`).join('')}</div>`;
+    }).join('')}${lockedTrackItems(cq).map(({ item, lesson }) => `<article class="cq-tile cq-locked" ${rarity(item)}>${icon(item, true)}<strong>${esc(item.name)}</strong><small>Pass Lesson ${esc(lesson.toUpperCase())} · ${esc(getLesson(lesson).title)} to unlock</small></article>`).join('')}</div>`;
 }
 function wardrobe() {
   return `${editor(false)}<div class="cq-section-head cq-divider"><div><span class="cq-eyebrow">COLLECTED STYLE</span><h2>Your wardrobe</h2></div></div>
@@ -154,9 +182,15 @@ function trader() {
     }).join('')}</div>`}`;
 }
 function quests() {
+  const lessons = trackLessons(cq.track);
   const passed = passedForTrack(cq);
-  return `<div class="cq-section-head"><div><span class="cq-eyebrow">PACK 1 · YOUR NEXT GOALS</span><h2>Quest log</h2></div><span class="cq-muted">${passed.length}/${trackItems(cq.track).length} passed</span></div>
-    <div class="cq-quests">${trackItems(cq.track).map((item, i) => `<article class="cq-quest ${passed.includes(item.lesson) ? 'cq-passed' : ''}"><span class="cq-quest-number">${i + 1}</span><div><span class="cq-eyebrow">LESSON ${esc(item.lesson.toUpperCase())}</span><h3>${esc(LESSON_TITLES[item.lesson])}</h3><span class="cq-quest-state">${passed.includes(item.lesson) ? '✅ Passed' : '🔒 Coming soon'}</span><div class="cq-reward">${icon(item, false, 40)}<span>${esc(item.name)}</span></div></div></article>`).join('')}</div>`;
+  return `<div class="cq-section-head"><div><span class="cq-eyebrow">PACK 1 · YOUR NEXT GOALS</span><h2>Quest log</h2></div><span class="cq-muted">${passed.length}/${lessons.length} passed</span></div>
+    <div class="cq-quests">${lessons.map((lesson) => {
+      const status = lessonStatus(cq, lesson);
+      const card = questCard(status, lesson, cq.lessons[lesson.id] ? cq.lessons[lesson.id].phase : 'warmup');
+      const item = getItem(lesson.item);
+      return `<article class="cq-quest cq-quest-${status} ${status === 'done' ? 'cq-passed' : ''}"><span class="cq-quest-number">${lesson.number}</span><div class="cq-quest-body"><span class="cq-eyebrow">LESSON ${esc(lesson.id.toUpperCase())} · ${esc(lesson.minutes)} MIN</span><h3>${esc(lesson.title)}</h3><span class="cq-quest-state">${esc(card.state)}</span><div class="cq-reward">${icon(item, status === 'locked', 40)}<span>${esc(item.name)}</span></div>${card.button ? button('open-lesson', esc(card.button), `data-id="${esc(lesson.id)}" data-route="${card.route}" aria-label="${esc(`${card.button.replace(/[▶🗝️]/gu, '').trim()}: Lesson ${lesson.id.toUpperCase()} ${lesson.title}`)}"`, 'cq-primary cq-quest-go') : ''}</div></article>`;
+    }).join('')}</div>`;
 }
 function render() {
   cancelAnimationFrame(animation);
@@ -202,6 +236,7 @@ function focusAction(action, id) {
   if (target) target.focus({ preventScroll: true });
 }
 function onClick(event) {
+  if (lessonView) return; // Lesson screens handle their own clicks.
   const b = event.target.closest('button[data-action]');
   if (!b || b.disabled) return;
   const action = b.dataset.action, id = b.dataset.id;
@@ -224,7 +259,11 @@ function onClick(event) {
     const selected = app.querySelector(`[data-tab="${tab}"]`); if (selected) selected.focus({ preventScroll: true });
   } else if (action === 'select') { selectedItem = id; sound('tap'); render(); app.querySelector('.cq-detail').focus({ preventScroll: true }); }
   else if (action === 'close-item') { const previous = selectedItem; selectedItem = null; render(); focusAction('select', previous); }
-  else if (action === 'empty-slot') { message = 'Choose an owned item to equip it here.'; app.querySelector('.cq-status').textContent = message; }
+  else if (action === 'open-lesson') {
+    const hash = `#${b.dataset.route}/${id}`;
+    if (!parseLessonHash(hash)) return;
+    sound('tap'); lessonEntry = hash; location.hash = hash;
+  } else if (action === 'empty-slot') { message = 'Choose an owned item to equip it here.'; app.querySelector('.cq-status').textContent = message; }
   else if (action === 'equip') { if (mutate((state) => equip(state, id, b.dataset.slot), `${getItem(id).name} equipped`)) focusAction('unequip'); }
   else if (action === 'unequip') { if (mutate((state) => unequip(state, b.dataset.slot), 'Gear removed')) focusAction('equip', selectedItem); }
   else if (action === 'wear') { if (mutate((state) => wear(state, id), `${getCosmetic(id).name} worn`)) focusAction('take-off', id); }
