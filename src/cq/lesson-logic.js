@@ -3,6 +3,7 @@ import { addGems, awardLesson, battleGems, chestGems, packComplete, rollChest } 
 import { emptyLessonState, normalizeLessons, normalizeWindows } from './lesson-state.js';
 import { trackLessons } from './lessons/pack1.js';
 import { normalizeTyping } from './typing/state.js';
+import { isValidIso, isValidDay } from './iso.js';
 
 export { emptyLessonState, normalizeLessons, normalizeWindows } from './lesson-state.js';
 
@@ -10,10 +11,10 @@ const PHASES = ['warmup', 'learn', 'mission', 'quiz', 'parent', 'key', 'chest', 
 const LESSON_IDS = ['g1', 'g2', 'g3', 'g4', 'g5', 's1', 's2', 's3', 's4', 's5'];
 const BATTLE_OUTCOMES = ['victory', 'time', 'fell', 'skipped'];
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
-const validIso = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value));
+// Same strict validators the saved-state reader uses, so a value accepted here is never dropped on reload.
+const validIso = isValidIso;
 const clampInt = (value, min, max) => Math.min(max, Math.max(min, Number.isFinite(value) ? Math.floor(value) : min));
-const validDay = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
-  && (() => { const p = value.split('-').map(Number); const date = new Date(Date.UTC(p[0], p[1] - 1, p[2])); return date.getUTCFullYear() === p[0] && date.getUTCMonth() === p[1] - 1 && date.getUTCDate() === p[2]; })();
+const validDay = isValidDay;
 const stateFor = (cq, id) => normalizeLessons(cq?.lessons)[id] || emptyLessonState();
 const replace = (cq, id, state) => ({ ...cq, lessons: { ...normalizeLessons(cq?.lessons), [id]: state } });
 const phaseIndex = (phase) => PHASES.indexOf(phase);

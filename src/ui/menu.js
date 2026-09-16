@@ -670,6 +670,7 @@ function computerQuestReport(profiles) {
   const today = todayYmd();
   const section = el(`<section class="cq-report" aria-labelledby="cq-report-title">
     <h3 id="cq-report-title">💻 Computer Quest</h3>
+    <p class="cq-report-help">Each week: tap Copy both boys' report and paste it to Claude to plan the next lessons. Setup and how-it-works guide: the &#34;CodeQuest — Computer Quest Parent Guide&#34; doc in your Drive CodeQuest folder.</p>
     <p><button type="button" class="big-btn cq-copy-all" style="font-size:1rem">Copy both boys' report</button></p>
     <p class="cq-copy-status" aria-live="polite"></p>
     <textarea class="cq-copy-fallback" readonly rows="8" hidden aria-label="Report text to copy"></textarea>

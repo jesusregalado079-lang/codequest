@@ -61,12 +61,12 @@ export function runGame(code, mission) {
   const totalTicks = mission.ticks ?? 12;
   for (let t = 0; t < totalTicks && !g.over && !timedOut; t++) {
     for (const input of inputs.filter((i) => i.tick === t)) {
-      timedOut ||= !callHandler(interp, input.key === 'left' ? 'onLeft' : 'onRight');
+      timedOut = timedOut || !callHandler(interp, input.key === 'left' ? 'onLeft' : 'onRight');
       snapshot('move');
     }
-    timedOut ||= !callHandler(interp, 'onTick');
+    timedOut = timedOut || !callHandler(interp, 'onTick');
     for (const event of stepPhysics(g, mission)) {
-      timedOut ||= !callHandler(interp, event === 'catch' ? 'onCatch' : 'onMiss');
+      timedOut = timedOut || !callHandler(interp, event === 'catch' ? 'onCatch' : 'onMiss');
       snapshot(event);
     }
     snapshot('tick');

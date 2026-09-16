@@ -126,7 +126,7 @@ export function mountTyping({ app, mode, profileId = null, getCq, save, sound, o
       </div>
       <div class="cq-actions cq-ty-tools">
         ${standard ? `<button type="button" class="cq-button" data-ty="kbd" aria-pressed="${keyboardHidden}">${keyboardHidden ? 'Show keyboard' : 'Hide keyboard'}</button>` : ''}
-        <button type="button" class="cq-button" data-ty="sound" aria-pressed="${!soundOn}">${soundOn ? '🔊 Sound' : '🔇 Sound'}</button>
+        <button type="button" class="cq-button" data-ty="sound" aria-pressed="${!soundOn}"><span aria-hidden="true">${soundOn ? '🔊' : '🔇'}</span> Sound</button>
       </div>`;
     const kb = screenEl.querySelector('.cq-kb');
     const keys = {};
@@ -306,7 +306,7 @@ export function mountTyping({ app, mode, profileId = null, getCq, save, sound, o
       soundOn = !soundOn;
       writePref(soundPrefKey(profileId), soundOn ? '1' : '0');
       button.setAttribute('aria-pressed', String(!soundOn));
-      button.textContent = soundOn ? '🔊 Sound' : '🔇 Sound';
+      button.innerHTML = `<span aria-hidden="true">${soundOn ? '🔊' : '🔇'}</span> Sound`;
     } else if (what === 'kbd' && els.kb) {
       keyboardHidden = !keyboardHidden;
       writePref(keyboardPrefKey(profileId), keyboardHidden ? '1' : '0');

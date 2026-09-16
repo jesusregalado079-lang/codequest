@@ -1,17 +1,14 @@
 import { GEMS } from '../items.js';
 import { addGems, normalizeCq } from '../character.js';
 import { normalizeTyping } from './state.js';
+import { isValidIso, isValidDay } from '../iso.js';
 
 const MODES = ['homeRow', 'lessonWords', 'sentences'];
 // Fix P5a-fix #5: require a real ISO timestamp shape before trusting Date.parse (too lenient alone).
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
-const validIso = (value) => typeof value === 'string' && ISO_RE.test(value) && Number.isFinite(Date.parse(value));
-const validDay = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
-  && (() => {
-    const parts = value.split('-').map(Number);
-    const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-    return date.getUTCFullYear() === parts[0] && date.getUTCMonth() === parts[1] - 1 && date.getUTCDate() === parts[2];
-  })();
+// Fix P6b: isValidIso/isValidDay also reject impossible dates the regex+Date.parse pair let
+// through (e.g. "2026-02-30" rolls over instead of failing).
+const validIso = isValidIso;
+const validDay = isValidDay;
 // Fix P5a-fix #2/#3: clamp/round exactly like state.js's normalizeSession/normalizeBest, so the
 // stored session, the new-best comparison, and the returned cq all agree on the same values.
 const clampInt = (value, min, max) => Math.min(max, Math.max(min, Math.round(value)));

@@ -1,18 +1,17 @@
+import { isValidIso, isValidDay } from './iso.js';
+
 const LESSON_IDS = ['g1', 'g2', 'g3', 'g4', 'g5', 's1', 's2', 's3', 's4', 's5'];
 const PHASES = ['warmup', 'learn', 'mission', 'quiz', 'parent', 'key', 'chest', 'done'];
 const BATTLE_OUTCOMES = ['victory', 'time', 'fell', 'skipped'];
 
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const number = (value) => Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
-const iso = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : null;
+// Fix P6b: was Date.parse-only (loose, and let impossible dates like "2026-02-30" roll over) —
+// isValidIso requires the ISO shape plus every component actually being in range.
+const iso = (value) => (isValidIso(value) ? value : null);
 const finiteNumber = (value) => typeof value === 'number' && Number.isFinite(value);
 const clampInt = (value, min, max) => Math.min(max, Math.max(min, Math.floor(value)));
-const day = (value) => {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const parts = value.split('-').map(Number);
-  const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-  return date.getUTCFullYear() === parts[0] && date.getUTCMonth() === parts[1] - 1 && date.getUTCDate() === parts[2] ? value : null;
-};
+const day = (value) => (isValidDay(value) ? value : null);
 
 function answers(value) {
   if (!Array.isArray(value)) return [];

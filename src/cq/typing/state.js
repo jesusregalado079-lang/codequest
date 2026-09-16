@@ -1,3 +1,5 @@
+import { isValidIso, isValidDay } from '../iso.js';
+
 const MODES = ['homeRow', 'lessonWords', 'sentences'];
 
 const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
@@ -5,16 +7,12 @@ const object = (value) => (value && typeof value === 'object' && !Array.isArray(
 const finiteNumber = (value) => typeof value === 'number' && Number.isFinite(value);
 // Fix P5a-fix #5: Date.parse alone is too lenient (engine-dependent loose parsing of non-ISO
 // strings like "1"), so require a real ISO timestamp shape before trusting Date.parse's result.
-const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
-const iso = (value) => (typeof value === 'string' && ISO_RE.test(value) && Number.isFinite(Date.parse(value)) ? value : null);
+// Fix P6b: shape alone still let impossible dates like "2026-02-30" through (Date.parse rolls
+// them over) — isValidIso also checks the Y-M-D/H:M:S components are in range.
+const iso = (value) => (isValidIso(value) ? value : null);
 const clampInt = (value, min, max) => Math.min(max, Math.max(min, Math.round(value)));
 const clamp1 = (value, min, max) => Math.round(Math.min(max, Math.max(min, value)) * 10) / 10;
-const day = (value) => {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  const parts = value.split('-').map(Number);
-  const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-  return date.getUTCFullYear() === parts[0] && date.getUTCMonth() === parts[1] - 1 && date.getUTCDate() === parts[2] ? value : null;
-};
+const day = (value) => (isValidDay(value) ? value : null);
 
 export function emptyTyping() {
   return { best: { homeRow: null, lessonWords: null, sentences: null }, sessions: [], bestGemDays: [] };

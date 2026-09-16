@@ -288,6 +288,13 @@ assert.strictEqual(normalizeTyping({ best: { homeRow: { wpm: 1, accuracy: 1, at:
 assert.strictEqual(normalizeTyping({ sessions: [{ at: '1', mode: 'homeRow', wpm: 1, accuracy: 1, ms: 1, chars: 1 }] }).sessions.length, 0, 'session at: "1" is rejected');
 assert.strictEqual(normalizeTyping({ best: { homeRow: { wpm: 1, accuracy: 1, at: iso } } }).best.homeRow.at, iso, 'a real ISO timestamp still passes');
 assert.strictEqual(normalizeTyping({ best: { homeRow: { wpm: 1, accuracy: 1, at: 'not-a-date' } } }).best.homeRow, null, 'bad at drops the record');
+
+// P6b: strict dates — Date.parse silently rolls impossible calendar dates/times over into a real
+// one (Feb 30 -> Mar 2, hour 24 -> next day), which must not be accepted as a valid timestamp.
+['2026-02-30T00:00:00.000Z', '2026-04-31T00:00:00.000Z', '2025-02-29T00:00:00.000Z', '2026-09-16T24:00:00.000Z', '2026-09-16T12:60:00.000Z', '2026-13-01T00:00:00.000Z', '2026-00-16T00:00:00.000Z']
+  .forEach((bad) => assert.strictEqual(normalizeTyping({ best: { homeRow: { wpm: 1, accuracy: 1, at: bad } } }).best.homeRow, null, `impossible date rejected: ${bad}`));
+['2026-02-28T00:00:00.000Z', '2024-02-29T00:00:00.000Z', '2026-04-30T00:00:00.000Z', '2026-09-16T23:59:59.000Z']
+  .forEach((good) => assert.strictEqual(normalizeTyping({ best: { homeRow: { wpm: 1, accuracy: 1, at: good } } }).best.homeRow.at, good, `real date accepted: ${good}`));
 assert.deepStrictEqual(normalizeTyping('nope'), emptyTyping(), 'non-object input');
 assert.deepStrictEqual(normalizeTyping(null), emptyTyping());
 

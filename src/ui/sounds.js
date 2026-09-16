@@ -1,7 +1,7 @@
 // Tiny WebAudio chimes — no audio assets. iOS unlocks audio on first tap.
 let ctx;
 function ac() {
-  ctx ??= new (window.AudioContext || window.webkitAudioContext)();
+  ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
 }

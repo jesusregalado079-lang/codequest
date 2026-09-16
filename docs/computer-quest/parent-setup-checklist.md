@@ -73,11 +73,12 @@ Setup decided:
 - ☐ Chair height puts elbows level with the keyboard. The top of the screen is about eye level.
 - ☐ Tape a card by the screen: **STOP. Don't click. Tell a grown-up.**
 
-## 10. CodeQuest itself (after Phase 1 is built)
-- ☐ Set your 4-digit **parent PIN**. It's a lock against curious fingers, not real security; your Windows admin password is the real lock.
-- ☐ Each boy creates his character and a **nickname** (not his full name). Use the same nickname as his Documents folder.
-- ☐ Each boy picks his **3-picture code**. It stops casual profile-switching, not a determined brother. If he forgets it, reset it from the parent area.
-- ☐ Assign each boy's quest line (9yo track / 10yo track).
+## 10. CodeQuest itself
+- ☐ Each boy creates his profile with a **nickname** (not his full name — use the same nickname as his Documents folder) and picks a **3-picture code**. The code stops casual profile-switching, not a determined brother; if he forgets it, reset it from the grown-ups corner.
+- ☐ Then set your 4-digit **parent PIN** — open a profile, tap **"for grown-ups"** at the bottom of the map, and it asks you to choose one the first time. It's a lock against curious fingers, not real security; your Windows admin password is the real lock.
+- ☐ In the **grown-ups corner** (tap "for grown-ups", enter your PIN), set each boy's **Computer Quest track** (9yo track / 10yo track) and his **Windows version** (10 or 11) so the lessons show the right steps for that version.
+- ☐ Once his track is set, a **💻 Computer Quest** card appears on his map. He taps it to **create his hero** — that's Computer Quest's own character, separate from his CodeQuest one.
+- ☐ Weekly report: in the grown-ups corner's **Computer Quest** section, tap **Copy both boys' report** (or one boy's) and paste it to Claude to plan the next lessons.
 
 ## Each lesson day (2 minutes)
 **Before:**
@@ -88,4 +89,4 @@ Setup decided:
 
 **After:**
 - ☐ When he calls you, enter your PIN and tick the real-task checks you actually saw.
-- ☐ Open the report → **Copy summary** (one boy or both) → paste it to me, and we decide what's next.
+- ☐ Weekly: in the **grown-ups corner**'s **💻 Computer Quest** section, tap **Copy** for each boy's report → paste it to me, and we decide what's next.

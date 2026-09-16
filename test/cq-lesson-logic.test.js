@@ -52,6 +52,18 @@ assert.strictEqual(normalizeLessons({ g1: { phase: 'done' } }).g1.phase, 'warmup
 assert.strictEqual(normalizeLessons({ g1: { quizPassedAt: iso, phase: 'warmup' } }).g1.phase, 'parent');
 assert.strictEqual(normalizeLessons({ g1: { quizPassedAt: iso, passedAt: iso, phase: 'done' } }).g1.phase, 'chest');
 
+// P6b: strict dates — Date.parse silently rolls impossible calendar dates/times over into a real
+// one (Feb 30 -> Mar 2, hour 24 -> next day), which must not be accepted as a startedAt/passedAt/
+// quizPassedAt timestamp or a practiceDays entry.
+['2026-02-30T00:00:00.000Z', '2026-04-31T00:00:00.000Z', '2025-02-29T00:00:00.000Z', '2026-09-16T24:00:00.000Z'].forEach((bad) => {
+  assert.strictEqual(normalizeLessons({ g1: { startedAt: bad } }).g1.startedAt, null, `startedAt rejects ${bad}`);
+});
+['2026-02-28T00:00:00.000Z', '2024-02-29T00:00:00.000Z', '2026-04-30T00:00:00.000Z'].forEach((good) => {
+  assert.strictEqual(normalizeLessons({ g1: { startedAt: good } }).g1.startedAt, good, `startedAt accepts ${good}`);
+});
+assert.deepStrictEqual(normalizeLessons({ g1: { practiceDays: ['2026-02-30', '2026-04-31', '2025-02-29', '2024-02-29', '2026-02-28'] } }).g1.practiceDays,
+  ['2024-02-29', '2026-02-28'], 'practiceDays keeps only real calendar dates, leap day only in a leap year');
+
 // chestProgress: booleans, capped at 10 (the lesson's real chest length isn't known at normalize time).
 const chestNorm = normalizeLessons({ g1: { chestProgress: [true, 'x', false, 1, null, true, true, true, true, true, true, true] } }).g1.chestProgress;
 assert.deepStrictEqual(chestNorm, [true, false, false, false, false, true, true, true, true, true]);
@@ -65,7 +77,7 @@ const validBattle = { playedAt: iso, ms: 90000, poofs: 12, outcome: 'victory', g
 assert.deepStrictEqual(normalizeLessons({ g1: { ...passedState(), battle: validBattle } }).g1.battle, validBattle);
 assert.strictEqual(normalizeLessons({ g1: { battle: validBattle } }).g1.battle, null, 'battle without passedAt is dropped');
 [
-  { ...validBattle, playedAt: 'nope' }, { ...validBattle, playedAt: 5 }, { ...validBattle, outcome: 'lose' },
+  { ...validBattle, playedAt: 'nope' }, { ...validBattle, playedAt: 5 }, { ...validBattle, playedAt: '2026-02-30T00:00:00.000Z' }, { ...validBattle, outcome: 'lose' },
   { ...validBattle, outcome: undefined }, { ...validBattle, ms: NaN }, { ...validBattle, ms: '5' }, { ...validBattle, ms: Infinity },
   { ...validBattle, poofs: NaN }, { ...validBattle, poofs: null }, { ...validBattle, poofs: '3' },
   { ...validBattle, gems: NaN }, { ...validBattle, gems: undefined }, { ...validBattle, gems: [3] },

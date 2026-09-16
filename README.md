@@ -149,6 +149,66 @@ World 4 because building is the reward for learning, not for finishing).
 
 ---
 
+# 🖥️ Computer Quest
+
+A third, sibling app for the same kids (5–10): real-computer skills — files,
+windows, typing, the browser — taught as short lessons with a grown-up watch
+step, not a coding game. Entry: `computer.html` → `src/cq/ui.js`. Same
+localStorage doc as the base app (`codequest-v1`), same profile, same picture
+code / parent PIN; Computer Quest just adds a `cq` field to each profile,
+always run through `normalizeCq` (`src/cq/character.js`) before it's trusted.
+Every screen guards on `requireUnlockedProfile()` (`src/progress.js`), exactly
+like the base app's `play.js`/`code.js`/etc.
+
+**Contracts live in `docs/computer-quest/`** — read the relevant one before
+touching `src/cq/`: `lessons-engine.md` (state machine), `lessons-pack1.md`
+(the 10 authored lessons), `battle.md`, `typing.md`, `character-and-loot.md`,
+`parent-setup-checklist.md`.
+
+- **A lesson is a state machine**, not a screen: warmup → learn → mission →
+  quiz → parent check → key → horde battle (or skip) → chest → done. All
+  transitions are pure functions in `src/cq/lesson-logic.js` /
+  `lesson-state.js`; `lesson-ui.js`'s `mountLesson` is the only thing that
+  touches the DOM. The battle record is committed to storage **the moment the
+  battle ends**, before the visual results banner even starts its timer — see
+  `test/cq-battle-record.test.js`, which drives the real `finishBattle`/`onDone`
+  wiring (not a hand-written stand-in) on a stub DOM to prove it.
+- **The horde battle is a deterministic engine** (`src/cq/battle/engine.js`):
+  no `Math.random()`, no DOM — it takes an `rng` function, so `npm test` can
+  replay 100 seeds per track/gear combo and assert a target bot win rate
+  (`test/cq-battle.test.js`). `battle-ui.js` is the real screen: canvas + rAF
+  + keyboard, wired to the engine.
+- **The typing engine** (`src/cq/typing/engine.js`) is the same shape: pure
+  key-by-key state and WPM/accuracy scoring in `engine.js`, personal bests +
+  gems in `record.js`, `typing-ui.js` as the
+  real Typing Dojo screen (`test/cq-typing.test.js`, `test/cq-typing-ui.test.js`).
+- **The parent report** (`familyReport`/`profileReport`/`lessonReport` in
+  `lesson-logic.js`) turns saved lesson/typing state into the plain-text
+  summary the grown-ups corner's Copy buttons hand to a parent — see
+  `src/ui/menu.js`'s Computer Quest section.
+
+## Computer Quest gotchas
+
+- **No ES2021+ syntax or builtins**, same rule as the base app, enforced by
+  `test/syntax-compat.test.js`: no `??=`/`||=`/`&&=`, no `.at(`, no
+  `Object.hasOwn`, `structuredClone`, `findLast`, `replaceAll`, numeric
+  separators, or top-level `await`, anywhere under `src/cq/` (or the rest of
+  the kids app). `src/pro/` is exempt — it's the adult track, shipped
+  separately, never sent to the iPad.
+- **Lesson text is verbatim from the approved pack** (`src/cq/lessons/pack1.js`,
+  see `docs/computer-quest/lessons-pack1.md`). Don't paraphrase or "improve"
+  copy while touching lesson logic.
+- **Never bind `Ctrl`/`Alt`/`Meta`/`Tab`/F-keys in any game**, battle included
+  — `keyAction`/`shouldPreventDefault` (`src/cq/battle/view.js`) and the
+  battle-ui keydown handler exist specifically to keep those free for
+  accessibility/browser chrome; `test/cq-battle-ui.test.js` asserts it.
+- **Dates read from storage are strictly validated**, not just `Date.parse`'d
+  — `src/cq/iso.js`'s `isValidIso`/`isValidDay` reject impossible calendar
+  dates (`Date.parse` silently rolls "2026-02-30" over into March), shared by
+  `typing/state.js`, `typing/record.js` and `lesson-state.js`.
+
+---
+
 # ⌨️ CodeQuest Pro
 
 The adult track. Same repo, opposite premise: no blocks, no grid, no robot — you
