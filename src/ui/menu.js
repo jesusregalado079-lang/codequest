@@ -2,7 +2,10 @@
 import { WORLDS, worldUnlocked, levelUnlocked, levelUrl, expertUnlocked } from '../levels/index.js';
 import {
   getProfiles, getActiveProfile, setActiveProfile, createProfile,
-  deleteProfile, streakToday, exportData, importData,
+  deleteProfile, streakToday, exportData, importData, PICTURES,
+  setPictureCode, checkPictureCode, clearPictureCode, setTrack,
+  markUnlocked, isUnlocked, clearUnlocked, hasParentPin, setParentPin,
+  checkParentPin, resetParentPin, recentPinResets, load,
 } from '../progress.js';
 import { sounds } from './sounds.js';
 import { listLevels, deleteLevel } from '../custom-levels.js';
@@ -30,11 +33,18 @@ function header() {
 // ---------- profile picker ----------
 function showProfiles() {
   app.innerHTML = header();
-  const card = el(`<div class="card player-select"><span class="quest-wordmark">PICK YOUR EXPLORER</span><h2>Ready for your next quest?</h2><p>Choose your player to jump in.</p><div class="profile-row"></div></div>`);
+  const resetNotice = recentPinResets().length
+    ? '<p class="pin-notice">⚠️ Grown-up PIN was reset recently.</p>'
+    : '';
+  const card = el(`<div class="card player-select"><span class="quest-wordmark">PICK YOUR EXPLORER</span><h2>Ready for your next quest?</h2><p>Choose your player to jump in.</p>${resetNotice}<div class="profile-row"></div></div>`);
   const row = card.querySelector('.profile-row');
   for (const p of getProfiles()) {
-    const b = el(`<button class="profile-btn"><span class="avatar">${p.avatar}</span>${esc(p.name)}</button>`);
-    b.onclick = () => { sounds.tap(); setActiveProfile(p.id); showMap(); };
+    const b = el(`<button class="profile-btn"><span class="avatar">${esc(p.avatar)}</span>${esc(p.name)}</button>`);
+    b.onclick = () => {
+      sounds.tap();
+      if (p.pictureCode) showPictureUnlock(p);
+      else showPictureCodeSetup(p);
+    };
     row.append(b);
   }
   const add = el(`<button class="profile-btn add"><span class="avatar">➕</span>New explorer</button>`);
@@ -44,13 +54,141 @@ function showProfiles() {
   app.append(el(`<section class="world-peek"><div class="section-heading"><h2>So much to discover</h2><span>Code your way to every world</span></div><div class="discovery-grid">${[0,2,3].map((i,n)=>`<div class="discovery-card">${worldArt(i)}<div><small>WORLD ${i+1}</small><h3>${esc(WORLDS[i].place)}</h3><span>${['Move your robot','Make clever choices','Create your own moves'][n]}</span></div></div>`).join('')}</div></section>`));
 }
 
+function pictureCodeMaker(onConfirmed, onChanged = () => {}) {
+  let first = [];
+  let confirm = [];
+  let confirming = false;
+  let confirmed = false;
+  const maker = el(`<section class="picture-code">
+    <h3>Make your secret picture code</h3>
+    <p class="picture-help">Pick 3 pictures, in order.</p>
+    <p class="picture-code-display" aria-live="polite"></p>
+    <div class="picture-slots" aria-label="Picture code slots"></div>
+    <div class="picture-grid"></div>
+    <p><button class="link-btn restart">start over</button></p>
+  </section>`);
+  const help = maker.querySelector('.picture-help');
+  const codeDisplay = maker.querySelector('.picture-code-display');
+  const slots = maker.querySelector('.picture-slots');
+  const grid = maker.querySelector('.picture-grid');
+  const render = () => {
+    const picks = confirming ? confirm : first;
+    slots.innerHTML = picks.map((id) => `<span>${PICTURES.find((picture) => picture.id === id).emoji}</span>`)
+      .concat(Array(3 - picks.length).fill('<span>?</span>')).join('');
+    const code = first.map((id) => PICTURES.find((picture) => picture.id === id).emoji).join(' ');
+    codeDisplay.textContent = confirming && !confirmed
+      ? `Your code: ${code} — remember it!`
+      : confirmed ? `✅ Code saved: ${code}` : '';
+  };
+  const reset = () => {
+    first = [];
+    confirm = [];
+    confirming = false;
+    confirmed = false;
+    onChanged(null);
+    help.textContent = 'Pick 3 pictures, in order.';
+    render();
+  };
+  for (const picture of PICTURES) {
+    const b = el(`<button type="button" aria-label="${picture.id}">${picture.emoji}</button>`);
+    b.onclick = () => {
+      sounds.tap();
+      if (confirmed) return;
+      const picks = confirming ? confirm : first;
+      if (picks.length >= 3) return;
+      picks.push(picture.id);
+      render();
+      if (picks.length < 3) return;
+      if (!confirming) {
+        confirming = true;
+        confirm = [];
+        help.textContent = 'Now confirm it. Pick the same 3 again.';
+        render();
+      } else if (first.every((id, index) => id === confirm[index])) {
+        help.textContent = 'That is your secret code!';
+        confirmed = true;
+        onConfirmed([...first]);
+        render();
+      } else {
+        confirm = [];
+        help.textContent = "Those didn't match — try again";
+        render();
+      }
+    };
+    grid.append(b);
+  }
+  maker.querySelector('.restart').onclick = reset;
+  render();
+  return maker;
+}
+
+function showPictureCodeSetup(profile) {
+  app.innerHTML = header();
+  const card = el(`<div class="card picture-card"><h2>Hi, ${esc(profile.name)}!</h2><p>Make a code only you know.</p><div class="maker"></div><p><button class="link-btn" id="back">← back</button></p></div>`);
+  card.querySelector('.maker').append(pictureCodeMaker((code) => {
+    setPictureCode(profile.id, code);
+    markUnlocked(profile.id);
+    setActiveProfile(profile.id);
+    showMap();
+  }));
+  card.querySelector('#back').onclick = showProfiles;
+  app.append(card);
+}
+
+function showPictureUnlock(profile) {
+  app.innerHTML = header();
+  let picks = [];
+  let tries = 0;
+  const card = el(`<div class="card picture-card"><h2>Enter your picture code</h2>
+    <p class="profile-code-name"><span class="avatar">${esc(profile.avatar)}</span> ${esc(profile.name)}</p>
+    <p class="picture-help">Pick your 3 secret pictures, in order.</p>
+    <div class="picture-slots" aria-label="Picture code slots"></div><div class="picture-grid"></div>
+    <p class="picture-error" aria-live="polite"></p><p><button class="link-btn" id="back">← back</button></p></div>`);
+  const slots = card.querySelector('.picture-slots');
+  const message = card.querySelector('.picture-error');
+  const render = () => {
+    slots.innerHTML = picks.map((id) => `<span>${PICTURES.find((picture) => picture.id === id).emoji}</span>`)
+      .concat(Array(3 - picks.length).fill('<span>?</span>')).join('');
+  };
+  for (const picture of PICTURES) {
+    const b = el(`<button type="button" aria-label="${picture.id}">${picture.emoji}</button>`);
+    b.onclick = () => {
+      sounds.tap();
+      if (picks.length >= 3) return;
+      picks.push(picture.id);
+      render();
+      if (picks.length !== 3) return;
+      if (checkPictureCode(profile.id, picks)) {
+        markUnlocked(profile.id);
+        setActiveProfile(profile.id);
+        showMap();
+        return;
+      }
+      tries += 1;
+      picks = [];
+      card.classList.add('code-wrong');
+      setTimeout(() => card.classList.remove('code-wrong'), 350);
+      message.textContent = tries >= 3
+        ? 'Not quite — try again. Forgot it? Ask a grown-up to check it in the grown-ups corner.'
+        : 'Not quite — try again';
+      render();
+    };
+    card.querySelector('.picture-grid').append(b);
+  }
+  card.querySelector('#back').onclick = showProfiles;
+  render();
+  app.append(card);
+}
+
 function showCreate() {
   app.innerHTML = header();
   let avatar = null;
   let mode = null;
+  let pictureCode = null;
   const card = el(`<div class="card">
     <h2>New explorer</h2>
-    <p><input type="text" id="name" maxlength="14" placeholder="Your name" /></p>
+    <p><input type="text" id="name" maxlength="14" placeholder="Nickname" /></p>
+    <p class="input-hint">Use a nickname, not your full name.</p>
     <h3>Pick your buddy</h3>
     <div class="avatar-grid"></div>
     <h3>How big an explorer are you?</h3>
@@ -58,13 +196,14 @@ function showCreate() {
       <button data-mode="sprout">🌱 Little<small>ages 5–7 · picture blocks</small></button>
       <button data-mode="explorer">🌳 Big<small>ages 8–10 · word blocks</small></button>
     </div>
+    <div class="maker"></div>
     <button class="big-btn" id="go" disabled>Let's go!</button>
     <p><button class="link-btn" id="back">← back</button></p>
   </div>`);
   const grid = card.querySelector('.avatar-grid');
   const goBtn = card.querySelector('#go');
   const nameInput = card.querySelector('#name');
-  const ready = () => { goBtn.disabled = !(nameInput.value.trim() && avatar && mode); };
+  const ready = () => { goBtn.disabled = !(nameInput.value.trim() && avatar && mode && pictureCode); };
   for (const a of AVATARS) {
     const b = el(`<button>${a}</button>`);
     b.onclick = () => {
@@ -86,8 +225,16 @@ function showCreate() {
     };
   });
   nameInput.oninput = ready;
+  card.querySelector('.maker').append(pictureCodeMaker((code) => {
+    pictureCode = code;
+    ready();
+  }, () => {
+    pictureCode = null;
+    ready();
+  }));
   goBtn.onclick = () => {
-    createProfile(nameInput.value.trim(), avatar, mode);
+    const profile = createProfile(nameInput.value.trim(), avatar, mode, pictureCode);
+    markUnlocked(profile.id);
     sounds.win();
     showMap();
   };
@@ -98,14 +245,14 @@ function showCreate() {
 // ---------- world map ----------
 function showMap() {
   const p = getActiveProfile();
-  if (!p) return showProfiles();
+  if (!p || !isUnlocked(p.id)) return showProfiles();
   app.innerHTML = header();
 
   const flame = p.streak.count > 0
     ? `<span class="streak">🔥 ${p.streak.count} day${p.streak.count > 1 ? 's' : ''}${streakToday(p) ? '' : ' — play today to keep it!'}</span>`
     : `<span class="streak">Play a level to start your streak! 🔥</span>`;
   const hello = el(`<div class="card hello-bar">
-    <div class="who"><span class="hero-slot"></span><span class="avatar">${p.avatar}</span>${esc(p.name)}</div>
+    <div class="who"><span class="hero-slot"></span><span class="avatar">${esc(p.avatar)}</span>${esc(p.name)}</div>
     ${flame}
     <span>
       <button class="link-btn" id="outfits">👕 outfits</button>
@@ -114,10 +261,14 @@ function showMap() {
   </div>`);
   hello.querySelector('.hero-slot').append(heroCanvas(p.armor, 44));
   hello.querySelector('#outfits').onclick = () => { sounds.tap(); showOutfits(); };
-  hello.querySelector('#switch').onclick = showProfiles;
+  hello.querySelector('#switch').onclick = () => { clearUnlocked(); showProfiles(); };
   app.append(hello);
   const stars = Object.values(p.stars).reduce((sum,n) => sum + n, 0);
   app.append(el(`<div class="quest-inventory"><span><b>★ ${stars}</b> stars earned</span><span><b>${ARMOR.filter(a=>armorUnlocked(a,p)).length}/${ARMOR.length}</b> outfits unlocked</span><span><b>${esc(getArmor(p.armor).name)}</b> equipped</span></div>`));
+
+  if (p.cq.track) {
+    app.append(el(`<div class="card computer-quest"><h2>💻 Computer Quest</h2><p>Your computer missions are being built — check back soon!</p></div>`));
+  }
 
   const nextWorld = WORLDS.find((world, wi) => !world.sandbox && worldUnlocked(wi, p)
     && world.levels.some((level, i) => levelUnlocked(world, i, p) && !(p.stars[level.id] > 0)));
@@ -211,7 +362,7 @@ function showMap() {
     app.append(card);
   });
   const parents = el(`<p><button class="link-btn" id="parents">for grown-ups</button></p>`);
-  parents.querySelector('#parents').onclick = showParents;
+  parents.querySelector('#parents').onclick = showParentsGate;
   app.append(parents);
 }
 
@@ -301,31 +452,136 @@ function showOutfits() {
 }
 
 // ---------- parents corner ----------
+function showParentsGate() {
+  if (hasParentPin()) showParentPinEnter();
+  else showParentPinSet();
+}
+
+function showParentPinSet() {
+  app.innerHTML = header();
+  const card = el(`<div class="card pin-card"><h2>Set a grown-up PIN</h2>
+    <p>Choose a 4-digit PIN. This is a simple kids-only boundary, not a password.</p>
+    <form><p><input type="password" inputmode="numeric" maxlength="4" id="pin" aria-label="New 4 digit PIN" /></p>
+    <p><input type="password" inputmode="numeric" maxlength="4" id="again" aria-label="Confirm 4 digit PIN" /></p>
+    <p class="pin-error" aria-live="polite"></p><button class="big-btn">Save PIN</button></form>
+    <p><button class="link-btn" id="back">← back to the map</button></p></div>`);
+  const form = card.querySelector('form');
+  const message = card.querySelector('.pin-error');
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const pin = card.querySelector('#pin').value;
+    if (pin !== card.querySelector('#again').value) {
+      message.textContent = 'Those PINs do not match.';
+      return;
+    }
+    try {
+      await setParentPin(pin);
+    } catch {
+      message.textContent = 'Use exactly 4 digits.';
+      return;
+    }
+    showParents();
+  };
+  card.querySelector('#back').onclick = showMap;
+  app.append(card);
+}
+
+function showParentPinEnter() {
+  app.innerHTML = header();
+  const parent = load().parent;
+  const now = Date.now();
+  const remaining = Math.max(0, parent.lockUntil - now);
+  const locked = remaining > 0;
+  const card = el(`<div class="card pin-card"><h2>Grown-ups only</h2>
+    <form><p><input type="password" inputmode="numeric" maxlength="4" id="pin" aria-label="4 digit PIN" ${locked ? 'disabled' : ''} /></p>
+    <p class="pin-error" aria-live="polite">${locked ? `Too many tries — wait ${Math.ceil(remaining / 1000)} seconds` : ''}</p>
+    <button class="big-btn" ${locked ? 'disabled' : ''}>Enter</button></form>
+    <p><button class="link-btn" id="forgot">Forgot PIN?</button></p>
+    <p><button class="link-btn" id="back">← back to the map</button></p></div>`);
+  const form = card.querySelector('form');
+  const message = card.querySelector('.pin-error');
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const result = await checkParentPin(card.querySelector('#pin').value);
+    if (result.ok) return showParents();
+    message.textContent = result.lockedMs
+      ? `Too many tries — wait ${Math.ceil(result.lockedMs / 1000)} seconds`
+      : `Wrong PIN — ${result.triesLeft} tries left before a 1-minute wait`;
+    if (result.lockedMs) {
+      startPinCountdown(card, message);
+    }
+  };
+  card.querySelector('#forgot').onclick = showParentPinReset;
+  card.querySelector('#back').onclick = showMap;
+  app.append(card);
+  if (locked) {
+    startPinCountdown(card, message);
+  }
+}
+
+function startPinCountdown(card, message) {
+  const input = card.querySelector('#pin');
+  const submit = card.querySelector('.big-btn');
+  input.disabled = true;
+  submit.disabled = true;
+  const timer = setInterval(() => {
+    if (!card.isConnected) return clearInterval(timer);
+    const left = Math.max(0, load().parent.lockUntil - Date.now());
+    if (left) return void (message.textContent = `Too many tries — wait ${Math.ceil(left / 1000)} seconds`);
+    input.disabled = false;
+    submit.disabled = false;
+    message.textContent = '';
+    clearInterval(timer);
+  }, 250);
+}
+
+function showParentPinReset() {
+  app.innerHTML = header();
+  const card = el(`<div class="card pin-card"><h2>Reset grown-up PIN</h2>
+    <p>This reset will be visible to the parent in the grown-ups corner.</p>
+    <p>Type <b>RESET MY PIN</b> to continue.</p>
+    <p><input type="text" id="phrase" autocomplete="off" /></p>
+    <button class="big-btn" id="reset" disabled>Reset PIN</button>
+    <p><button class="link-btn" id="back">← back</button></p></div>`);
+  const phrase = card.querySelector('#phrase');
+  const reset = card.querySelector('#reset');
+  phrase.oninput = () => { reset.disabled = phrase.value === 'RESET MY PIN' ? false : true; };
+  reset.onclick = () => { resetParentPin(); showParentPinSet(); };
+  card.querySelector('#back').onclick = showParentPinEnter;
+  app.append(card);
+}
+
 function showParents() {
   app.innerHTML = header();
-  const allLevels = WORLDS.flatMap((w) => w.levels);
+  const allLevels = WORLDS.flatMap((w) => w.levels ?? []);
   const total = allLevels.length;
-  const rows = getProfiles().map((p) => {
-    const done = allLevels.filter((l) => p.stars[l.id]).length;
+  const profiles = getProfiles();
+  const rows = profiles.map((p, index) => {
+    const done = allLevels.filter((level) => p.stars[level.id]).length;
     const stars = Object.values(p.stars).reduce((a, b) => a + b, 0);
-    return `<tr><td>${p.avatar} ${esc(p.name)}</td><td>${done}/${total} levels</td><td>${stars} ⭐</td><td>🔥 ${p.streak.count}</td>
-      <td><button class="link-btn del" data-id="${p.id}">remove</button></td></tr>`;
+    const code = p.pictureCode ? p.pictureCode.map((id) => PICTURES.find((picture) => picture.id === id).emoji).join(' ') : 'not set';
+    return `<tr><td><b>${esc(p.avatar)} ${esc(p.name)}</b><br><small>${done}/${total} levels · ${stars} ⭐ · 🔥 ${p.streak.count}</small>
+      <label class="parent-setting">Computer Quest track <select class="track" data-index="${index}">
+        <option value="" ${p.cq.track === null ? 'selected' : ''}>— not started —</option>
+        <option value="guided" ${p.cq.track === 'guided' ? 'selected' : ''}>9yo quest line (guided: shorter, more review)</option>
+        <option value="standard" ${p.cq.track === 'standard' ? 'selected' : ''}>10yo quest line (standard)</option>
+      </select></label><span class="parent-setting">Picture code: ${code} <button class="link-btn reset-code" data-index="${index}">reset code</button></span></td>
+      <td><button class="link-btn del" data-index="${index}">remove</button></td></tr>`;
   }).join('');
-  const card = el(`<div class="card">
-    <h2>Grown-ups corner</h2>
-    <p>Each world teaches one real programming concept — World 1 <b>sequencing</b>,
-    World 2 <b>loops</b>, World 3 <b>conditionals</b>, World 4 <b>functions</b>, World 5 <b>variables</b> — the five fundamentals — then World 6 <b>events</b> (they build a real arcade game) and World 7, where the blocks come off and they type JavaScript by hand.
-    Every world starts with a lesson, ends with a review, and (from World 2) a quiz
-    that also re-tests earlier concepts. Aim for 1–2 levels a day; the streak rewards
-    showing up, not bingeing.</p>
-    <table class="parents"><tr><th>Player</th><th>Progress</th><th>Stars</th><th>Streak</th><th></th></tr>${rows}</table>
-    <p>
-      <button class="big-btn" id="export" style="font-size:1rem">Backup progress</button>
-      <button class="big-btn" id="import" style="font-size:1rem;background:#4a90d9;box-shadow:0 4px 0 #2c5e94">Restore backup</button>
-    </p>
-    <p><button class="link-btn" id="back">← back to the map</button></p>
-  </div>`);
+  const resets = recentPinResets();
+  const notice = resets.length
+    ? `<p class="pin-notice">⚠️ The grown-up PIN was reset on ${esc(resets.map((time) => new Date(time).toLocaleString()).join(', '))}. If that wasn't you, a kid may have changed it.</p>`
+    : '';
+  const card = el(`<div class="card parents-card">${notice}<h2>Grown-ups corner</h2>
+    <p>Each world teaches one real programming concept — World 1 <b>sequencing</b>, World 2 <b>loops</b>, World 3 <b>conditionals</b>, World 4 <b>functions</b>, World 5 <b>variables</b> — the five fundamentals — then World 6 <b>events</b> and World 7, where the blocks come off and they type JavaScript by hand.</p>
+    <table class="parents"><tr><th>Player</th><th></th></tr>${rows}</table>
+    <p><button class="big-btn" id="change-pin" style="font-size:1rem">Change PIN</button></p>
+    <p><button class="big-btn" id="export" style="font-size:1rem">Backup progress</button>
+      <button class="big-btn" id="import" style="font-size:1rem;background:#4a90d9;box-shadow:0 4px 0 #2c5e94">Restore backup</button></p>
+    <p class="pin-error" id="import-message" aria-live="polite"></p>
+    <p><button class="link-btn" id="back">← back to the map</button></p></div>`);
   card.querySelector('#back').onclick = showMap;
+  card.querySelector('#change-pin').onclick = showParentPinSet;
   card.querySelector('#export').onclick = () => {
     const blob = new Blob([exportData()], { type: 'application/json' });
     const a = document.createElement('a');
@@ -343,15 +599,21 @@ function showParents() {
         importData(await input.files[0].text());
         showParents();
       } catch {
-        alert('That file is not a CodeQuest backup.');
+        card.querySelector('#import-message').textContent = 'That file is not a CodeQuest backup.';
       }
     };
     input.click();
   };
-  card.querySelectorAll('.del').forEach((b) => {
-    b.onclick = () => {
+  card.querySelectorAll('.track').forEach((select) => {
+    select.onchange = () => setTrack(profiles[select.dataset.index].id, select.value || null);
+  });
+  card.querySelectorAll('.reset-code').forEach((button) => {
+    button.onclick = () => { clearPictureCode(profiles[button.dataset.index].id); showParents(); };
+  });
+  card.querySelectorAll('.del').forEach((button) => {
+    button.onclick = () => {
       if (confirm('Remove this player and all their progress?')) {
-        deleteProfile(b.dataset.id);
+        deleteProfile(profiles[button.dataset.index].id);
         showParents();
       }
     };
@@ -359,6 +621,7 @@ function showParents() {
   app.append(card);
 }
 
-getActiveProfile() ? showMap() : showProfiles();
+const active = getActiveProfile();
+active && isUnlocked(active.id) ? showMap() : showProfiles();
 
 if ('serviceWorker' in navigator && !import.meta.env.DEV) navigator.serviceWorker.register('sw.js');

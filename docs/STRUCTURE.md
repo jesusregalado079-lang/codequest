@@ -28,7 +28,7 @@ src/
   blocks/        kids: Blockly block definitions
   levels/        kids: all level content as JSON
   ui/            kids: menu, hero art, coach, sounds
-  progress.js    kids: localStorage 'codequest-v1'
+  progress.js    kids: localStorage 'codequest-v1'; parent PIN, picture codes, Computer Quest track
   custom-levels.js
 
   pro/                                             ← everything Pro lives here
@@ -42,6 +42,7 @@ public/media/    icons, hero art, pro-bg.jpg (Pro home emblem)
 test/
   engine.test.js   proves every kid level is solvable
   pro.test.js      proves every Pro lesson solution passes its own tests
+  computer.test.js proves Computer Quest storage, picture-code, PIN, track, import, and session logic
 docs/STRUCTURE.md  ← this file
 README.md          full technical notes for both apps
 ```
@@ -82,4 +83,4 @@ npm run build
 
 Push to `main` → GitHub Actions runs the tests, builds, deploys to Pages.
 
-_Last updated 2026-07-17._
+_Last updated 2026-09-16._

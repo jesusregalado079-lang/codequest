@@ -470,3 +470,42 @@ table.parents td, table.parents th { padding: 6px 14px; border-bottom: 1px solid
 @keyframes pop { from { transform: scale(0.6); opacity: 0; } }
 .win-stars { font-size: 3rem; letter-spacing: 4px; margin: 8px 0; }
 .win-card .row { display: flex; gap: 12px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+
+/* ---------- Computer Quest foundations ---------- */
+.input-hint { margin: -8px 0 14px; font-size: 0.85rem; opacity: 0.75; }
+.picture-code { margin: 22px 0 14px; padding-top: 8px; border-top: 1px solid #7b9aa7; }
+.picture-help, .picture-error, .pin-error { min-height: 1.4em; font-weight: 700; }
+.picture-error, .pin-error { color: #ffe08a; }
+.picture-code-display { min-height: 1.4em; color: #fff1b8; font-weight: 700; }
+.picture-slots { display: flex; justify-content: center; gap: 10px; margin: 12px 0; }
+.picture-slots span {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 2px dashed #7da2a7;
+  border-radius: 14px;
+  background: #18364e;
+  font-size: 2rem;
+}
+.picture-grid { display: grid; grid-template-columns: repeat(3, minmax(54px, 76px)); justify-content: center; gap: 10px; }
+.picture-grid button { min-height: 58px; padding: 6px; background: #294d61; color: #fff; border: 1px solid #6e9198; font-size: 2rem; box-shadow: 0 3px 0 #0c2234; }
+.picture-grid button:active { transform: translateY(2px); box-shadow: 0 1px 0 #0c2234; }
+.profile-code-name .avatar { font-size: 2rem; }
+.code-wrong { animation: code-shake 0.35s ease; border-color: #e46a6a !important; }
+@keyframes code-shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+.pin-card input[type='password'] { font: inherit; font-size: 1.5rem; letter-spacing: 0.3em; padding: 10px 14px; border: 2px solid #6e9198; border-radius: 14px; width: min(220px, 80%); text-align: center; color: inherit; background: #18364e; -webkit-user-select: text; user-select: text; }
+.pin-notice { padding: 10px 12px; border: 1px solid #c69b45; border-radius: 12px; background: #4d3d1b; color: #fff1b8; }
+.parents-card { text-align: left; }
+table.parents { width: 100%; }
+.parent-setting { display: block; margin-top: 8px; font-size: 0.85rem; }
+.parent-setting select { display: block; max-width: 100%; margin-top: 3px; padding: 7px; border: 1px solid #6e9198; border-radius: 8px; color: inherit; background: #18364e; font: inherit; }
+.computer-quest { text-align: left; border-color: #6d9c86 !important; }
+.computer-quest p { color: #c6dedb; }
+@media (max-width: 700px) {
+  .parents-card { padding: 14px; }
+  table.parents td, table.parents th { padding: 8px 4px; vertical-align: top; }
+  table.parents td:last-child { white-space: nowrap; }
+  .parent-setting select { width: 100%; }
+  .picture-grid { grid-template-columns: repeat(3, minmax(52px, 1fr)); }
+}
