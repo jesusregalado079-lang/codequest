@@ -1,4 +1,5 @@
 // Profiles + progress in localStorage. One key, plain JSON, export/import.
+import { normalizeCq } from './cq/character.js';
 const KEY = 'codequest-v1';
 const UNLOCKED_KEY = 'codequest-unlocked';
 
@@ -33,7 +34,7 @@ function normalizeProfileExtras(profile) {
   return {
     ...profile,
     pictureCode: normalizePictureCode(profile?.pictureCode),
-    cq: { track: ['guided', 'standard'].includes(profile?.cq?.track) ? profile.cq.track : null },
+    cq: normalizeCq(profile?.cq),
   };
 }
 
@@ -87,7 +88,7 @@ export function createProfile(name, avatar, mode, pictureCode = null) {
     stars: {}, // levelId -> 1..3
     streak: { count: 0, last: null },
     pictureCode: code,
-    cq: { track: null },
+    cq: normalizeCq({ track: null }),
   };
   s.profiles.push(p);
   s.active = p.id;
@@ -163,8 +164,28 @@ export function setTrack(profileId, track) {
   const s = load();
   const p = s.profiles.find((profile) => profile.id === profileId);
   if (!p) throw new Error('profile not found');
-  p.cq = { track };
+  p.cq = normalizeCq({ ...p.cq, track });
   save(s);
+}
+
+export function getCq(profileId) {
+  const p = getProfiles().find((profile) => profile.id === profileId);
+  return p ? normalizeCq(p.cq) : null;
+}
+
+export function updateCq(profileId, mutator) {
+  const s = load();
+  const p = s.profiles.find((profile) => profile.id === profileId);
+  if (!p) throw new Error('profile not found');
+  const result = mutator(normalizeCq(p.cq));
+  if (!result || typeof result !== 'object' || Array.isArray(result)
+    || (Object.getPrototypeOf(result) !== Object.prototype && Object.getPrototypeOf(result) !== null)) {
+    throw new Error('updateCq mutator must return a cq object');
+  }
+  const cq = normalizeCq(result);
+  p.cq = cq;
+  save(s);
+  return cq;
 }
 
 function salt() {
@@ -267,7 +288,7 @@ export function importData(json) {
       last: typeof p?.streak?.last === 'string' ? p.streak.last : null,
     },
     pictureCode: normalizePictureCode(p?.pictureCode),
-    cq: { track: ['guided', 'standard'].includes(p?.cq?.track) ? p.cq.track : null },
+    cq: normalizeCq(p?.cq),
   }));
   const active = profiles.some((p) => p.id === parsed.active) ? parsed.active : profiles[0]?.id ?? null;
   save({ profiles, active, parent });

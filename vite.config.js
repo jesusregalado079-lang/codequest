@@ -10,6 +10,7 @@ export default defineConfig({
         play: resolve(import.meta.dirname, 'play.html'),
         world: resolve(import.meta.dirname, 'world.html'),
         quiz: resolve(import.meta.dirname, 'quiz.html'),
+        computer: resolve(import.meta.dirname, 'computer.html'),
         game: resolve(import.meta.dirname, 'game.html'),
         code: resolve(import.meta.dirname, 'code.html'),
         build: resolve(import.meta.dirname, 'build.html'),

@@ -25,7 +25,8 @@ localStorage.setItem('codequest-v1', JSON.stringify({
 }));
 let state = load();
 assert.deepStrictEqual(state.profiles[0].pictureCode, null);
-assert.deepStrictEqual(state.profiles[0].cq, { track: null });
+assert.strictEqual(state.profiles[0].cq.track, null);
+assert.deepStrictEqual(state.profiles[0].cq.owned, []);
 assert.deepStrictEqual(state.parent, { pinHash: null, pinSalt: null, failCount: 0, lockUntil: 0, resets: [] });
 
 const kid = createProfile('Kid', '🤖', 'explorer', ['dragon', 'rocket', 'pizza']);
@@ -106,7 +107,8 @@ importData(JSON.stringify({
 }));
 state = load();
 assert.strictEqual(state.profiles[0].pictureCode, null);
-assert.deepStrictEqual(state.profiles[0].cq, { track: null });
+assert.strictEqual(state.profiles[0].cq.track, null);
+assert.deepStrictEqual(state.profiles[0].cq.owned, []);
 assert.strictEqual((await checkParentPin('1357')).ok, true);
 
 markUnlocked('imported');

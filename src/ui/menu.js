@@ -267,7 +267,7 @@ function showMap() {
   app.append(el(`<div class="quest-inventory"><span><b>★ ${stars}</b> stars earned</span><span><b>${ARMOR.filter(a=>armorUnlocked(a,p)).length}/${ARMOR.length}</b> outfits unlocked</span><span><b>${esc(getArmor(p.armor).name)}</b> equipped</span></div>`));
 
   if (p.cq.track) {
-    app.append(el(`<div class="card computer-quest"><h2>💻 Computer Quest</h2><p>Your computer missions are being built — check back soon!</p></div>`));
+    app.append(el(`<a class="card computer-quest" href="computer.html" style="display:block;color:inherit;text-decoration:none"><h2>💻 Computer Quest</h2><p>${p.cq.look === null ? 'Create your hero ▶' : 'Your hero is waiting ▶'}</p></a>`));
   }
 
   const nextWorld = WORLDS.find((world, wi) => !world.sandbox && worldUnlocked(wi, p)

@@ -1,0 +1,237 @@
+import './cq.css';
+import { getActiveProfile, isUnlocked, getCq, updateCq } from '../progress.js';
+import { sounds } from '../ui/sounds.js';
+import { BASE_HEARTS, COSMETICS, DEFAULT_LOOK, GEAR_SLOTS, ITEMS, LOOK_OPTIONS, RARITY, TRACK_LESSONS } from './items.js';
+import {
+  buyCosmetic, equip, getCosmetic, getItem, lockedTrackItems, maxHearts, normalizeCq, normalizeLook,
+  passedForTrack, randomLook, rankFor, setProgress, takeOff, trackItems, traderStock, unequip, wear,
+} from './character.js';
+import { characterCanvas, drawCharacter, drawIcon } from './sprite.js';
+
+const LESSON_TITLES = {
+  g1: 'Meet Your Computer', g2: 'Open, Switch, Close', g3: 'Folders Are Containers',
+  g4: 'Find It and Keep It Tidy', g5: 'Keyboard Keys and the STOP Rule',
+  s1: 'Windows Map + Alt+Tab', s2: 'Files, Folders, Save and Find',
+  s3: 'Copy, Move, Rename + Ctrl+Z', s4: 'Shortcut Power + Home Row', s5: 'Search Smart, Stay Safe',
+};
+const SLOT_LABELS = { head: 'Head', body: 'Body', feet: 'Feet', mainHand: 'Hand', offHand: 'Off-hand', back: 'Back', magic1: 'Magic 1', magic2: 'Magic 2' };
+const FIELD_LABELS = { skin: 'Skin', hairStyle: 'Hair style', hairColor: 'Hair color', eyeColor: 'Eye color', shirtStyle: 'Shirt style', shirtColor: 'Shirt color', pantsColor: 'Pants', shoesColor: 'Shoes' };
+const LAYER_LABELS = { hat: 'Hats', cape: 'Capes & wings', face: 'Face', hairFx: 'Hair effects', title: 'Titles', trail: 'Trails' };
+const FACINGS = ['down', 'right', 'up', 'left'];
+const FACING_LABELS = ['Front', 'Right', 'Back', 'Left'];
+const TABS = ['Gear', 'Wardrobe', 'Trader', 'Quests'];
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
+const app = document.getElementById('app');
+const active = getActiveProfile();
+let cq, draft, preview = false, facingIndex = 0, tab = 'Gear', selectedItem = null, pendingBuy = null;
+let animation = 0, message = '';
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+try { const saved = sessionStorage.getItem('cq-tab'); if (TABS.includes(saved)) tab = saved; } catch { /* Private mode. */ }
+
+if (!active || !isUnlocked(active.id)) {
+  location.replace('index.html');
+} else {
+  cq = getCq(active.id);
+  if (!cq.track) {
+    app.append(el('<section class="card cq-gate"><h1>Ask a grown-up to start Computer Quest for you</h1><a class="cq-button" href="index.html">← Back to map</a></section>'));
+  } else {
+    if (import.meta.env.DEV) {
+      if (new URLSearchParams(location.search).get('dev') === 'all') {
+        preview = true;
+        cq = normalizeCq({ ...cq, owned: ITEMS.map((item) => item.id), cosmetics: COSMETICS.map((item) => item.id), gems: 999,
+          lessonsPassed: [...TRACK_LESSONS.guided, ...TRACK_LESSONS.standard] });
+      }
+    }
+    draft = { ...(cq.look || DEFAULT_LOOK) };
+    render();
+    app.addEventListener('click', onClick);
+    // Another tab may change profiles or revoke this track while the hub is open.
+    window.addEventListener('storage', () => {
+      if (preview) return;
+      const profile = getActiveProfile();
+      if (!profile || profile.id !== active.id || !isUnlocked(active.id)) { location.replace('index.html'); return; }
+      cq = getCq(active.id);
+      if (!cq.track) { location.replace('computer.html'); return; }
+      render();
+    });
+    window.addEventListener('pagehide', () => cancelAnimationFrame(animation));
+    window.addEventListener('pageshow', (event) => { if (event.persisted) render(); });
+  }
+}
+
+function sound(name) {
+  try { sounds[name](); } catch { /* Audio may be disabled; actions still work. */ }
+}
+function mutate(change, feedback = 'Saved', chime = 'tap') {
+  try {
+    if (preview) cq = normalizeCq(change(cq));
+    else cq = updateCq(active.id, change);
+    message = feedback; sound(chime); render();
+    return true;
+  } catch {
+    message = 'Could not save that change. Please try again.';
+    const status = app.querySelector('.cq-status');
+    if (status) status.textContent = message;
+    return false;
+  }
+}
+function icon(entry, silhouette = false, size = 56) {
+  return `<span class="cq-icon" data-icon="${esc(entry.id)}" data-silhouette="${silhouette}" data-size="${size}" aria-hidden="true"></span>`;
+}
+function rarity(entry) { return `style="--rarity:${esc(RARITY[entry.rarity])}"`; }
+function button(action, label, data = '', cls = '') {
+  return `<button type="button" class="cq-button ${cls}" data-action="${action}" ${data}>${label}</button>`;
+}
+function editor(creator) {
+  return `<section class="cq-editor" aria-label="Hero look editor">
+    <div class="cq-section-head"><div><span class="cq-eyebrow">YOUR LOOK</span><h2>${creator ? 'Make it yours' : 'Change your look'}</h2></div>${button('random', '🎲 Randomize')}</div>
+    ${Object.keys(LOOK_OPTIONS).map((key) => `<fieldset><legend>${FIELD_LABELS[key]}</legend><div class="cq-options">${LOOK_OPTIONS[key].map((o, i) => {
+      const name = o.name || (o.id === 'darkbrown' ? 'Dark brown' : o.id);
+      const label = key === 'skin' ? `Skin tone ${i + 1}` : o.hex ? `${FIELD_LABELS[key]}: ${name}` : name;
+      return `<button type="button" class="${o.hex ? 'cq-swatch' : 'cq-chip'}" data-action="option" data-field="${key}" data-value="${esc(o.id)}" aria-label="${esc(label)}" title="${esc(label)}" aria-pressed="${draft[key] === o.id}" ${o.hex ? `style="--swatch:${esc(o.hex)}"` : ''}>${o.hex ? '<span aria-hidden="true">✓</span>' : esc(label)}</button>`;
+    }).join('')}</div></fieldset>`).join('')}
+    <div class="cq-actions">${button('save-look', creator ? 'Save my hero' : 'Save look', '', 'cq-primary')}${creator ? '' : button('cancel-look', 'Cancel')}</div>
+    </section>`;
+}
+function hero(creator) {
+  const set = setProgress(cq);
+  const extraHearts = maxHearts(cq) - BASE_HEARTS;
+  return `<aside class="cq-hero-panel">
+    <div class="cq-stage"><span class="cq-stage-label">${creator ? 'HERO PREVIEW' : 'YOUR HERO'}</span>
+      <button type="button" class="cq-hero" data-action="rotate" data-step="1" aria-label="Rotate hero right"><span class="cq-canvas-mount"></span></button>
+      <div class="cq-platform" aria-hidden="true"></div>
+    </div>
+    <div class="cq-rotation">${button('rotate', '◀', 'data-step="-1" aria-label="Rotate hero left"')}<span class="cq-facing" aria-live="polite">${FACING_LABELS[facingIndex]}</span>${button('rotate', '▶', 'data-step="1" aria-label="Rotate hero right"')}</div>
+    ${creator ? '<p class="cq-muted cq-preview-note">Your hero. Your style.<br>Change your look anytime.</p>' : `<div class="cq-set"><strong>${esc(set.name)} ${set.have}/${set.total}</strong><progress max="${set.total}" value="${set.have}" aria-label="${esc(set.name)} equipped"></progress><span>${set.active ? `✨ Set bonus active: +${extraHearts} ${extraHearts === 1 ? 'heart' : 'hearts'}` : 'Equip the full set for a bonus heart.'}</span></div>`}
+    ${!creator && tab === 'Gear' ? slots() : ''}
+  </aside>`;
+}
+function slots() {
+  return `<div class="cq-slots" aria-label="Equipped gear">${GEAR_SLOTS.map((slot) => {
+    const item = getItem(cq.equipped[slot]);
+    const contents = `${item ? icon(item, false, 36) : '<span class="cq-empty-slot" aria-hidden="true">◇</span>'}<span>${SLOT_LABELS[slot]}</span>`;
+    return slot === 'body' ? `<div class="cq-slot cq-future">${contents}<small>Coming in a future quest</small></div>`
+      : `<button type="button" class="cq-slot" data-action="${item ? 'select' : 'empty-slot'}" data-id="${item ? esc(item.id) : ''}" aria-label="${esc(SLOT_LABELS[slot] + ': ' + (item ? item.name : 'Empty'))}" ${item ? rarity(item) : ''}>${contents}</button>`;
+  }).join('')}</div>`;
+}
+function itemDetails(item) {
+  const equippedSlot = GEAR_SLOTS.find((slot) => cq.equipped[slot] === item.id);
+  return `<section class="cq-detail" ${rarity(item)} aria-label="Item details" tabindex="-1">
+    <div class="cq-detail-heading">${icon(item, false, 90)}<div><span class="cq-rarity">${esc(item.rarity)}</span><h3>${esc(item.name)}</h3></div>${button('close-item', '×', 'aria-label="Close item details"')}</div>
+    <p>${esc(item.flavor)}</p><p class="cq-effect">${esc(item.effect)}</p><div class="cq-actions">
+    ${equippedSlot ? button('unequip', `Unequip ${SLOT_LABELS[equippedSlot]}`, `data-slot="${equippedSlot}"`) : ''}
+    ${item.slot === 'magic' ? ['magic1', 'magic2'].filter((slot) => slot !== equippedSlot).map((slot) => button('equip', `Equip ${SLOT_LABELS[slot]}`, `data-id="${esc(item.id)}" data-slot="${slot}"`, 'cq-primary')).join('')
+      : equippedSlot ? '' : button('equip', 'Equip', `data-id="${esc(item.id)}"`, 'cq-primary')}
+    </div></section>`;
+}
+function gear() {
+  const selected = getItem(selectedItem);
+  return `<div class="cq-section-head"><div><span class="cq-eyebrow">EARNED IN QUESTS</span><h2>Your gear</h2></div><span class="cq-muted">${cq.owned.length} owned</span></div>
+    <p class="cq-muted">Pass lessons. Collect gear. Build your set.</p>
+    ${selected && cq.owned.includes(selected.id) ? itemDetails(selected) : ''}
+    <div class="cq-inventory">${cq.owned.map((id) => {
+      const item = getItem(id);
+      return `<button type="button" class="cq-tile" data-action="select" data-id="${esc(id)}" ${rarity(item)} aria-pressed="${selectedItem === id}">${icon(item)}<strong>${esc(item.name)}</strong><span class="cq-rarity">${Object.values(cq.equipped).includes(id) ? 'Equipped' : esc(item.rarity)}</span></button>`;
+    }).join('')}${lockedTrackItems(cq).map(({ item, lesson }) => `<article class="cq-tile cq-locked" ${rarity(item)}>${icon(item, true)}<strong>${esc(item.name)}</strong><small>Pass Lesson ${esc(lesson.toUpperCase())} · ${esc(LESSON_TITLES[lesson])} to unlock</small></article>`).join('')}</div>`;
+}
+function wardrobe() {
+  return `${editor(false)}<div class="cq-section-head cq-divider"><div><span class="cq-eyebrow">COLLECTED STYLE</span><h2>Your wardrobe</h2></div></div>
+    ${Object.keys(LAYER_LABELS).map((layer) => {
+      const owned = cq.cosmetics.map(getCosmetic).filter((c) => c.layer === layer);
+      return `<section class="cq-layer"><h3>${LAYER_LABELS[layer]}</h3>${layer === 'hat' && cq.equipped.head ? '<p class="cq-muted">Your helmet hides hats. Take it off in Gear to show your hat.</p>' : ''}${layer === 'trail' ? '<p class="cq-muted">Trails appear in battle.</p>' : ''}
+        ${owned.length ? `<div class="cq-inventory">${owned.map((c) => `<article class="cq-tile" ${rarity(c)}>${icon(c)}<strong>${esc(c.name)}</strong>${c.note ? `<small>${esc(c.note)}</small>` : ''}${button(cq.worn[layer] === c.id ? 'take-off' : 'wear', cq.worn[layer] === c.id ? 'Take off' : 'Wear', `data-id="${esc(c.id)}" data-layer="${layer}" aria-pressed="${cq.worn[layer] === c.id}"`)}</article>`).join('')}</div>` : '<p class="cq-empty">Find these in chests or at the Trader</p>'}</section>`;
+    }).join('')}`;
+}
+function trader() {
+  const stock = traderStock(cq);
+  return `<div class="cq-section-head"><div><span class="cq-eyebrow">LOOKS ONLY · NO BATTLE POWER</span><h2>The Trader</h2></div></div><p class="cq-muted">Spend your gems on a new look.</p>
+    ${!stock.length ? '<p class="cq-empty">You own everything here!</p>' : `<div class="cq-inventory">${stock.map((c) => {
+      const short = Math.max(0, c.price - cq.gems);
+      return `<article class="cq-tile" ${rarity(c)}>${icon(c)}<strong>${esc(c.name)}</strong><span class="cq-rarity">${esc(c.rarity)}</span>${c.note ? `<small>${esc(c.note)}</small>` : ''}<span class="cq-price">${c.price} 💎</span>
+        ${pendingBuy === c.id ? `<div class="cq-confirm" role="group" aria-label="Confirm purchase"><p>Spend ${c.price} 💎 on ${esc(c.name)}?</p><div class="cq-actions">${button('buy-yes', 'Yes', `data-id="${esc(c.id)}"`, 'cq-primary')}${button('buy-no', 'No', `data-id="${esc(c.id)}"`)}</div></div>` : button('buy', short ? `Need ${short} more 💎` : 'Buy', `data-id="${esc(c.id)}" ${short ? 'disabled' : ''}`)}
+      </article>`;
+    }).join('')}</div>`}`;
+}
+function quests() {
+  const passed = passedForTrack(cq);
+  return `<div class="cq-section-head"><div><span class="cq-eyebrow">PACK 1 · YOUR NEXT GOALS</span><h2>Quest log</h2></div><span class="cq-muted">${passed.length}/${trackItems(cq.track).length} passed</span></div>
+    <div class="cq-quests">${trackItems(cq.track).map((item, i) => `<article class="cq-quest ${passed.includes(item.lesson) ? 'cq-passed' : ''}"><span class="cq-quest-number">${i + 1}</span><div><span class="cq-eyebrow">LESSON ${esc(item.lesson.toUpperCase())}</span><h3>${esc(LESSON_TITLES[item.lesson])}</h3><span class="cq-quest-state">${passed.includes(item.lesson) ? '✅ Passed' : '🔒 Coming soon'}</span><div class="cq-reward">${icon(item, false, 40)}<span>${esc(item.name)}</span></div></div></article>`).join('')}</div>`;
+}
+function render() {
+  cancelAnimationFrame(animation);
+  const focus = document.activeElement;
+  const focusKey = focus && app.contains(focus) ? [focus.dataset.action, focus.dataset.id, focus.dataset.slot, focus.dataset.tab] : null;
+  const creator = cq.look === null;
+  const rank = rankFor(cq), title = getCosmetic(cq.worn.title);
+  app.innerHTML = `${preview ? '<div class="cq-dev">DEV PREVIEW — nothing is saved</div>' : ''}
+    <header class="cq-top"><a class="cq-map" href="index.html">← Map</a><div class="cq-identity"><span class="cq-eyebrow">COMPUTER QUEST</span><h1>${creator ? 'Create your hero' : esc(active.name)}</h1>${!creator && title ? `<p>${esc(title.name)}</p>` : ''}</div>${creator ? '' : `<div class="cq-wallet"><span class="cq-badge" ${rarity(rank)}>Hero Rank · ${esc(rank.name)}</span><strong aria-label="${cq.gems} gems">💎 ${cq.gems}</strong></div>`}</header>
+    <p class="cq-status" role="status">${esc(message)}</p>
+    <main class="cq-layout ${creator ? 'cq-creator' : ''}">${hero(creator)}<div class="cq-content">
+    ${creator ? `<div class="cq-panel">${editor(true)}</div>` : `<nav class="cq-tabs" aria-label="Hero hub">${TABS.map((name) => `<button type="button" data-action="tab" data-tab="${name}" aria-pressed="${tab === name}" aria-controls="cq-tab-panel">${name}</button>`).join('')}</nav><section id="cq-tab-panel" class="cq-panel" aria-label="${tab}">${({ Gear: gear, Wardrobe: wardrobe, Trader: trader, Quests: quests })[tab]()}</section>`}
+    </div></main>`;
+  app.querySelectorAll('[data-icon]').forEach((mount) => {
+    const size = Number(mount.dataset.size), canvas = document.createElement('canvas');
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.round(size * ratio); canvas.height = canvas.width;
+    canvas.style.width = `${size}px`; canvas.style.height = `${size}px`;
+    const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    drawIcon(ctx, 0, 0, canvas.width, mount.dataset.icon, { silhouette: mount.dataset.silhouette === 'true' });
+    mount.append(canvas);
+  });
+  const canvas = characterCanvas(320, heroOptions(0));
+  app.querySelector('.cq-canvas-mount').append(canvas);
+  const ctx = canvas.getContext('2d');
+  const frame = (time) => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawCharacter(ctx, canvas.width / 2, canvas.height * 0.86, Math.max(1, Math.floor(canvas.width / 50)), heroOptions(reducedMotion.matches ? 0 : (time % 3200) / 3200));
+    animation = requestAnimationFrame(frame);
+  };
+  animation = requestAnimationFrame(frame);
+  if (focusKey) {
+    const match = Array.from(app.querySelectorAll('button')).find((b) => [b.dataset.action, b.dataset.id, b.dataset.slot, b.dataset.tab].every((v, i) => v === focusKey[i]));
+    if (match) match.focus({ preventScroll: true });
+  }
+}
+function heroOptions(bob) {
+  return { look: cq.look === null || tab === 'Wardrobe' ? draft : cq.look, equipped: cq.equipped, worn: cq.worn,
+    facing: FACINGS[facingIndex], bob, glow: setProgress(cq).active };
+}
+function focusAction(action, id) {
+  const target = Array.from(app.querySelectorAll('[data-action]')).find((b) => b.dataset.action === action && (!id || b.dataset.id === id));
+  if (target) target.focus({ preventScroll: true });
+}
+function onClick(event) {
+  const b = event.target.closest('button[data-action]');
+  if (!b || b.disabled) return;
+  const action = b.dataset.action, id = b.dataset.id;
+  if (action === 'rotate') {
+    facingIndex = (facingIndex + Number(b.dataset.step) + 4) % 4;
+    app.querySelector('.cq-facing').textContent = FACING_LABELS[facingIndex]; sound('tap');
+  } else if (action === 'option') {
+    draft = { ...draft, [b.dataset.field]: b.dataset.value };
+    app.querySelectorAll(`[data-field="${b.dataset.field}"]`).forEach((o) => o.setAttribute('aria-pressed', String(o === b))); sound('tap');
+  } else if (action === 'random') { draft = randomLook(); sound('tap'); render(); }
+  else if (action === 'save-look') {
+    const creator = cq.look === null;
+    if (mutate((state) => ({ ...state, look: normalizeLook(draft) }), 'Hero saved', creator ? 'win' : 'collect') && creator) focusAction('tab');
+  } else if (action === 'cancel-look') { draft = { ...cq.look }; message = 'Look changes cancelled'; render(); }
+  else if (action === 'tab') {
+    tab = b.dataset.tab; pendingBuy = null;
+    if (tab === 'Wardrobe') draft = { ...cq.look };
+    try { sessionStorage.setItem('cq-tab', tab); } catch { /* Private mode. */ }
+    sound('tap'); render(); focusAction('tab');
+    const selected = app.querySelector(`[data-tab="${tab}"]`); if (selected) selected.focus({ preventScroll: true });
+  } else if (action === 'select') { selectedItem = id; sound('tap'); render(); app.querySelector('.cq-detail').focus({ preventScroll: true }); }
+  else if (action === 'close-item') { const previous = selectedItem; selectedItem = null; render(); focusAction('select', previous); }
+  else if (action === 'empty-slot') { message = 'Choose an owned item to equip it here.'; app.querySelector('.cq-status').textContent = message; }
+  else if (action === 'equip') { if (mutate((state) => equip(state, id, b.dataset.slot), `${getItem(id).name} equipped`)) focusAction('unequip'); }
+  else if (action === 'unequip') { if (mutate((state) => unequip(state, b.dataset.slot), 'Gear removed')) focusAction('equip', selectedItem); }
+  else if (action === 'wear') { if (mutate((state) => wear(state, id), `${getCosmetic(id).name} worn`)) focusAction('take-off', id); }
+  else if (action === 'take-off') { if (mutate((state) => takeOff(state, b.dataset.layer), 'Cosmetic removed')) focusAction('wear', id); }
+  else if (action === 'buy') { pendingBuy = id; sound('tap'); render(); focusAction('buy-yes', id); }
+  else if (action === 'buy-no') { pendingBuy = null; render(); focusAction('buy', id); }
+  else if (action === 'buy-yes') {
+    if (mutate((state) => buyCosmetic(state, id), `${getCosmetic(id).name} added to your wardrobe`, 'collect')) { pendingBuy = null; focusAction('buy'); }
+  }
+}
