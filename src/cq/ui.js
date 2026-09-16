@@ -1,5 +1,5 @@
 import './cq.css';
-import { getActiveProfile, isUnlocked, getCq, updateCq } from '../progress.js';
+import { getActiveProfile, isUnlocked, getCq, requireUnlockedProfile, updateCq } from '../progress.js';
 import { sounds } from '../ui/sounds.js';
 import { BASE_HEARTS, COSMETICS, DEFAULT_LOOK, GEAR_SLOTS, ITEMS, LOOK_OPTIONS, RARITY, TRACK_LESSONS } from './items.js';
 import {
@@ -21,16 +21,14 @@ const TABS = ['Gear', 'Wardrobe', 'Trader', 'Quests'];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
 const app = document.getElementById('app');
-const active = getActiveProfile();
+const active = requireUnlockedProfile();
 let cq, draft, preview = false, facingIndex = 0, tab = 'Gear', selectedItem = null, pendingBuy = null;
 let animation = 0, message = '';
 let lessonView = null, lessonEntry = '';
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 try { const saved = sessionStorage.getItem('cq-tab'); if (TABS.includes(saved)) tab = saved; } catch { /* Private mode. */ }
 
-if (!active || !isUnlocked(active.id)) {
-  location.replace('index.html');
-} else {
+if (active) {
   cq = getCq(active.id);
   if (!cq.track) {
     app.append(el('<section class="card cq-gate"><h1>Ask a grown-up to start Computer Quest for you</h1><a class="cq-button" href="index.html">← Back to map</a></section>'));
@@ -54,7 +52,9 @@ if (!active || !isUnlocked(active.id)) {
       if (!profile || profile.id !== active.id || !isUnlocked(active.id)) { location.replace('index.html'); return; }
       cq = getCq(active.id);
       if (!cq.track) { location.replace('computer.html'); return; }
-      if (lessonView) showRoute(); else render();
+      // A lesson in progress rebuilds only if this lesson's saved state actually changed and there's
+      // no unsaved in-screen input; otherwise the kid keeps working undisturbed.
+      if (lessonView) lessonView.refreshFromStorage(); else render();
     });
     window.addEventListener('pagehide', () => cancelAnimationFrame(animation));
     window.addEventListener('pageshow', (event) => { if (event.persisted && !lessonView) render(); });

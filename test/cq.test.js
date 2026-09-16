@@ -276,7 +276,7 @@ const uiSource = readFileSync(new URL('../src/cq/ui.js', import.meta.url), 'utf8
 function uiMarkup(expression, state = base(), overrides = {}) {
   return runInNewContext(`${uiSource}\ncq = testState; draft = { ...DEFAULT_LOOK }; ${expression}`, {
     ...catalog, ...character, ...overrides, testState: state,
-    getActiveProfile: () => null, document: { getElementById: () => ({}) },
+    getActiveProfile: () => null, requireUnlockedProfile: () => null, document: { getElementById: () => ({}) },
     window: { matchMedia: () => ({ matches: true }) }, sessionStorage: new MemoryStorage(),
     location: { replace() {} },
   });

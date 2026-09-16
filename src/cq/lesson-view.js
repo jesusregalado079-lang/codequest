@@ -94,3 +94,41 @@ export function parseLessonHash(hash) {
   const match = /^#?(lesson|practice)\/([gs][1-5])$/.exec(String(hash || ''));
   return match ? { route: match[1], id: match[2] } : null;
 }
+
+// Chest resume position: the next unanswered question, or the last one when progress is already
+// complete (a reload right before openChest commits must not strand the kid past the end).
+export function chestResumeIndex(progressLength, chestLength) {
+  const length = Number.isInteger(chestLength) && chestLength > 0 ? chestLength : 1;
+  const at = Number.isInteger(progressLength) && progressLength > 0 ? progressLength : 0;
+  return Math.min(at, length - 1);
+}
+
+// Whether a fresh lesson-state JSON differs from the last one we recorded, ignoring activeMs: a
+// periodic active-time save (ours or another tab's) must never by itself look like "this lesson changed".
+export function lessonStateChanged(freshJson, lastJson) {
+  if (freshJson === lastJson) return false;
+  const strip = (json) => {
+    try {
+      const state = JSON.parse(json);
+      return JSON.stringify(state && typeof state === 'object' ? { ...state, activeMs: 0 } : state);
+    } catch { return json; }
+  };
+  return strip(freshJson) !== strip(lastJson);
+}
+
+// Pure decision behind the storage-refresh rebuild: only true when this lesson's state actually
+// changed (ignoring activeMs) AND the kid has no unsaved in-screen input that a rebuild would wipe.
+export function shouldRefreshFromStorage(freshJson, lastJson, hasUnsavedInput) {
+  return !hasUnsavedInput && lessonStateChanged(freshJson, lastJson);
+}
+
+// In-screen progress that isn't saved yet, expressed as plain signals so it's testable without a DOM.
+// quiz: an attempt in progress. parent-checks: ticks or a note not yet saved. chest: a wrong pick shown.
+// parent-pin: digits already typed into the PIN box.
+export function hasUnsavedLessonInput({ kind, quizPos = 0, quizSelected = null, noteValue = '', checksTicked = false, chestWrongCount = 0, pinValue = '' } = {}) {
+  if (kind === 'quiz') return quizPos > 0 || quizSelected !== null;
+  if (kind === 'parent-checks') return Boolean(String(noteValue || '').trim()) || checksTicked;
+  if (kind === 'chest') return chestWrongCount > 0;
+  if (kind === 'parent-pin') return Boolean(pinValue);
+  return false;
+}

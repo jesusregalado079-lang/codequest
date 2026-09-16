@@ -1,17 +1,19 @@
 // Computer Quest lesson screens. One idea per card; every saved change goes through lesson-logic + the hub's save.
-import { checkParentPin, hasParentPin, load } from '../progress.js';
+import { checkParentPin, getActiveProfile, hasParentPin, load } from '../progress.js';
+import { mountBattle } from './battle/battle-ui.js';
+import { endBannerMs, resultsView } from './battle/view.js';
 import { GEMS, LEGENDARY_CHOICES, RARITY } from './items.js';
 import { chooseLegendary, equip, getCosmetic, getItem, packComplete } from './character.js';
 import {
   addActiveMs, completePractice, emptyLessonState, lessonStatus, missionStepDone, normalizeLessons, openChest,
-  quizQuestionsToAsk, recordParentCheck, recordQuizAttempt, recordSpotIt, recordWarmup, setPosition, setWindows,
-  startLesson, tickMission,
+  quizQuestionsToAsk, recordBattle, recordChestAnswer, recordParentCheck, recordQuizAttempt, recordSpotIt, recordWarmup, setPosition,
+  setWindows, startLesson, tickMission,
 } from './lesson-logic.js';
 import { getLesson } from './lessons/pack1.js';
 import { drawIcon } from './sprite.js';
 import {
-  esc, lessonText, PHASES, phaseLabel, plainText, shuffled, shuffledChoices, todayYmd, visibleOptions,
-  windowsFromPlatformVersion, windowsLines,
+  chestResumeIndex, esc, hasUnsavedLessonInput, lessonText, PHASES, phaseLabel, plainText, shouldRefreshFromStorage,
+  shuffled, shuffledChoices, todayYmd, visibleOptions, windowsFromPlatformVersion, windowsLines,
 } from './lesson-view.js';
 
 const TIMED_PHASES = ['warmup', 'learn', 'mission', 'quiz', 'parent'];
@@ -76,6 +78,10 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
   let pinTimer = 0;
   let tickTimer = 0;
   let lastTick = null;
+  let lastStateJson = null; // this lesson's persisted JSON as of our own last render, for the storage-event check
+  let battle = null; // the mounted horde battle ({ destroy }) while screen.kind === 'battle'
+  let battleReducedMotion = false;
+  let resultsTimer = 0; // end banner -> results screen (the battle is already recorded)
 
   const cqNow = () => getCq();
   const stateNow = () => (lesson && normalizeLessons(cqNow().lessons)[lesson.id]) || emptyLessonState();
@@ -92,12 +98,18 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
     const ms = now - lastTick;
     lastTick = now;
     if (ms <= 0 || !TIMED_PHASES.includes(stateNow().phase)) return;
-    try { save((cq) => addActiveMs(cq, lesson.id, ms)); } catch { /* Time tracking is best-effort. */ }
+    try {
+      save((cq) => addActiveMs(cq, lesson.id, ms));
+      // Keep our own snapshot current so this silent flush never looks like a stale-vs-fresh
+      // mismatch later (the storage-refresh check also ignores activeMs, as a second guard).
+      lastStateJson = JSON.stringify(stateNow());
+    } catch { /* Time tracking is best-effort. */ }
   }
   function commit(change) {
     flushActive();
     try {
       save(change);
+      lastStateJson = JSON.stringify(stateNow());
       return true;
     } catch {
       announce('Could not save that. Please try again.');
@@ -129,21 +141,33 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
       questions: shuffled(asks).map((entry) => ({ q: entry.value, order: shuffledChoices(lesson.quiz[entry.value].choices) })),
     };
   }
-  const chestScreen = () => ({ kind: 'chest', pos: 0, firstTry: [], order: shuffledChoices(lesson.chest[0].choices), wrong: [], hint: '', wobble: false });
+  const chestScreen = () => {
+    const pos = chestResumeIndex(stateNow().chestProgress.length, lesson.chest.length);
+    return { kind: 'chest', pos, order: shuffledChoices(lesson.chest[pos].choices), wrong: [], hint: '', wobble: false };
+  };
   const legendaryPending = () => { const cq = cqNow(); return packComplete(cq) && !cq.legendaryChoice; };
 
   function screenFromState() {
     const state = stateNow();
     switch (state.phase) {
       case 'warmup':
-        if (!state.warmup.length) return warmupScreen(0, []);
+        if (!state.warmup.length) return warmupScreen(position(lesson.warmup), []);
         return commit((cq) => setPosition(cq, lesson.id, 'learn', 0)) ? { kind: 'learn' } : { kind: 'blocked', message: 'Could not open this lesson. Please try again.' };
       case 'learn': return { kind: 'learn' };
       case 'mission': return { kind: 'mission' };
       case 'quiz': return quizScreen();
       case 'parent': return state.parent.at ? { kind: 'not-yet' } : { kind: 'parent' };
       case 'key': return { kind: 'key' };
-      case 'chest': return chestScreen();
+      case 'chest': {
+        // A reload right between the last chest answer and openChest committing must not strand the kid mid-question.
+        if (state.chestProgress.length < lesson.chest.length) return chestScreen();
+        let loot = null;
+        if (!commit((cq) => { const result = openChest(cq, lesson, state.chestProgress, nowIso(), Math.random); loot = result.loot; return result.cq; }) || !loot) {
+          return { kind: 'blocked', message: 'Could not open your chest. Please try again.' };
+        }
+        play('win');
+        return { kind: 'loot', loot, step: 0 };
+      }
       default: return legendaryPending() ? { kind: 'legendary', choice: null } : { kind: 'complete' };
     }
   }
@@ -179,6 +203,7 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
   function phaseOfScreen() {
     const kind = screen.kind;
     if (kind === 'warmup' || kind === 'learn' || kind === 'mission' || kind === 'key' || kind === 'chest') return kind;
+    if (kind === 'battle' || kind === 'battle-results') return 'key';
     if (kind === 'quiz' || kind === 'quiz-results') return 'quiz';
     if (PARENT_KINDS.includes(kind)) return 'parent';
     if (kind === 'practice' || kind === 'blocked') return stateNow().phase;
@@ -296,9 +321,23 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
         <div class="cq-actions"><a class="cq-button" href="#practice/${esc(lesson.id)}">Practice Mission ▶</a>${btn('grownup', 'I’m the grown-up', '', 'cq-primary')}</div>`;
     },
 
-    key: () => `<p class="cq-key-art" aria-hidden="true">🗝️</p>${heading('🗝️ You earned a key!', 'KEY')}
+    key: () => (stateNow().battle
+      ? `<p class="cq-key-art" aria-hidden="true">🗝️</p>${heading('🗝️ You earned a key!', 'KEY')}
       <p>Your grown-up checked your real computer task. This key opens the lesson’s treasure chest.</p>
-      <div class="cq-actions">${btn('key-continue', 'Continue ▶', '', 'cq-primary')}</div>`,
+      <div class="cq-actions">${btn('key-continue', 'Open your chest ▶', '', 'cq-primary')}</div>`
+      : `<p class="cq-key-art" aria-hidden="true">🗝️</p>${heading('🗝️ You earned a key!', 'KEY')}
+      <p>Your grown-up checked your real computer task. Monsters want your treasure chest. Defend it, then open it!</p>
+      <div class="cq-actions">${btn('battle-skip', 'Skip to the chest', '', 'cq-battle-skip')}${btn('battle-start', '⚔️ Defend the chest!', '', 'cq-primary')}</div>`),
+
+    battle: () => `<h2 id="cq-lesson-heading" class="cq-sr" tabindex="-1">Defend the chest!</h2><div class="cq-battle-host"></div>`,
+
+    'battle-results': () => {
+      const results = resultsView(screen.result, screen.gems);
+      const hearts = results.hearts === null ? '' : `<li><span>Hearts left</span><strong>${esc(results.hearts)}${results.maxHearts === null ? '' : ` / ${esc(results.maxHearts)}`}</strong></li>`;
+      return `<p class="cq-key-art" aria-hidden="true">${screen.result.outcome === 'victory' ? '🏆' : '🛡️'}</p>${heading(esc(results.headline), 'BATTLE RESULTS')}
+      <ul class="cq-battle-stats"><li><span>Poofs</span><strong>💨 ${esc(results.poofs)}</strong></li><li><span>Time played</span><strong>${esc(results.played)}</strong></li>${hearts}<li class="cq-battle-gems"><span>Gems</span><strong>${esc(results.gemsText)}</strong></li></ul>
+      <div class="cq-actions">${btn('key-continue', 'Open your chest ▶', '', 'cq-primary')}</div>`;
+    },
 
     chest: () => {
       const q = lesson.chest[screen.pos];
@@ -433,6 +472,8 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
   // focus: undefined → card heading (a new screen); { action, value } → that control; 'keep' → whatever had focus.
   function render(focus) {
     if (!mounted) return;
+    stopBattle(); // Rebuilding the card always ends a mounted battle (unrecorded).
+    if (screen && screen.kind === 'battle' && screen.recorded) screen = screen.recorded; // never re-mount a recorded battle
     let target = focus;
     if (focus === 'keep') {
       const current = document.activeElement;
@@ -441,6 +482,11 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
     }
     view.innerHTML = `${topBar()}<section class="cq-lesson-card cq-kind-${screen.kind}" aria-labelledby="cq-lesson-heading">${bodies[screen.kind]()}</section>`;
     paintArt();
+    if (screen.kind === 'battle') {
+      if (typeof window.scrollTo === 'function') window.scrollTo(0, 0);
+      startBattle();
+      return;
+    }
     if (target && target.action) {
       // Card controls win over the top bar (both have an "exit" button).
       const nodes = Array.from(view.querySelectorAll('.cq-lesson-card [data-action]')).concat(Array.from(view.querySelectorAll('.cq-lesson-top [data-action]')));
@@ -454,10 +500,40 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
     if (title) title.focus({ preventScroll: true });
   }
   function go(next, focus) {
+    announce(''); // A status line from the previous screen must never bleed into the next one.
     clearPinTimer();
+    clearResultsTimer();
     screen = next;
     render(focus);
     if (screen.kind === 'parent-pin') startPinCountdown();
+  }
+
+  // In-screen progress that isn't saved yet and a storage-event rebuild would wipe out. Gathers
+  // DOM/screen signals and hands the decision to the pure helper (see lesson-view.js).
+  function hasUnsavedInput() {
+    if (!screen) return false;
+    if (battle || screen.kind === 'battle') return true; // A battle in progress must never be rebuilt away.
+    const note = view.querySelector('#cq-note');
+    const pin = view.querySelector('#cq-pin');
+    return hasUnsavedLessonInput({
+      kind: screen.kind,
+      quizPos: screen.pos,
+      quizSelected: screen.selected !== undefined ? screen.selected : null,
+      noteValue: note ? note.value : '',
+      checksTicked: Array.from(view.querySelectorAll('[data-check]')).some((box) => box.checked),
+      chestWrongCount: Array.isArray(screen.wrong) ? screen.wrong.length : 0,
+      pinValue: pin ? pin.value : '',
+    });
+  }
+
+  // Another tab saved a change to this profile: rebuild only if THIS lesson's stored state actually
+  // changed (ignoring activeMs) and the kid isn't mid-input here, otherwise leave the current screen alone.
+  function refreshFromStorage() {
+    if (!mounted) return;
+    const freshJson = JSON.stringify(stateNow());
+    if (!shouldRefreshFromStorage(freshJson, lastStateJson, hasUnsavedInput())) return;
+    lastStateJson = freshJson;
+    go(openScreen());
   }
 
   // ---------- grown-up PIN ----------
@@ -513,9 +589,55 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
     go({ kind: 'key' });
   }
 
+  // ---------- battle (docs/computer-quest/battle.md) ----------
+  // Nothing is saved until the battle ends or is skipped: leaving or reloading mid-battle counts as not played.
+  function clearResultsTimer() {
+    if (resultsTimer) { clearTimeout(resultsTimer); resultsTimer = 0; }
+  }
+  function stopBattle() {
+    if (!battle) return;
+    const running = battle;
+    battle = null;
+    running.destroy();
+  }
+  function startBattle() {
+    const host = view.querySelector('.cq-battle-host');
+    if (!host || battle) return;
+    let reducedMotion = false;
+    try { reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { reducedMotion = false; }
+    let profileId = null;
+    try { const profile = getActiveProfile(); profileId = profile ? profile.id : null; } catch { profileId = null; }
+    battleReducedMotion = reducedMotion;
+    battle = mountBattle(host, { cq: cqNow(), lesson, nickname, reducedMotion, profileId, onDone: finishBattle });
+  }
+  // Records the battle (or a skip) exactly once, the moment it ends. Skips go straight on to the chest.
+  // A finished battle stays mounted for its short end banner, then the results screen shows; leaving
+  // during the banner keeps the record (no replay for gems).
+  function finishBattle(result) {
+    if (!mounted || !screen || screen.kind !== 'battle' || screen.recorded) { stopBattle(); return; }
+    if (result.outcome === 'skipped') { stopBattle(); skipToChest(result); return; }
+    let gems = 0;
+    const saved = commit((cq) => { const recorded = recordBattle(cq, lesson, result, nowIso()); gems = recorded.gems; return recorded.cq; });
+    if (!saved) { stopBattle(); go({ kind: 'key' }); announce('Could not save the battle. You can still open your chest.'); return; }
+    play(result.outcome === 'victory' ? 'win' : 'collect');
+    const next = { kind: 'battle-results', result, gems };
+    screen.recorded = next;
+    clearResultsTimer();
+    resultsTimer = setTimeout(() => {
+      resultsTimer = 0;
+      if (mounted && screen && screen.kind === 'battle' && screen.recorded === next) go(next);
+    }, endBannerMs(battleReducedMotion));
+  }
+  function skipToChest(result) {
+    const skipped = { outcome: 'skipped', ms: result ? result.ms : 0, poofs: result ? result.poofs : 0 };
+    if (commit((cq) => setPosition(recordBattle(cq, lesson, skipped, nowIso()).cq, lesson.id, 'chest', 0))) { play('tap'); go(chestScreen()); return; }
+    go({ kind: 'key' });
+    announce('Could not save that. Please try again.');
+  }
+
   function openTheChest() {
     let loot = null;
-    const firstTry = screen.firstTry.slice();
+    const firstTry = stateNow().chestProgress.slice();
     if (!commit((cq) => { const result = openChest(cq, lesson, firstTry, nowIso(), Math.random); loot = result.loot; return result.cq; }) || !loot) return;
     play('win');
     go({ kind: 'loot', loot, step: 0 });
@@ -536,7 +658,13 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
     },
     'warm-next': () => {
       if (screen.picked === null) return;
-      if (screen.i < lesson.warmup.length - 1) { play('tap'); go(warmupScreen(screen.i + 1, screen.answers)); return; }
+      if (screen.i < lesson.warmup.length - 1) {
+        const next = screen.i + 1;
+        if (!commit((cq) => setPosition(cq, lesson.id, 'warmup', next))) return;
+        play('tap');
+        go(warmupScreen(next, screen.answers));
+        return;
+      }
       const answers = screen.answers;
       if (commit((cq) => setPosition(recordWarmup(cq, lesson, answers), lesson.id, 'learn', 0))) { play('tap'); go({ kind: 'learn' }); }
     },
@@ -639,24 +767,33 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
       else { play('tap'); go({ kind: 'not-yet' }); }
     },
 
+    'battle-start': () => {
+      if (stateNow().battle) { render(); return; }
+      play('tap');
+      go({ kind: 'battle' });
+    },
+    'battle-skip': () => {
+      if (stateNow().battle) { render(); return; }
+      skipToChest(null);
+    },
     'key-continue': () => {
       if (commit((cq) => setPosition(cq, lesson.id, 'chest', 0))) { play('tap'); go(chestScreen()); }
     },
     'chest-pick': (value) => {
       const choice = Number(value);
       const q = lesson.chest[screen.pos];
-      const first = screen.firstTry.length === screen.pos;
-      if (choice === q.answer) {
-        if (first) screen.firstTry = screen.firstTry.concat(true);
+      const right = choice === q.answer;
+      const first = screen.wrong.length === 0;
+      if (first && !commit((cq) => recordChestAnswer(cq, lesson, screen.pos, right))) return;
+      if (right) {
         play('collect');
         if (screen.pos < lesson.chest.length - 1) {
           const pos = screen.pos + 1;
-          announce('Right! Next chest question.');
           go({ ...screen, pos, order: shuffledChoices(lesson.chest[pos].choices), wrong: [], hint: '', wobble: false });
+          announce('Right! Next chest question.');
         } else openTheChest();
         return;
       }
-      if (first) screen.firstTry = screen.firstTry.concat(false);
       screen.wrong = screen.wrong.concat(choice);
       screen.hint = q.why ? text(q.why) : `The answer is: <strong>${text(q.choices[q.answer])}</strong>`;
       screen.wobble = true;
@@ -671,7 +808,7 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
       const item = getItem(screen.loot.item);
       if (!item || !commit((cq) => equip(cq, item.id))) return;
       play('collect');
-      announce(`${item.name} equipped`);
+      // The loot card already shows "✓ <item> equipped" inline; don't repeat it in the page status line.
       render({ action: legendaryPending() ? 'to-legendary' : 'exit' });
     },
     'to-legendary': () => { play('tap'); go({ kind: 'legendary', choice: null }); },
@@ -704,6 +841,7 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
     if (handler) handler(button.dataset.value);
   }
   function onKeydown(event) {
+    if (battle) return; // The battle owns the keyboard while it's mounted.
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || !mounted) return;
     const target = event.target;
     const tag = target && target.tagName;
@@ -740,6 +878,7 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
 
   screen = openScreen();
   render();
+  lastStateJson = JSON.stringify(stateNow());
   startTicking();
   if (lesson && !cqNow().windows) {
     onDetected = redrawForDetection;
@@ -748,10 +887,13 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
 
   return {
     lessonId: lesson ? lesson.id : null,
+    refreshFromStorage,
     destroy() {
       if (!mounted) return;
+      stopBattle();
       stopTicking();
       clearPinTimer();
+      clearResultsTimer();
       mounted = false;
       if (onDetected === redrawForDetection) onDetected = null;
       root.removeEventListener('click', onClick);

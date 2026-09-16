@@ -1,5 +1,5 @@
 import { GEMS, TRACK_LESSONS } from './items.js';
-import { addGems, awardLesson, chestGems, packComplete, rollChest } from './character.js';
+import { addGems, awardLesson, battleGems, chestGems, packComplete, rollChest } from './character.js';
 import { emptyLessonState, normalizeLessons, normalizeWindows } from './lesson-state.js';
 import { trackLessons } from './lessons/pack1.js';
 
@@ -7,8 +7,10 @@ export { emptyLessonState, normalizeLessons, normalizeWindows } from './lesson-s
 
 const PHASES = ['warmup', 'learn', 'mission', 'quiz', 'parent', 'key', 'chest', 'done'];
 const LESSON_IDS = ['g1', 'g2', 'g3', 'g4', 'g5', 's1', 's2', 's3', 's4', 's5'];
+const BATTLE_OUTCOMES = ['victory', 'time', 'fell', 'skipped'];
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const validIso = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value));
+const clampInt = (value, min, max) => Math.min(max, Math.max(min, Number.isFinite(value) ? Math.floor(value) : min));
 const validDay = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && (() => { const p = value.split('-').map(Number); const date = new Date(Date.UTC(p[0], p[1] - 1, p[2])); return date.getUTCFullYear() === p[0] && date.getUTCMonth() === p[1] - 1 && date.getUTCDate() === p[2]; })();
 const stateFor = (cq, id) => normalizeLessons(cq?.lessons)[id] || emptyLessonState();
@@ -189,6 +191,33 @@ export function openChest(cq, lesson, firstTry, nowIso, rng) {
     loot: { item: award.item, titles: award.titles, cosmetic: rolled.cosmetic, gems: gems + rolled.gems } };
 }
 
+// Append-only: persists each chest question's first-try result the moment it's known, so a reload
+// mid-chest can't wipe a wrong pick and hand back a clean first try (b8).
+export function recordChestAnswer(cq, lesson, index, firstTryCorrect) {
+  requireUnlockedLesson(cq, lesson);
+  const state = stateFor(cq, lesson.id);
+  if (state.phase !== 'chest') throw new Error('not at chest yet');
+  if (index >= lesson.chest.length) throw new Error('chest question index out of range');
+  if (index !== state.chestProgress.length) throw new Error('chest answers must be recorded in order');
+  return replace(cq, lesson.id, { ...state, chestProgress: state.chestProgress.concat(firstTryCorrect === true) });
+}
+
+export function recordBattle(cq, lesson, result, nowIso) {
+  requireUnlockedLesson(cq, lesson);
+  const state = stateFor(cq, lesson.id);
+  if (!state.passedAt) throw new Error('lesson is not passed');
+  if (state.phase !== 'key') throw new Error('not at the key screen yet');
+  if (state.battle) throw new Error('battle already recorded');
+  const outcome = result && result.outcome;
+  if (!BATTLE_OUTCOMES.includes(outcome)) throw new Error('invalid battle outcome');
+  const poofs = clampInt(result?.poofs, 0, 500);
+  const ms = clampInt(result?.ms, 0, 600000);
+  const gems = clampInt(outcome === 'skipped' ? 0 : battleGems(poofs), 0, 10);
+  const playedAt = validIso(nowIso) ? nowIso : new Date().toISOString();
+  const battle = { playedAt, ms, poofs, outcome, gems };
+  return { cq: addGems(replace(cq, lesson.id, { ...state, battle }), gems), gems };
+}
+
 export function completePractice(cq, lesson, today) {
   requireUnlockedLesson(cq, lesson);
   const state = stateFor(cq, lesson.id);
@@ -230,6 +259,9 @@ export function lessonReport(profile, lesson, nextLesson, todayYmd) {
   const chestCorrect = state.chest.firstTry.filter(Boolean).length;
   const missedChest = state.chest.firstTry.map((correct, index) => correct ? null : clean(lesson.chest[index]?.q)).filter(Boolean);
   const next = nextLesson ? label(nextLesson) : packComplete(cq) ? 'Pack 1 complete!' : '—';
+  const battle = state.battle;
+  const battleTime = !battle ? '—' : battle.outcome === 'skipped' ? 'skipped'
+    : battle.ms > 0 && battle.ms < 60000 ? '<1 min' : `${Math.round(battle.ms / 60000)} min`;
   return [
     `Computer Quest — ${profile.name} — ${todayYmd}`,
     `Lesson ${label(lesson)} — ${statusText(lessonStatus(cq, lesson), state)}`,
@@ -237,7 +269,7 @@ export function lessonReport(profile, lesson, nextLesson, todayYmd) {
     `Quiz: ${quiz.length ? quiz.join(' · ') : '—'}`,
     state.parent.at ? `Real task (parent-checked): ${checks}/${lesson.parentChecks.length}${allChecks ? '' : ` — not yet: "${clean(unmarked[0])}"`}` : 'Real task (parent-checked): —',
     state.chest.openedAt ? `Chest questions first try: ${chestCorrect}/${lesson.chest.length}${missedChest.length ? ` (missed: ${missedChest.map((text) => `"${text}"`).join(', ')})` : ''}` : 'Chest questions first try: —',
-    `Time: lesson ${Math.round(state.activeMs / 60000)} min · battle —`,
+    `Time: lesson ${Math.round(state.activeMs / 60000)} min · battle ${battleTime}`,
     `Practice Missions done: ${state.practiceDays.length} day(s)`,
     `Windows: ${normalizeWindows(cq.windows) || '—'}`,
     `Parent note: ${cleanNote(state.parent.note) || '—'}`,

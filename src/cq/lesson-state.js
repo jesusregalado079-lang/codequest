@@ -1,9 +1,12 @@
 const LESSON_IDS = ['g1', 'g2', 'g3', 'g4', 'g5', 's1', 's2', 's3', 's4', 's5'];
 const PHASES = ['warmup', 'learn', 'mission', 'quiz', 'parent', 'key', 'chest', 'done'];
+const BATTLE_OUTCOMES = ['victory', 'time', 'fell', 'skipped'];
 
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const number = (value) => Number.isFinite(value) && value >= 0 ? Math.floor(value) : 0;
 const iso = (value) => typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : null;
+const finiteNumber = (value) => typeof value === 'number' && Number.isFinite(value);
+const clampInt = (value, min, max) => Math.min(max, Math.max(min, Math.floor(value)));
 const day = (value) => {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
   const parts = value.split('-').map(Number);
@@ -25,11 +28,25 @@ function spotAnswers(value) {
     .map((answer) => ({ card: answer.card, pick: answer.pick, correct: answer.correct }));
 }
 
+// Decision 2026-09-16 (docs/computer-quest/battle.md §7): wrong TYPES (non-ISO playedAt, unknown outcome,
+// non-finite/non-number counts) drop the whole record. Out-of-range or non-integer FINITE numbers are
+// clamped/floored and the record is kept, so a tampered record can't be dropped to replay a battle for gems.
+function battleRecord(value) {
+  const source = object(value);
+  if (!iso(source.playedAt)) return null;
+  if (!BATTLE_OUTCOMES.includes(source.outcome)) return null;
+  if (!finiteNumber(source.ms) || !finiteNumber(source.poofs) || !finiteNumber(source.gems)) return null;
+  return {
+    playedAt: source.playedAt, outcome: source.outcome,
+    ms: clampInt(source.ms, 0, 600000), poofs: clampInt(source.poofs, 0, 500), gems: clampInt(source.gems, 0, 10),
+  };
+}
+
 export function emptyLessonState() {
   return {
     phase: 'warmup', index: 0, startedAt: null, activeMs: 0, warmup: [], mission: [], spotIt: {},
     quizAttempts: [], quizPassedAt: null, parent: { at: null, checks: [], note: '' }, passedAt: null,
-    chest: { openedAt: null, firstTry: [], cosmetic: null, gems: 0 }, practiceDays: [], battle: null,
+    chest: { openedAt: null, firstTry: [], cosmetic: null, gems: 0 }, chestProgress: [], practiceDays: [], battle: null,
   };
 }
 
@@ -49,6 +66,8 @@ function normalizeLesson(value) {
   days.sort();
   const parent = object(source.parent);
   const chest = object(source.chest);
+  // chestProgress length can't be checked against the lesson's chest length here (no lesson data in scope), so cap at 10.
+  const chestProgress = Array.isArray(source.chestProgress) ? source.chestProgress.slice(0, 10).map((value) => value === true) : [];
   const result = {
     phase: PHASES.includes(source.phase) ? source.phase : 'warmup', index: number(source.index),
     startedAt: iso(source.startedAt), activeMs: number(source.activeMs), warmup: answers(source.warmup),
@@ -59,9 +78,10 @@ function normalizeLesson(value) {
     passedAt: iso(source.passedAt),
     chest: { openedAt: iso(chest.openedAt), firstTry: Array.isArray(chest.firstTry) ? chest.firstTry.map((value) => value === true) : [],
       cosmetic: typeof chest.cosmetic === 'string' ? chest.cosmetic : null, gems: number(chest.gems) },
-    practiceDays: days, battle: null,
+    chestProgress, practiceDays: days, battle: battleRecord(source.battle),
   };
   if (result.passedAt && !result.quizPassedAt) result.passedAt = null;
+  if (!result.passedAt) result.battle = null; // battle kept only if passedAt is set
   if (result.chest.openedAt && !result.passedAt) {
     result.chest = { openedAt: null, firstTry: [], cosmetic: null, gems: 0 };
   }

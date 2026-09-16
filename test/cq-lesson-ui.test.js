@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  esc, lessonText, parentStatus, parseLessonHash, phaseLabel, PHASES, plainText, questCard, shuffled, shuffledChoices,
-  todayYmd, visibleOptions, windowsFromPlatformVersion, windowsLines,
+  chestResumeIndex, esc, hasUnsavedLessonInput, lessonStateChanged, lessonText, parentStatus, parseLessonHash,
+  phaseLabel, PHASES, plainText, questCard, shouldRefreshFromStorage, shuffled, shuffledChoices, todayYmd,
+  visibleOptions, windowsFromPlatformVersion, windowsLines,
 } from '../src/cq/lesson-view.js';
 import {
   completePractice, lessonStatus, missionStepDone, normalizeLessons, openChest, quizQuestionsToAsk, recordParentCheck,
@@ -156,6 +157,49 @@ assert.match(todayYmd(), /^\d{4}-\d{2}-\d{2}$/);
 assert.deepEqual(parseLessonHash('#lesson/g1'), { route: 'lesson', id: 'g1' });
 assert.deepEqual(parseLessonHash('#practice/s5'), { route: 'practice', id: 's5' });
 ['', '#', '#lesson/', '#lesson/g6', '#lesson/x1', '#shop/g1', '#lesson/g1/extra', '#lesson/<img>', null].forEach((hash) => assert.equal(parseLessonHash(hash), null));
+
+// ---------- chest resume index (b8: resume at the first unanswered question) ----------
+assert.equal(chestResumeIndex(0, 2), 0, 'fresh chest starts at Q1');
+assert.equal(chestResumeIndex(1, 2), 1, 'one answered so far resumes at Q2');
+assert.equal(chestResumeIndex(2, 2), 1, 'progress already complete stays on the last question, not past it');
+assert.equal(chestResumeIndex(5, 2), 1, 'corrupted/over-length progress clamps to the last question');
+assert.equal(chestResumeIndex(0, 1), 0, 'single-question chest');
+assert.equal(chestResumeIndex(undefined, 3), 0, 'missing progress treated as none');
+
+// ---------- storage-refresh decision (b9: stale-snapshot + storage-event rebuild) ----------
+const s0 = { phase: 'learn', activeMs: 60000, index: 0 };
+const s0ActiveOnly = { ...s0, activeMs: 65000 };
+const s0OtherField = { ...s0, index: 1 };
+assert.equal(lessonStateChanged(JSON.stringify(s0), JSON.stringify(s0)), false, 'identical JSON: unchanged');
+assert.equal(lessonStateChanged(JSON.stringify(s0ActiveOnly), JSON.stringify(s0)), false,
+  'an activeMs-only difference (this tab\'s own flush, or another tab\'s) is not "this lesson changed"');
+assert.equal(lessonStateChanged(JSON.stringify(s0OtherField), JSON.stringify(s0)), true, 'a real field difference is a change');
+// The combined decision: no rebuild while unsaved input is present, even for a real change.
+assert.equal(shouldRefreshFromStorage(JSON.stringify(s0OtherField), JSON.stringify(s0), false), true, 'changed-this-lesson + no unsaved input: refresh');
+assert.equal(shouldRefreshFromStorage(JSON.stringify(s0OtherField), JSON.stringify(s0), true), false, 'changed-this-lesson but unsaved input present: do not refresh');
+assert.equal(shouldRefreshFromStorage(JSON.stringify(s0), JSON.stringify(s0), false), false, 'other-field-elsewhere (no diff here) + no unsaved input: no refresh needed');
+assert.equal(shouldRefreshFromStorage(JSON.stringify(s0ActiveOnly), JSON.stringify(s0), false), false, 'activeMs-only change: no refresh even with no unsaved input');
+assert.equal(shouldRefreshFromStorage(JSON.stringify(s0ActiveOnly), JSON.stringify(s0), true), false, 'activeMs-only change + unsaved input: still no refresh');
+
+// ---------- unsaved in-screen input (incl. PIN digits) ----------
+assert.equal(hasUnsavedLessonInput({ kind: 'quiz', quizPos: 0, quizSelected: null }), false, 'quiz not yet touched');
+assert.equal(hasUnsavedLessonInput({ kind: 'quiz', quizPos: 0, quizSelected: 1 }), true, 'quiz: an answer is selected');
+assert.equal(hasUnsavedLessonInput({ kind: 'quiz', quizPos: 2, quizSelected: null }), true, 'quiz: mid-attempt (past question 1)');
+assert.equal(hasUnsavedLessonInput({ kind: 'parent-checks', checksTicked: false, noteValue: '' }), false, 'parent checks: nothing ticked or typed');
+assert.equal(hasUnsavedLessonInput({ kind: 'parent-checks', checksTicked: true, noteValue: '' }), true, 'parent checks: a box is ticked');
+assert.equal(hasUnsavedLessonInput({ kind: 'parent-checks', checksTicked: false, noteValue: '  hi  ' }), true, 'parent checks: a note is typed');
+assert.equal(hasUnsavedLessonInput({ kind: 'parent-checks', checksTicked: false, noteValue: '   ' }), false, 'parent checks: whitespace-only note does not count');
+assert.equal(hasUnsavedLessonInput({ kind: 'chest', chestWrongCount: 0 }), false, 'chest: no wrong picks yet');
+assert.equal(hasUnsavedLessonInput({ kind: 'chest', chestWrongCount: 1 }), true, 'chest: a wrong pick is showing');
+assert.equal(hasUnsavedLessonInput({ kind: 'parent-pin', pinValue: '' }), false, 'PIN box empty');
+assert.equal(hasUnsavedLessonInput({ kind: 'parent-pin', pinValue: '12' }), true, 'PIN digits typed count as unsaved input');
+assert.equal(hasUnsavedLessonInput({ kind: 'learn' }), false, 'a screen kind with nothing to lose');
+assert.equal(hasUnsavedLessonInput(), false, 'no signals at all');
+
+// ---------- status line cleared on every screen change (stale status message) ----------
+assert.match(uiSource, /function go\(next, focus\) \{\s*announce\(''\);/, 'go() clears the aria-live status line on every screen change');
+assert.match(uiSource, /function refreshFromStorage\(\) \{[\s\S]*?go\(openScreen\(\)\);/,
+  'the storage-refresh rebuild goes through go() (not a bare render()), so the status line is cleared there too');
 
 // ---------- the UI's call order is legal against the lesson rules (a whole pack, both tracks) ----------
 const rng = seeded(99);
