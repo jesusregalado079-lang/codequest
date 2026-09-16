@@ -5,7 +5,7 @@ import { drawIcon } from '../sprite.js';
 import { createBattle, resultOf, step, waveTotal } from './engine.js';
 import { drawSlotIcon, PARTICLE_LIFE, renderBattle } from './render.js';
 import {
-  blankInput, doneOnce, fitView, formatClock, HOWTO_TIP, howToKeys, hudSlots, isInteractiveOutside, keyAction, keyId,
+  blankInput, doneOnce, fitView, formatClock, HOWTO_TIP, howToKeys, hudSlots, isActivationKey, isInteractiveOutside, keyAction, keyId,
   slotStatus, waveBanner, waveLabel,
 } from './view.js';
 
@@ -355,15 +355,17 @@ export function mountBattle(container, {
   function onKeyDown(event) {
     if (!mounted || doc.hidden) return;
     if (event.ctrlKey || event.altKey || event.metaKey) return;
-    // Space/Enter on a focused control outside the battle (e.g. "← Quests") belongs to that control.
-    if (isInteractiveOutside(event.target, root)) return;
+    // Space/Enter on a focused control outside the battle (e.g. "← Quests") belongs to that control;
+    // every other battle key still plays.
+    const outside = isInteractiveOutside(event.target, root);
+    if (outside && isActivationKey(event)) return;
     if (overlayMode === 'howto' && (event.key === 'Enter' || event.code === 'Space' || event.key === ' ')) {
       event.preventDefault();
       ensureAudio();
       dismissHowTo();
       return;
     }
-    const action = keyAction(event);
+    const action = keyAction(event, outside);
     if (!action) return;
     anyKey = true;
     ensureAudio();

@@ -3,6 +3,7 @@ import {
   ITEMS, LEGENDARY_CHOICES, LESSON_AWARDS, LOOK_OPTIONS, RANKS, SETS, TRACK_LESSONS,
 } from './items.js';
 import { normalizeLessons, normalizeWindows } from './lesson-state.js';
+import { normalizeTyping } from './typing/state.js';
 
 const validTracks = ['guided', 'standard'];
 const allLessons = [...TRACK_LESSONS.guided, ...TRACK_LESSONS.standard];
@@ -86,6 +87,7 @@ export function normalizeCq(value) {
   return {
     track, look: normalizeLook(source.look), owned, equipped, cosmetics, worn, gems, lessonsPassed, legendaryChoice,
     windows: normalizeWindows(source.windows), lessons: normalizeLessons(source.lessons),
+    typing: normalizeTyping(source.typing),
   };
 }
 

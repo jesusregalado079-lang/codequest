@@ -11,13 +11,15 @@ import { getLesson, trackLessons } from './lessons/pack1.js';
 import { lessonStatus } from './lesson-logic.js';
 import { mountLesson } from './lesson-ui.js';
 import { parseLessonHash, questCard } from './lesson-view.js';
+import { mountTyping } from './typing/typing-ui.js';
+import { isMode, LOCK_LABEL, MODE_TITLES, modeLocked, parseTypingHash, pickerHtml } from './typing/view.js';
 
 const SLOT_LABELS = { head: 'Head', body: 'Body', feet: 'Feet', mainHand: 'Hand', offHand: 'Off-hand', back: 'Back', magic1: 'Magic 1', magic2: 'Magic 2' };
 const FIELD_LABELS = { skin: 'Skin', hairStyle: 'Hair style', hairColor: 'Hair color', eyeColor: 'Eye color', shirtStyle: 'Shirt style', shirtColor: 'Shirt color', pantsColor: 'Pants', shoesColor: 'Shoes' };
 const LAYER_LABELS = { hat: 'Hats', cape: 'Capes & wings', face: 'Face', hairFx: 'Hair effects', title: 'Titles', trail: 'Trails' };
 const FACINGS = ['down', 'right', 'up', 'left'];
 const FACING_LABELS = ['Front', 'Right', 'Back', 'Left'];
-const TABS = ['Gear', 'Wardrobe', 'Trader', 'Quests'];
+const TABS = ['Gear', 'Wardrobe', 'Trader', 'Quests', 'Typing'];
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
 const app = document.getElementById('app');
@@ -25,6 +27,7 @@ const active = requireUnlockedProfile();
 let cq, draft, preview = false, facingIndex = 0, tab = 'Gear', selectedItem = null, pendingBuy = null;
 let animation = 0, message = '';
 let lessonView = null, lessonEntry = '';
+let typingView = null, typingEntry = '', typingFocus = null;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 try { const saved = sessionStorage.getItem('cq-tab'); if (TABS.includes(saved)) tab = saved; } catch { /* Private mode. */ }
 
@@ -43,7 +46,8 @@ if (active) {
     draft = { ...(cq.look || DEFAULT_LOOK) };
     showRoute();
     app.addEventListener('click', onClick);
-    // #lesson/<id> and #practice/<id> show a lesson screen; no hash (or '#') is the hub. Browser Back returns to the hub.
+    // #lesson/<id> and #practice/<id> show a lesson screen; #typing is the hub's Typing tab (mode picker) and
+    // #typing/<mode> a typing run; no hash (or '#') is the hub. Browser Back returns to the hub.
     window.addEventListener('hashchange', showRoute);
     // Another tab may change profiles or revoke this track while the hub is open.
     window.addEventListener('storage', () => {
@@ -54,10 +58,11 @@ if (active) {
       if (!cq.track) { location.replace('computer.html'); return; }
       // A lesson in progress rebuilds only if this lesson's saved state actually changed and there's
       // no unsaved in-screen input; otherwise the kid keeps working undisturbed.
-      if (lessonView) lessonView.refreshFromStorage(); else render();
+      // A typing run is never rebuilt: its session lives only in memory until the text is done.
+      if (typingView) { if (!typingView.inProgress()) typingView.refresh(); } else if (lessonView) lessonView.refreshFromStorage(); else render();
     });
     window.addEventListener('pagehide', () => cancelAnimationFrame(animation));
-    window.addEventListener('pageshow', (event) => { if (event.persisted && !lessonView) render(); });
+    window.addEventListener('pageshow', (event) => { if (event.persisted && !lessonView && !typingView) render(); });
   }
 }
 
@@ -70,17 +75,57 @@ function showRoute() {
   // Any hop other than Quests → lesson (an in-lesson link, Back/Forward) means history.back() may not reach the hub.
   if (location.hash !== lessonEntry) lessonEntry = '';
   const previous = lessonView ? lessonView.lessonId : null;
+  const previousTyping = typingView ? typingView.mode : null;
   if (lessonView) { lessonView.destroy(); lessonView = null; }
+  if (typingView) { typingView.destroy(); typingView = null; }
+  if (location.hash !== typingEntry) typingEntry = '';
   if (!preview) cq = getCq(active.id);
+  const typing = parseTypingHash(location.hash);
+  if (typing && cq.look !== null) {
+    if (typing.mode && !modeLocked(typing.mode, cq)) {
+      cancelAnimationFrame(animation);
+      lessonEntry = '';
+      typingView = mountTyping({ app, mode: typing.mode, profileId: active.id, getCq: () => cq, save: saveCq, sound, onExit: exitTyping });
+      return;
+    }
+    // #typing (or a locked / unknown mode) shows the picker in the hub's Typing tab.
+    tab = 'Typing'; pendingBuy = null;
+    if (typing.mode) message = `${MODE_TITLES[typing.mode]}: ${LOCK_LABEL}`;
+  }
   if (target && cq.look !== null) {
     cancelAnimationFrame(animation);
     lessonView = mountLesson({ app, route: target.route, lessonId: target.id, nickname: active.name, getCq: () => cq, save: saveCq, sound, onExit: exitLesson });
     return;
   }
   lessonEntry = '';
+  typingEntry = '';
   if (previous) { tab = 'Quests'; message = ''; }
+  if (previousTyping) { tab = 'Typing'; message = ''; }
   render();
   if (previous) focusAction('open-lesson', previous);
+  if (previousTyping || typingFocus) {
+    const focus = typingFocus || ['tab'];
+    typingFocus = null;
+    if (focus[0] === 'typing-mode') focusMode(focus[1]); else focusTab('Typing');
+  }
+}
+function exitTyping(where) {
+  const mode = typingView ? typingView.mode : null;
+  typingFocus = where === 'picker' ? ['typing-mode', mode] : ['tab'];
+  tab = 'Typing';
+  try { sessionStorage.setItem('cq-tab', tab); } catch { /* Private mode. */ }
+  // Opened from the Typing tab and still on that entry: step back so history stays hub -> run.
+  if (typingEntry && typingEntry === location.hash) { typingEntry = ''; history.back(); return; }
+  history.replaceState(null, '', location.pathname + location.search);
+  showRoute();
+}
+function focusMode(mode) {
+  const target = Array.from(app.querySelectorAll('[data-action="typing-mode"]')).find((b) => b.dataset.mode === mode);
+  if (target) target.focus({ preventScroll: true });
+}
+function focusTab(name) {
+  const target = app.querySelector(`[data-tab="${name}"]`);
+  if (target) target.focus({ preventScroll: true });
 }
 function exitLesson() {
   // Opened from the Quests tab and still on that entry: step back so browser history stays hub → lesson.
@@ -202,7 +247,7 @@ function render() {
     <header class="cq-top"><a class="cq-map" href="index.html">← Map</a><div class="cq-identity"><span class="cq-eyebrow">COMPUTER QUEST</span><h1>${creator ? 'Create your hero' : esc(active.name)}</h1>${!creator && title ? `<p>${esc(title.name)}</p>` : ''}</div>${creator ? '' : `<div class="cq-wallet"><span class="cq-badge" ${rarity(rank)}>Hero Rank · ${esc(rank.name)}</span><strong aria-label="${cq.gems} gems">💎 ${cq.gems}</strong></div>`}</header>
     <p class="cq-status" role="status">${esc(message)}</p>
     <main class="cq-layout ${creator ? 'cq-creator' : ''}">${hero(creator)}<div class="cq-content">
-    ${creator ? `<div class="cq-panel">${editor(true)}</div>` : `<nav class="cq-tabs" aria-label="Hero hub">${TABS.map((name) => `<button type="button" data-action="tab" data-tab="${name}" aria-pressed="${tab === name}" aria-controls="cq-tab-panel">${name}</button>`).join('')}</nav><section id="cq-tab-panel" class="cq-panel" aria-label="${tab}">${({ Gear: gear, Wardrobe: wardrobe, Trader: trader, Quests: quests })[tab]()}</section>`}
+    ${creator ? `<div class="cq-panel">${editor(true)}</div>` : `<nav class="cq-tabs" aria-label="Hero hub">${TABS.map((name) => `<button type="button" data-action="tab" data-tab="${name}" aria-pressed="${tab === name}" aria-controls="cq-tab-panel">${name}</button>`).join('')}</nav><section id="cq-tab-panel" class="cq-panel" aria-label="${tab}">${({ Gear: gear, Wardrobe: wardrobe, Trader: trader, Quests: quests, Typing: () => pickerHtml(cq) })[tab]()}</section>`}
     </div></main>`;
   app.querySelectorAll('[data-icon]').forEach((mount) => {
     const size = Number(mount.dataset.size), canvas = document.createElement('canvas');
@@ -236,7 +281,7 @@ function focusAction(action, id) {
   if (target) target.focus({ preventScroll: true });
 }
 function onClick(event) {
-  if (lessonView) return; // Lesson screens handle their own clicks.
+  if (lessonView || typingView) return; // Lesson and typing screens handle their own clicks.
   const b = event.target.closest('button[data-action]');
   if (!b || b.disabled) return;
   const action = b.dataset.action, id = b.dataset.id;
@@ -253,6 +298,7 @@ function onClick(event) {
   } else if (action === 'cancel-look') { draft = { ...cq.look }; message = 'Look changes cancelled'; render(); }
   else if (action === 'tab') {
     tab = b.dataset.tab; pendingBuy = null;
+    if (parseTypingHash(location.hash)) history.replaceState(null, '', location.pathname + location.search);
     if (tab === 'Wardrobe') draft = { ...cq.look };
     try { sessionStorage.setItem('cq-tab', tab); } catch { /* Private mode. */ }
     sound('tap'); render(); focusAction('tab');
@@ -263,6 +309,11 @@ function onClick(event) {
     const hash = `#${b.dataset.route}/${id}`;
     if (!parseLessonHash(hash)) return;
     sound('tap'); lessonEntry = hash; location.hash = hash;
+  } else if (action === 'typing-mode') {
+    const mode = b.dataset.mode;
+    if (!isMode(mode)) return;
+    if (modeLocked(mode, cq)) { message = `${MODE_TITLES[mode]}: ${LOCK_LABEL}`; app.querySelector('.cq-status').textContent = message; sound('tap'); return; }
+    sound('tap'); typingEntry = `#typing/${mode}`; location.hash = typingEntry;
   } else if (action === 'empty-slot') { message = 'Choose an owned item to equip it here.'; app.querySelector('.cq-status').textContent = message; }
   else if (action === 'equip') { if (mutate((state) => equip(state, id, b.dataset.slot), `${getItem(id).name} equipped`)) focusAction('unequip'); }
   else if (action === 'unequip') { if (mutate((state) => unequip(state, b.dataset.slot), 'Gear removed')) focusAction('equip', selectedItem); }

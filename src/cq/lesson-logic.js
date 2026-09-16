@@ -2,6 +2,7 @@ import { GEMS, TRACK_LESSONS } from './items.js';
 import { addGems, awardLesson, battleGems, chestGems, packComplete, rollChest } from './character.js';
 import { emptyLessonState, normalizeLessons, normalizeWindows } from './lesson-state.js';
 import { trackLessons } from './lessons/pack1.js';
+import { normalizeTyping } from './typing/state.js';
 
 export { emptyLessonState, normalizeLessons, normalizeWindows } from './lesson-state.js';
 
@@ -242,6 +243,21 @@ const label = (lesson) => `${lesson.id.toUpperCase()} "${lesson.title}"`;
 const statusText = (status, state) => status === 'in-progress' ? `IN PROGRESS: ${state.phase}`
   : status === 'not-yet' ? 'NOT YET (parent check)' : (status === 'passed' || status === 'done') ? 'PASSED' : status.toUpperCase();
 
+// Typing best WPM: at most 1 decimal, trailing .0 dropped (docs/computer-quest/typing.md §7).
+const fmtWpm = (wpm) => { const fixed = Number(wpm).toFixed(1); return fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed; };
+const TYPING_MODES = [['homeRow', 'Home Row'], ['lessonWords', 'Lesson Words'], ['sentences', 'Sentences']];
+// Fix P5a-fix #6: normalize cq.typing here rather than trusting it, so a raw/partial typing
+// object still formats correctly; and use singular "1 session" vs plural "N sessions".
+function typingReportLine(cq) {
+  const typing = normalizeTyping(cq?.typing);
+  const parts = TYPING_MODES.map(([mode, name]) => {
+    const best = typing.best[mode];
+    return best ? `${name} ${fmtWpm(best.wpm)} WPM @ ${best.accuracy}%` : `${name} —`;
+  });
+  const sessionWord = typing.sessions.length === 1 ? 'session' : 'sessions';
+  return `Typing best: ${parts.join(' · ')} · ${typing.sessions.length} ${sessionWord}`;
+}
+
 export function lessonReport(profile, lesson, nextLesson, todayYmd) {
   const cq = profile?.cq || {};
   const state = stateFor(cq, lesson.id);
@@ -283,8 +299,9 @@ export function profileReport(profile, lessons, todayYmd) {
   const reports = ordered.filter((lesson) => stateFor(profile.cq, lesson.id).startedAt)
     .map((lesson) => lessonReport(profile, lesson, ordered[ordered.findIndex((item) => item.id === lesson.id) + 1] || null, todayYmd));
   const header = `Computer Quest — ${profile.name} — ${todayYmd}`;
+  const typingLine = typingReportLine(profile?.cq);
   const blocks = reports.map((report) => report.split('\n').slice(1).join('\n'));
-  return blocks.length ? `${header}\n${blocks.join('\n\n')}` : header;
+  return blocks.length ? `${header}\n${typingLine}\n${blocks.join('\n\n')}` : `${header}\n${typingLine}`;
 }
 
 export function familyReport(profiles, lessons, todayYmd) {

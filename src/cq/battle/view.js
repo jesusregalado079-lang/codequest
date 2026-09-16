@@ -42,6 +42,7 @@ const own = (object, key) => typeof key === 'string' && Object.prototype.hasOwnP
 
 // True when a key event's target is a focusable control OUTSIDE the battle root that handles its
 // own activation (e.g. the "← Quests" button), so Space/Enter must reach it instead of the game.
+// Only those two keys are handed over: arrows/WASD/Esc/E/Q/R/1/2 still play (see keyAction).
 const INTERACTIVE = 'button, a[href], input, select, textarea, summary, [contenteditable=""], [contenteditable="true"], [role="button"], [role="link"]';
 export function isInteractiveOutside(target, root) {
   if (!target || typeof target.closest !== 'function') return false;
@@ -49,10 +50,15 @@ export function isInteractiveOutside(target, root) {
   return Boolean(target.closest(INTERACTIVE));
 }
 
+// Space and Enter activate a focused button/link natively.
+export const isActivationKey = (event) => Boolean(event) && (event.code === 'Space' || event.key === ' ' || event.key === 'Spacebar'
+  || event.key === 'Enter' || event.code === 'Enter' || event.code === 'NumpadEnter');
+
 // The engine input a key event maps to, or null. Ctrl/Alt/Meta combos are never the game's, and
-// neither is a key aimed at an interactive control outside the battle (interactiveOutside = true).
+// neither is Space/Enter aimed at an interactive control outside the battle (interactiveOutside = true).
 export function keyAction(event, interactiveOutside) {
-  if (!event || event.ctrlKey || event.altKey || event.metaKey || interactiveOutside) return null;
+  if (!event || event.ctrlKey || event.altKey || event.metaKey) return null;
+  if (interactiveOutside && isActivationKey(event)) return null;
   if (event.code) return own(KEY_CODES, event.code) ? KEY_CODES[event.code] : null;
   return own(KEY_NAMES, event.key) ? KEY_NAMES[event.key] : null;
 }

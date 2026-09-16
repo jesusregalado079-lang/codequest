@@ -8,7 +8,7 @@ import { ARENA, spawnPoint, WAVE_COUNT } from '../src/cq/battle/content.js';
 import { createBattle, gearFrom, resultOf, spawnEnemy, step, waveTotal } from '../src/cq/battle/engine.js';
 import { drawSlotIcon, renderBattle } from '../src/cq/battle/render.js';
 import {
-  blankInput, cooldownFraction, doneOnce, endBannerMs, fitView, HOWTO_TIP, isInteractiveOutside, formatClock, formatPlayed, howToKeys, hudSlots, keyAction, keyId,
+  blankInput, cooldownFraction, doneOnce, endBannerMs, fitView, HOWTO_TIP, isActivationKey, isInteractiveOutside, formatClock, formatPlayed, howToKeys, hudSlots, keyAction, keyId,
   MAX_CSS_WIDTH, RESULT_HEADLINES, resultsView, shouldPreventDefault, slotStatus, waveBanner, waveLabel,
 } from '../src/cq/battle/view.js';
 
@@ -192,7 +192,21 @@ assert.equal(HOWTO_TIP, 'Tip: face a monster, then press Space.');
   assert.equal(keyAction(space, isInteractiveOutside(body, root)), 'attack', 'Space on the page body still attacks');
   assert.equal(keyAction(space, isInteractiveOutside(canvas, root)), 'attack');
   assert.equal(keyAction({ code: 'ArrowUp' }, false), 'up');
-  assert.equal(keyAction({ code: 'ArrowUp' }, true), null);
+  // b12: with focus on an outside control only Space and Enter are handed to that control.
+  assert.equal(keyAction({ code: 'ArrowUp' }, true), 'up', 'arrows still move with ← Quests focused');
+  [['KeyW', 'up'], ['KeyA', 'left'], ['KeyS', 'down'], ['KeyD', 'right'], ['Escape', 'pause'], ['KeyE', 'ability'], ['KeyQ', 'stance'],
+    ['KeyR', 'undo'], ['Digit1', 'apple'], ['Digit2', 'stone'], ['ShiftLeft', 'block']].forEach(([code, action]) => {
+    assert.equal(keyAction({ code, key: '' }, true), action, `${code} still plays with an outside control focused`);
+    assert.equal(keyAction({ code, key: '', ctrlKey: true }, true), null, `Ctrl+${code} is never the game's`);
+  });
+  assert.equal(keyAction({ code: 'Space', key: ' ' }, true), null);
+  assert.equal(keyAction({ code: '', key: ' ' }, true), null, 'Space by key name is handed over too');
+  assert.equal(keyAction({ code: 'Enter', key: 'Enter' }, true), null);
+  assert.equal(keyAction({ code: '', key: 'Escape' }, true), 'pause', 'key-name fallback also keeps Esc');
+  assert.equal(isActivationKey({ code: 'Space', key: ' ' }), true);
+  assert.equal(isActivationKey({ code: 'NumpadEnter', key: 'Enter' }), true);
+  assert.equal(isActivationKey({ code: 'ArrowUp', key: 'ArrowUp' }), false);
+  assert.equal(isActivationKey(null), false);
   // Real selector check with a closest() that tests the selector string.
   const byTag = (tag) => ({ closest: (sel) => (sel.split(',').map((x) => x.trim()).indexOf(tag) !== -1 ? {} : null) });
   ['button', 'input', 'select', 'textarea', 'summary', 'a[href]'].forEach((tag) => assert.equal(isInteractiveOutside(byTag(tag), root), true, tag));
@@ -387,7 +401,8 @@ assert.ok(uiSource.includes('webkitAudioContext'));
   assert.ok(!/done\.call|onDone/.test(destroySrc), 'destroy() never calls onDone (no double record, no late record)');
   assert.ok(uiSource.includes('esc(HOWTO_TIP)'), 'how-to card shows the tip');
   assert.ok(uiSource.includes("ev.source === 'second-wind' ? 'Second Wind! Keep going!'"), 'Second Wind banner');
-  assert.ok(/if \(isInteractiveOutside\(event\.target, root\)\) return;/.test(uiSource), 'keydown ignores keys aimed at outside controls');
+  assert.ok(/const outside = isInteractiveOutside\(event\.target, root\);\s*if \(outside && isActivationKey\(event\)\) return;/.test(uiSource), 'keydown hands only Space/Enter to outside controls');
+  assert.ok(/keyAction\(event, outside\)/.test(uiSource), 'keydown maps the rest with the outside flag');
   assert.ok(/waveHeal = ev\.amount \|\| 0; if \(waveHeal > 0\) once\('heal'\);/.test(uiSource), 'no heal sound for a 0-amount wave heal');
   // lesson-ui: commit at end, results after the visual banner, timer cleared on navigation/destroy.
   const lessonSource = readFileSync(new URL('../src/cq/lesson-ui.js', import.meta.url), 'utf8');
@@ -405,5 +420,112 @@ assert.ok(/case 'wave':[^\n]*waveBanner\(ev\.wave, waveTotal\(state\), waveHeal\
 // Modules load without a DOM.
 const battleUi = await import('../src/cq/battle/battle-ui.js');
 assert.equal(typeof battleUi.mountBattle, 'function');
+
+// ---------- b11: end sequencing, driven for real ----------
+// Mount the real battle screen on a stub DOM with fake timers and a manual rAF. The host's onDone
+// mirrors lesson-ui's finishBattle (commit the record, then schedule results after the end banner).
+// The record must be committed the moment the battle ends, before the results timer can fire, and
+// leaving during the banner must neither drop nor repeat it.
+{
+  const noop = () => {};
+  const ctx2d = { fillRect: noop, clearRect: noop, save: noop, restore: noop, fillStyle: '#000', globalAlpha: 1, imageSmoothingEnabled: false };
+  const stub = () => new Proxy(function stubFn() {}, {
+    get(_t, prop) {
+      if (prop === 'getContext') return () => ctx2d;
+      if (prop === Symbol.toPrimitive) return () => '';
+      if (prop === 'hidden' || prop === 'repeat') return false;
+      return stub();
+    },
+    set() { return true; },
+    apply() { return stub(); },
+  });
+  const rafs = [];
+  const win = {
+    devicePixelRatio: 1, performance: { now: () => 0 },
+    requestAnimationFrame(cb) { rafs.push(cb); return rafs.length; }, cancelAnimationFrame: noop,
+    addEventListener: noop, removeEventListener: noop, matchMedia: () => ({ matches: false }),
+  };
+  const doc = { hidden: false, defaultView: win, createElement: () => stub(), addEventListener: noop, removeEventListener: noop };
+  const container = { ownerDocument: doc, clientWidth: 960, append: noop };
+
+  let clock = 0;
+  let nextTimer = 1;
+  const timers = new Map();
+  const realSetTimeout = globalThis.setTimeout;
+  const realClearTimeout = globalThis.clearTimeout;
+  const storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  globalThis.setTimeout = (fn, ms) => { const id = nextTimer; nextTimer += 1; timers.set(id, { fn, at: clock + (ms || 0) }); return id; };
+  globalThis.clearTimeout = (id) => { timers.delete(id); };
+  Object.defineProperty(globalThis, 'localStorage', { value: { getItem: () => null, setItem: noop }, configurable: true, writable: true });
+  const advance = (ms) => {
+    clock += ms;
+    Array.from(timers.entries()).sort((a, b) => a[1].at - b[1].at).forEach(([id, t]) => {
+      if (t.at <= clock && timers.has(id)) { timers.delete(id); t.fn(); }
+    });
+  };
+
+  const log = [];
+  let store = { battles: 0 };
+  let resultsTimer = 0;
+  let battle = null;
+  try {
+    battle = battleUi.mountBattle(container, {
+      cq: gearCq('guided'), lesson: getLesson('g1'), nickname: 'Kid', reducedMotion: false, profileId: 'p1', rng: seeded(8),
+      onDone(result) {
+        // lesson-ui finishBattle: commit, then the results screen after the end banner.
+        store = { battles: store.battles + 1, last: result.outcome };
+        log.push(`record:${result.outcome}`);
+        resultsTimer = setTimeout(() => { log.push(`results:battles=${store.battles}`); }, endBannerMs(false));
+      },
+    });
+    advance(8000); // the how-to card times out on its own
+    let ts = 0;
+    let frames = 0;
+    while (!log.length && frames < 20000) {
+      const pending = rafs.splice(0);
+      ts += 250;
+      pending.forEach((cb) => cb(ts));
+      frames += 1;
+    }
+    assert.equal(log.length, 1, `battle ended and recorded (${frames} frames)`);
+    assert.ok(/^record:(victory|time|fell)$/.test(log[0]), log[0]);
+    assert.equal(store.battles, 1, 'the record is committed synchronously as the battle ends');
+    assert.ok(timers.has(resultsTimer), 'results are still waiting on the banner timer');
+    // More frames during the banner never re-record.
+    for (let i = 0; i < 10; i += 1) rafs.splice(0).forEach((cb) => cb((ts += 250)));
+    assert.equal(store.battles, 1, 'frames after the end do not record again');
+    advance(endBannerMs(false) - 1);
+    assert.equal(log.length, 1, 'results wait for the full banner');
+    advance(1);
+    assert.deepEqual(log, [log[0], 'results:battles=1'], 'record commit happens before the results timer fires');
+    battle.destroy();
+    battle.destroy();
+    assert.equal(store.battles, 1, 'destroy never records');
+
+    // Leaving during the banner keeps the single record (host clears its timer on navigation).
+    log.length = 0; store = { battles: 0 }; rafs.length = 0;
+    const second = battleUi.mountBattle(container, {
+      cq: gearCq('guided'), lesson: getLesson('g1'), nickname: 'Kid', profileId: 'p1', rng: seeded(9),
+      onDone(result) {
+        store = { battles: store.battles + 1, last: result.outcome };
+        log.push(`record:${result.outcome}`);
+        resultsTimer = setTimeout(() => { log.push('results'); }, endBannerMs(true));
+      },
+    });
+    advance(8000);
+    for (let f = 0; f < 20000 && !log.length; f += 1) rafs.splice(0).forEach((cb) => cb((ts += 250)));
+    assert.equal(store.battles, 1);
+    second.destroy();
+    clearTimeout(resultsTimer);
+    advance(5000);
+    assert.deepEqual(log, [log[0]], 'left during the banner: recorded once, no results');
+    assert.equal(store.battles, 1);
+  } finally {
+    globalThis.setTimeout = realSetTimeout;
+    globalThis.clearTimeout = realClearTimeout;
+    if (storageDescriptor) Object.defineProperty(globalThis, 'localStorage', storageDescriptor);
+    else delete globalThis.localStorage;
+  }
+}
 
 console.log('ok — Computer Quest battle view fitting, key mapping, how-to keys, HUD slots, cooldowns, results text, and renderer smoke runs pass');
