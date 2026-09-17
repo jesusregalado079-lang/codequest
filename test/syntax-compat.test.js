@@ -26,6 +26,16 @@ const PATTERNS = [
   { name: 'top-level await', re: /^\S.*\bawait\b/m },
 ];
 
+// alert/confirm/prompt are checked separately (not in PATTERNS): the base coding game already has two
+// legitimate native confirm() dialogs for irreversible actions (delete a custom level, remove a player),
+// predating Computer Quest — those are allowed. Everything else (all of Computer Quest's own code, and
+// any new call anywhere) must never use them; the app builds its own in-screen UI instead.
+const DIALOG_RE = /\b(alert|confirm|prompt)\(/g;
+const DIALOG_ALLOWLIST = new Set([
+  'src/ui/menu.js:406', // delete a custom-built level — pre-existing, irreversible
+  'src/ui/menu.js:642', // remove a player and their progress — pre-existing, irreversible
+]);
+
 function listJsFiles(dir) {
   const out = [];
   readdirSync(dir).forEach((name) => {
@@ -56,21 +66,33 @@ const proDir = `${join(ROOT, 'src/pro')}/`;
 assert.ok(!targets.some((path) => path.startsWith(proDir)), 'src/pro/ is never scanned (grown-ups track, off-limits)');
 
 const offenders = [];
+const dialogOffenders = [];
 targets.forEach((path) => {
   const source = readFileSync(path, 'utf8');
   const lines = source.split('\n');
+  const relPath = path.replace(ROOT, '');
   PATTERNS.forEach(({ name, re }) => {
     lines.forEach((line, i) => {
       let match;
       const lineRe = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
       while ((match = lineRe.exec(line))) {
         if (lineIsCommentOnly(line, match.index)) continue;
-        offenders.push(`${path.replace(ROOT, '')}:${i + 1}: ${name} — "${line.trim()}"`);
+        offenders.push(`${relPath}:${i + 1}: ${name} — "${line.trim()}"`);
       }
     });
+  });
+  lines.forEach((line, i) => {
+    let match;
+    const lineRe = new RegExp(DIALOG_RE.source, 'g');
+    while ((match = lineRe.exec(line))) {
+      if (lineIsCommentOnly(line, match.index)) continue;
+      if (DIALOG_ALLOWLIST.has(`${relPath}:${i + 1}`)) continue;
+      dialogOffenders.push(`${relPath}:${i + 1}: ${match[1]}(...) — "${line.trim()}"`);
+    }
   });
 });
 
 assert.deepStrictEqual(offenders, [], `ES2021+ syntax/builtins unsafe for old iPad Safari found:\n${offenders.join('\n')}`);
+assert.deepStrictEqual(dialogOffenders, [], `unexpected alert/confirm/prompt (blocking browser dialogs) found:\n${dialogOffenders.join('\n')}`);
 
-console.log(`ok — no ES2021+ syntax/builtins (??=, ||=, &&=, .at(, Object.hasOwn, structuredClone, findLast, replaceAll, numeric separators, top-level await) across ${targets.length} kids-app source files`);
+console.log(`ok — no ES2021+ syntax/builtins (??=, ||=, &&=, .at(, Object.hasOwn, structuredClone, findLast, replaceAll, numeric separators, top-level await) and no unexpected alert/confirm/prompt across ${targets.length} kids-app source files`);

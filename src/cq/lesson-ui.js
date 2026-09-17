@@ -9,6 +9,8 @@ import {
   quizQuestionsToAsk, recordBattle, recordChestAnswer, recordParentCheck, recordQuizAttempt, recordSpotIt, recordWarmup, setPosition,
   setWindows, startLesson, tickMission,
 } from './lesson-logic.js';
+import { mountKeyDiagram } from './lessons/diagram-ui.js';
+import { mountKeyPractice } from './lessons/key-practice-ui.js';
 import { getLesson } from './lessons/pack1.js';
 import { drawIcon } from './sprite.js';
 import {
@@ -57,6 +59,10 @@ function drawChest(canvas, open) {
   px(6, 6, 4, 3, '#ffd76a'); px(7, 7, 2, 1, '#3a2410'); px(1, 13, 14, 1, '#0c2034');
 }
 
+// A mission step's optional key moment (docs/computer-quest/key-practice.md §3): 'practice' replaces
+// the blind "I did it ✓" tick with a live drill, 'diagram' only explains a combo we must never capture.
+const keyMomentOf = (step) => (step && step.keyMoment && typeof step.keyMoment === 'object' ? step.keyMoment : null);
+
 export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq, save, sound, onExit }) {
   const lesson = getLesson(lessonId);
   const root = document.createElement('div');
@@ -80,6 +86,7 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
   let lastTick = null;
   let lastStateJson = null; // this lesson's persisted JSON as of our own last render, for the storage-event check
   let battle = null; // the mounted horde battle ({ destroy }) while screen.kind === 'battle'
+  let keyMomentView = null; // { kind, view } while a mission step's drill/diagram is mounted
   let battleReducedMotion = false;
   let resultsTimer = 0; // end banner -> results screen (the battle is already recorded)
 
@@ -87,6 +94,7 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
   const stateNow = () => (lesson && normalizeLessons(cqNow().lessons)[lesson.id]) || emptyLessonState();
   const nowIso = () => new Date().toISOString();
   const play = (name) => { try { sound(name); } catch { /* Audio is optional. */ } };
+  const soundHooks = { tap: () => play('tap'), win: () => play('win') }; // the mounted key-moment views' cues
   const announce = (text) => { live.textContent = text; };
   const text = (value) => lessonText(value, nickname);
   const position = (list) => Math.min(Math.max(0, stateNow().index), list.length - 1);
@@ -257,11 +265,17 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
       const banner = step.grownup ? '<p class="cq-grownup" id="cq-grownup">🛑 Get a grown-up for this step</p>' : '';
       const options = step.options ? `<ul class="cq-list cq-option-list">${visibleOptions(step.options, cq.windows)
         .map((option) => `<li>${option.label ? `<span class="cq-win-label">${esc(option.label)}</span> ` : ''}${text(option.text)}</li>`).join('')}</ul>` : '';
+      const moment = keyMomentOf(step);
       let middle;
       if (step.kind === 'windowsCheck') middle = windowsPicker(cq);
       else if (step.kind === 'spotIt') middle = spotIt(index, step);
-      else middle = `<button type="button" class="cq-done-toggle" data-action="tick" aria-pressed="${done}">${done ? '✓ Done! <small>Tap to undo</small>' : 'I did it ✓'}</button>`;
-      return `${banner}${heading(text(step.text), `MISSION · STEP ${index + 1} OF ${lesson.mission.length}`, step.grownup ? 'aria-describedby="cq-grownup"' : '')}${options}${middle}
+      else if (moment && moment.kind === 'practice') {
+        // The drill IS the tick for this step: no manual toggle at all, and no remount once it is done.
+        middle = done ? '<p class="cq-done-toggle cq-done-static">✓ You did it!</p>' : `<div class="cq-kp-host" data-step="${index}"></div>`;
+      } else middle = `<button type="button" class="cq-done-toggle" data-action="tick" aria-pressed="${done}">${done ? '✓ Done! <small>Tap to undo</small>' : 'I did it ✓'}</button>`;
+      // A diagram only explains a combo we must never capture: the "I did it" tick above still gates the step.
+      const diagram = moment && moment.kind === 'diagram' ? `<div class="cq-kd-host" data-step="${index}"></div>` : '';
+      return `${banner}${heading(text(step.text), `MISSION · STEP ${index + 1} OF ${lesson.mission.length}`, step.grownup ? 'aria-describedby="cq-grownup"' : '')}${options}${middle}${diagram}
         <div class="cq-actions">${index > 0 ? btn('mission-back', '◀ Back') : ''}${btn('mission-next', last ? 'On to the quiz ▶' : 'Next ▶', done ? '' : 'disabled', 'cq-primary')}</div>
         ${done ? '' : '<p class="cq-muted cq-hint">Finish this step to unlock Next.</p>'}`;
     },
@@ -473,6 +487,7 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
   function render(focus) {
     if (!mounted) return;
     stopBattle(); // Rebuilding the card always ends a mounted battle (unrecorded).
+    stopKeyMoment(); // …and orphans a mounted drill/diagram, so end that here too.
     if (screen && screen.kind === 'battle' && screen.recorded) screen = screen.recorded; // never re-mount a recorded battle
     let target = focus;
     if (focus === 'keep') {
@@ -487,6 +502,7 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
       startBattle();
       return;
     }
+    if (screen.kind === 'mission') startKeyMoment();
     if (target && target.action) {
       // Card controls win over the top bar (both have an "exit" button).
       const nodes = Array.from(view.querySelectorAll('.cq-lesson-card [data-action]')).concat(Array.from(view.querySelectorAll('.cq-lesson-top [data-action]')));
@@ -513,6 +529,8 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
   function hasUnsavedInput() {
     if (!screen) return false;
     if (battle || screen.kind === 'battle') return true; // A battle in progress must never be rebuilt away.
+    // A practice drill is only ever mounted while the step is NOT done, so a mounted one is reps in progress.
+    if (keyMomentView && keyMomentView.kind === 'practice') return true;
     const note = view.querySelector('#cq-note');
     const pin = view.querySelector('#cq-pin');
     return hasUnsavedLessonInput({
@@ -587,6 +605,42 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
   function showKeyScreen() {
     play('win');
     go({ kind: 'key' });
+  }
+
+  // ---------- key moments (docs/computer-quest/key-practice.md §6) ----------
+  // Both views are mounted into a host div the mission body just wrote, so — exactly like the battle —
+  // they only live between one innerHTML rebuild and the next.
+  function stopKeyMoment() {
+    if (!keyMomentView) return;
+    const running = keyMomentView;
+    keyMomentView = null;
+    if (running.view && typeof running.view.destroy === 'function') running.view.destroy();
+  }
+  function startKeyMoment() {
+    if (keyMomentView || !screen || screen.kind !== 'mission') return;
+    const index = position(lesson.mission);
+    const moment = keyMomentOf(lesson.mission[index]);
+    if (!moment) return;
+    if (moment.kind === 'practice') {
+      if (missionStepDone(cqNow(), lesson, index)) return; // already drilled: the static done card stands alone
+      const host = view.querySelector('.cq-kp-host');
+      if (!host) return;
+      keyMomentView = { kind: 'practice', view: mountKeyPractice(host, { moment, onDone: () => finishPractice(index), sound: soundHooks }) };
+      return;
+    }
+    if (moment.kind !== 'diagram') return;
+    const host = view.querySelector('.cq-kd-host');
+    if (!host) return;
+    keyMomentView = { kind: 'diagram', view: mountKeyDiagram(host, { moment, sound: soundHooks }) };
+  }
+  // The drill hit its reps: tick the same mission flag the manual toggle writes, then rebuild so the
+  // static done card replaces the drill and focus lands on the now-enabled Next. `index` is the step
+  // we mounted for — never re-read the position here, the kid may have moved on.
+  function finishPractice(index) {
+    if (!mounted || !screen || screen.kind !== 'mission') return;
+    if (!commit((cq) => tickMission(cq, lesson, index, true))) return;
+    announce('Step done! Next is unlocked.'); // the drill already played its own win cue
+    render({ action: 'mission-next' });
   }
 
   // ---------- battle (docs/computer-quest/battle.md) ----------
@@ -891,6 +945,7 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
     destroy() {
       if (!mounted) return;
       stopBattle();
+      stopKeyMoment();
       stopTicking();
       clearPinTimer();
       clearResultsTimer();
