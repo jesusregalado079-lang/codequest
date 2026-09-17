@@ -625,7 +625,14 @@ function showParents() {
     input.click();
   };
   card.querySelectorAll('.track').forEach((select) => {
-    select.onchange = () => setTrack(profiles[select.dataset.index].id, select.value || null);
+    select.onchange = () => {
+      const index = select.dataset.index;
+      setTrack(profiles[index].id, select.value || null);
+      // Re-render so the Computer Quest report section appears (or disappears) right away.
+      showParents();
+      const again = app.querySelector(`.track[data-index="${index}"]`);
+      if (again) again.focus({ preventScroll: true });
+    };
   });
   card.querySelectorAll('.reset-code').forEach((button) => {
     button.onclick = () => { clearPictureCode(profiles[button.dataset.index].id); showParents(); };

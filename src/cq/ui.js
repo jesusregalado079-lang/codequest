@@ -84,6 +84,8 @@ function showRoute() {
   if (typing && cq.look !== null) {
     if (typing.mode && !modeLocked(typing.mode, cq)) {
       cancelAnimationFrame(animation);
+      tab = 'Typing';
+      try { sessionStorage.setItem('cq-tab', tab); } catch { /* Private mode. */ }
       lessonEntry = '';
       typingView = mountTyping({ app, mode: typing.mode, profileId: active.id, getCq: () => cq, save: saveCq, sound, onExit: exitTyping });
       return;
@@ -99,10 +101,12 @@ function showRoute() {
   }
   lessonEntry = '';
   typingEntry = '';
-  if (previous) { tab = 'Quests'; message = ''; }
+  // Leaving a lesson returns to Quests, unless the new hash asked for the Typing tab.
+  if (previous && !typing) { tab = 'Quests'; message = ''; }
   if (previousTyping) { tab = 'Typing'; message = ''; }
+  if (typing || previousTyping) { try { sessionStorage.setItem('cq-tab', tab); } catch { /* Private mode. */ } }
   render();
-  if (previous) focusAction('open-lesson', previous);
+  if (previous && !typing) focusAction('open-lesson', previous);
   if (previousTyping || typingFocus) {
     const focus = typingFocus || ['tab'];
     typingFocus = null;
