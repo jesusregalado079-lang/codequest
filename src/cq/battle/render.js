@@ -2,7 +2,7 @@
 // original pixel art, no random calls (all variation is hashed from ids and simulation time).
 import { drawCharacter } from '../sprite.js';
 import { ARENA, ENEMIES } from './content.js';
-import { HERO_RADIUS, SWING_TIME } from './engine.js';
+import { ENEMY_FLASH, HERO_RADIUS, SWING_TIME } from './engine.js';
 
 const INK = '#101c2e';
 const GRASS_A = '#4e9a47';
@@ -390,6 +390,11 @@ function drawTrail(state, view) {
 
 const FACE_ANGLE = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
 
+function heroBlinkedOut(state) {
+  const hero = state.hero;
+  return state.time < hero.invulnUntil && Math.floor((hero.invulnUntil - state.time) / 0.1) % 2 === 1;
+}
+
 function drawHero(state, view, now) {
   const hero = state.hero;
   const time = state.time;
@@ -397,7 +402,7 @@ function drawHero(state, view, now) {
   const X = view.offsetX + hero.x * T;
   const feet = view.offsetY + (hero.y + HERO_RADIUS) * T;
   box(X - T * 0.35, feet - T * 0.08, T * 0.7, T * 0.14, '#00000038');
-  if (time < hero.invulnUntil && Math.floor((hero.invulnUntil - time) / 0.1) % 2 === 1) return;
+  if (heroBlinkedOut(state)) return;
   const attacking = time < hero.attackUntil && hero.attackStartedAt >= 0;
   const attack = attacking ? Math.max(0.01, Math.min(1, (time - hero.attackStartedAt) / SWING_TIME)) : 0;
   if (view.glow) {
@@ -419,16 +424,109 @@ function drawHero(state, view, now) {
     glow: Boolean(view.glow),
     bob: 0,
   });
-  if (attacking && hero.swing) {
-    const base = FACE_ANGLE[hero.facing] || 0;
-    const arc = ((hero.swing.arc || 90) * Math.PI) / 180;
-    const reach = (hero.swing.reach || 1) * T * 0.85;
-    const cy = view.offsetY + hero.y * T;
-    for (let k = 0; k < 4; k += 1) {
-      const a = base - arc / 2 + arc * Math.min(1, attack) * (k / 3);
-      const s = Math.max(1, T / 10);
-      box(X + Math.cos(a) * reach - s / 2, cy + Math.sin(a) * reach - s / 2, s, s, k === 3 ? '#ffffff' : '#ffffffaa');
+}
+
+// Slash streak: a chunky crescent on the ground in front of the hero, spanning the real hitbox (the
+// swing's arc around the facing direction, out to its reach). The leading edge travels across the arc in
+// the same turning direction as the sword arm (eased, most of it in the first half), with a fading tail.
+// Bare hands get a short, thin "punch" crescent. Reduced motion shows the whole arc, still.
+const SWEEP_DIR = { right: 1, left: -1, down: -1, up: -1 };
+// The crescent keeps the hitbox's angles and reach but is lifted (in tiles) from the feet plane toward the
+// blade so it reads as the sword's trail. Facing down stays low so a slime right in front still touches it;
+// facing up is drawn behind the hero and lifted so the arc rises over and beside his head.
+export const SLASH_LIFT = { right: 0.7, left: 0.7, down: 0.15, up: 0.9 };
+const SLASH_EDGE = '#e8a93a';
+const SLASH_CORE = '#fff7d6';
+const SLASH_TIP = '#ffffff';
+const SLASH_INNER = '#ffe27a';
+function drawSlash(state, view, attack) {
+  const hero = state.hero;
+  const T = view.tile;
+  const bare = !(state.gear && state.gear.melee);
+  const base = FACE_ANGLE[hero.facing] || 0;
+  const dir = SWEEP_DIR[hero.facing] || 1;
+  const arc = ((hero.swing.arc || 90) * Math.PI) / 180;
+  const X = view.offsetX + hero.x * T;
+  const Y = view.offsetY + (hero.y - (SLASH_LIFT[hero.facing] || 0)) * T;
+  // Blocks snap to a coarse pixel grid so the streak reads as pixel art at every tile size.
+  const px = Math.max(1, Math.round(T / 12));
+  const s = px * 3;
+  const outer = (hero.swing.reach || 1) * T - s / 2;
+  const layers = bare ? 2 : 4;
+  const start = base - (dir * arc) / 2;
+  let lead;
+  let tail;
+  if (view.reducedMotion) {
+    lead = arc;
+    tail = arc;
+  } else {
+    const t = Math.min(1, attack / 0.6);
+    lead = arc * (1 - (1 - t) * (1 - t) * (1 - t));
+    // Tail trails ~60% of the arc (a third for a punch), then collapses into the end over the hold.
+    tail = arc * (bare ? 0.45 : 0.6) * (attack < 0.6 ? 1 : Math.max(0, (1 - attack) / 0.4));
+  }
+  const gap = Math.min(s * 0.6, outer * 0.16); // Layer spacing: the band stays a crescent at small tiles.
+  const from = Math.max(0, lead - tail);
+  const span = lead - from;
+  if (!(span > 0) && !view.reducedMotion) return;
+  const steps = Math.max(3, Math.min(bare ? 6 : 12, Math.ceil((outer * span) / (s * 0.7))));
+  for (let k = 0; k <= steps; k += 1) {
+    const f = k / steps; // 0 = tail end, 1 = leading edge
+    const a = start + dir * (from + span * f);
+    const cos = Math.cos(a);
+    const sin = Math.sin(a);
+    // Taper: the tail keeps only the core layer, the leading edge carries every layer.
+    const depth = view.reducedMotion ? layers : Math.max(1, Math.ceil(layers * (0.35 + 0.65 * f)));
+    for (let j = 0; j < depth; j += 1) {
+      const rad = outer - j * gap;
+      const size = j === 0 && f > 0.4 ? s : Math.max(px, s - px);
+      const color = k === steps && !view.reducedMotion ? SLASH_TIP : j === 0 ? SLASH_EDGE : j === layers - 1 ? SLASH_INNER : SLASH_CORE;
+      const cx = Math.round((X + cos * rad) / px) * px;
+      const cy = Math.round((Y + sin * rad) / px) * px;
+      box(cx - size / 2, cy - size / 2, size, size, color);
     }
+  }
+}
+
+// Impact burst: bright squares radiating from the side of the target that faces the hero, shrinking over
+// ENEMY_FLASH; reduced motion keeps the same star still. Used for hits (enemy.flashUntil) and for kills (the
+// first ENEMY_FLASH of every puff: puffs only come from poofs), so a one-hit kill shows spark, then poof.
+const BURST_RAYS = 4;
+function drawImpact(x, y, id, left, size, state, view) {
+  if (!(left > 0)) return;
+  const T = view.tile;
+  const hero = state.hero;
+  const q = view.reducedMotion ? 0.3 : Math.max(0, Math.min(1, 1 - left / ENEMY_FLASH));
+  const toHero = Math.atan2(hero.y - y, hero.x - x);
+  const X = view.offsetX + (x + Math.cos(toHero) * 0.45 * size) * T;
+  const Y = view.offsetY + (y + Math.sin(toHero) * 0.45 * size) * T;
+  const px = Math.max(1, Math.round(T / 16));
+  const s = Math.max(px, Math.round((T * 0.24 * (1 - 0.45 * q)) / px) * px);
+  const dist = T * (0.3 + 0.4 * q);
+  const spin = Math.PI / 4 + (hash01(id, 7) - 0.5) * 0.6; // Roughly an X, tilted per target.
+  const small = Math.max(px, Math.round((s * 0.6) / px) * px);
+  // Four rays, each a gold spark with a bright yellow head (8 radiating squares), around a gold/white core.
+  for (let k = 0; k < BURST_RAYS; k += 1) {
+    const a = spin + (k * Math.PI * 2) / BURST_RAYS;
+    const ix = Math.round((X + Math.cos(a) * dist * 0.55) / px) * px;
+    const iy = Math.round((Y + Math.sin(a) * dist * 0.55) / px) * px;
+    const bx = Math.round((X + Math.cos(a) * dist) / px) * px;
+    const by = Math.round((Y + Math.sin(a) * dist) / px) * px;
+    box(ix - small / 2, iy - small / 2, small, small, '#f2b631');
+    box(bx - s / 2, by - s / 2, s, s, '#ffe066');
+  }
+  box(X - s * 0.6, Y - s * 0.6, s * 1.2, s * 1.2, '#f2b631');
+  box(X - s * 0.3, Y - s * 0.3, s * 0.6, s * 0.6, '#ffffff');
+}
+function drawEnemyImpact(e, state, view) {
+  const def = ENEMIES[e.type];
+  drawImpact(e.x, e.y, e.id, e.flashUntil - state.time, def && def.size >= 2 ? 2 : 1, state, view);
+}
+function drawKillSparks(state, view) {
+  for (let i = 0; i < state.puffs.length; i += 1) {
+    const puff = state.puffs[i];
+    const age = state.time - puff.bornAt;
+    if (age >= 0) drawImpact(puff.x, puff.y, puff.id, ENEMY_FLASH - age, 1, state, view);
   }
 }
 
@@ -445,12 +543,23 @@ export function renderBattle(ctx, state, view, now) {
   drawStone(state, view);
   drawPickups(state, view);
   drawTrail(state, view);
-  const heroY = state.hero.y;
+  const hero = state.hero;
+  const heroY = hero.y;
+  const slashing = Boolean(hero.swing) && state.time < hero.attackUntil && hero.attackStartedAt >= 0;
+  const attack = slashing ? Math.max(0.01, Math.min(1, (state.time - hero.attackStartedAt) / SWING_TIME)) : 0;
+  const blinkedOut = heroBlinkedOut(state);
+  // Facing up the slash is behind the hero (after the enemies behind him); every other facing is in front
+  // of all sprites so a hit enemy never hides the streak.
+  const behind = hero.facing === 'up';
   for (let i = 0; i < state.enemies.length; i += 1) if (state.enemies[i].y < heroY) drawEnemy(state.enemies[i], state, view);
+  if (slashing && behind && !blinkedOut) drawSlash(state, view, attack);
   drawHero(state, view, now);
   for (let i = 0; i < state.enemies.length; i += 1) if (state.enemies[i].y >= heroY) drawEnemy(state.enemies[i], state, view);
+  if (slashing && !behind && !blinkedOut) drawSlash(state, view, attack);
+  for (let i = 0; i < state.enemies.length; i += 1) drawEnemyImpact(state.enemies[i], state, view);
   drawBolts(state, view);
   drawPuffs(state, view);
+  drawKillSparks(state, view);
   drawParticles(state, view);
   C = null;
 }

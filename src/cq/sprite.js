@@ -150,6 +150,23 @@ export function drawIcon(ctx, x, y, size, entry, { silhouette = false } = {}) {
   ctx.restore();
 }
 
+// One overhand chop per swing, in limb() angles: 0 hangs down, +PI/2 points to grid -x, +-PI points up.
+// Profile grid +x is the face side (mirror flips it for 'left'); front view's sword hand sits at grid x 0,
+// back view's at x 12. Each pair is [raised wind-up, strike end], always on the facing side, never under
+// or behind the body: profile goes overhead -> forward and a bit down (124 deg), front goes overhead-and-out ->
+// down-and-out toward the viewer, clear of the idle pose (132 deg), back goes out at the side -> up-and-forward (105 deg).
+const CHOP = {
+  right: [-3.49, -1.32], left: [-3.49, -1.32],
+  down: [2.75, 0.45], up: [-0.96, -2.79],
+};
+const CHOP_GRIP = 24; // Flipped 16-unit sword: pommel at local y 8, grip in the fist (y ~11), tip at y 24.
+function chopAngle(facing, attack) {
+  const [from, to] = CHOP[facing] || CHOP.down;
+  // Hold the wind-up for the first frame, snap through the strike (ease-out cubic), then hold the end pose.
+  const t = Math.max(0, Math.min(1, (attack - 0.12) / 0.38));
+  return from + (to - from) * (1 - (1 - t) * (1 - t) * (1 - t));
+}
+
 export function drawCharacter(ctx, cx, cy, unit, opts = {}) {
   const look = normalizeLook(opts.look) || DEFAULT_LOOK;
   const equipped = opts.equipped || {};
@@ -199,7 +216,7 @@ export function drawCharacter(ctx, cx, cy, unit, opts = {}) {
   };
   const rightX = back ? 12 : 0, leftX = back ? 0 : 12;
   const arm = (right, far = false) => {
-    const attack = right && opts.attack ? -1.9 + opts.attack * 3.6 : 0;
+    const attack = right && opts.attack ? chopAngle(facing, opts.attack) : 0;
     const angle = attack || (right ? swing : -swing);
     const x = side ? (far ? 7 : 5) : right ? rightX : leftX;
     limb(x, opts.blocking && !right ? 6 : 8, angle, (paint) => {
@@ -210,7 +227,10 @@ export function drawCharacter(ctx, cx, cy, unit, opts = {}) {
       if (look.shirtStyle === 'striped') q(0, 2, 3, 2, shade(shirt));
       const gear = right ? equipped.mainHand : equipped.offHand;
       if (gear === 'stop-sign-shield') item(gear, opts.blocking ? -4 : -2, opts.blocking ? 3 : 7, 10, 11, paint);
-      else if (gear) item(gear, side ? (right ? (far ? -6 : -4) : 0) : -2, gear === 'copy-crystal-staff' ? -9 : -4, 8, gear === 'copy-crystal-staff' ? 23 : 19, paint);
+      else if (gear && attack) {
+        // Mid-chop the blade leaves the fist along the arm (grip stays in the hand) instead of lying back along it.
+        item(gear, side ? (far ? -6 : -4) : -2, 0, 8, 16, (a, b, w, h, c) => paint(a, CHOP_GRIP - b - h, w, h, c));
+      } else if (gear) item(gear, side ? (right ? (far ? -6 : -4) : 0) : -2, gear === 'copy-crystal-staff' ? -9 : -4, 8, gear === 'copy-crystal-staff' ? 23 : 19, paint);
     });
   };
   // Right-facing near side is the left hand; left-facing near side is the right.

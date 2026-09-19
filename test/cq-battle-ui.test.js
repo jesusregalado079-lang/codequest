@@ -5,8 +5,8 @@ import { getItem, normalizeCq, setProgress } from '../src/cq/character.js';
 import { getLesson } from '../src/cq/lessons/pack1.js';
 import { TRACK_LESSONS, LESSON_AWARDS } from '../src/cq/items.js';
 import { ARENA, spawnPoint, WAVE_COUNT } from '../src/cq/battle/content.js';
-import { createBattle, gearFrom, resultOf, spawnEnemy, step, waveTotal } from '../src/cq/battle/engine.js';
-import { drawSlotIcon, renderBattle } from '../src/cq/battle/render.js';
+import { createBattle, ENEMY_FLASH, gearFrom, meleeStats, resultOf, spawnEnemy, step, SWING_TIME, waveTotal } from '../src/cq/battle/engine.js';
+import { drawSlotIcon, renderBattle, SLASH_LIFT } from '../src/cq/battle/render.js';
 import {
   blankInput, cooldownFraction, doneOnce, endBannerMs, fitView, HOWTO_TIP, isActivationKey, isInteractiveOutside, formatClock, formatPlayed, howToKeys, hudSlots, keyAction, keyId,
   MAX_CSS_WIDTH, RESULT_HEADLINES, resultsView, shouldPreventDefault, slotStatus, waveBanner, waveLabel,
@@ -379,6 +379,248 @@ assert.doesNotThrow(() => renderBattle(null, null, null, 0));
   const withoutBar = recordingContext();
   renderBattle(withoutBar, s, view, 0);
   assert.equal(withBar.rects - withoutBar.rects, 3, 'mid-boss gets the 3-rect HP bar');
+}
+
+// ---------- P8: slash streak + impact burst ----------
+// The slash is one contiguous block in the draw list: after every sprite for right/left/down, and between the
+// enemies behind the hero and the hero himself for up. Compare a frame with hero.swing set against the same frame
+// with swing cleared (the arm pose follows attackUntil either way) and cut the inserted block out.
+{
+  function capture() {
+    const calls = [];
+    const ctx = {
+      _fill: '#000000', imageSmoothingEnabled: true, globalAlpha: 1,
+      get fillStyle() { return this._fill; }, set fillStyle(v) { this._fill = v; },
+      fillRect(x, y, w, h) { calls.push([this._fill, x, y, w, h]); },
+      clearRect() {}, save() {}, restore() {},
+    };
+    return { ctx, calls };
+  }
+  function arena({ track = 'guided', main = 'start-blade', facing = 'right', stance = null, attack = 0.3, css = 960 } = {}) {
+    const cq = gearCq(track, main ? [main] : []);
+    const s = createBattle({ cq, lesson: getLesson(track === 'guided' ? 'g1' : 's1'), rng: seeded(3) });
+    s.enemies.length = 0;
+    s.time = 20;
+    const hero = s.hero;
+    hero.x = 10; hero.y = 6; hero.facing = facing; hero.invulnUntil = 0; hero.moving = false;
+    if (stance) hero.stance = stance;
+    const stats = meleeStats(s.gear, hero.stance);
+    hero.attackStartedAt = s.time - attack * SWING_TIME;
+    hero.attackUntil = hero.attackStartedAt + SWING_TIME;
+    hero.swing = { dmg: stats.dmg, reach: stats.reach, arc: stats.arc, hit: [] };
+    const view = { ...fitView(css, 1), look: cq.look, equipped: cq.equipped, worn: cq.worn, glow: false, reducedMotion: false, particles: [] };
+    return { s, view, stats };
+  }
+  let lastInsert = -1;
+  function extra(s, view) {
+    const a = capture();
+    renderBattle(a.ctx, s, view, 0);
+    const saved = s.hero.swing;
+    s.hero.swing = null;
+    const b = capture();
+    renderBattle(b.ctx, s, view, 0);
+    s.hero.swing = saved;
+    let i = 0;
+    while (i < b.calls.length && JSON.stringify(a.calls[i]) === JSON.stringify(b.calls[i])) i += 1;
+    const n = a.calls.length - b.calls.length;
+    assert.deepEqual(a.calls.slice(i + n), b.calls.slice(i), 'the streak is one inserted block; everything else is unchanged');
+    lastInsert = i;
+    return { rects: a.calls.slice(i, i + n), without: b.calls };
+  }
+  const FACE = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+  const polar = (rects, s, view) => rects.map(([c, x, y, w, h]) => {
+    const dx = x + w / 2 - (view.offsetX + s.hero.x * view.tile);
+    const dy = y + h / 2 - (view.offsetY + (s.hero.y - SLASH_LIFT[s.hero.facing]) * view.tile); // lifted centre
+    return { c, r: Math.hypot(dx, dy), a: Math.atan2(dy, dx), area: w * h };
+  });
+  const offBase = (a, facing) => { let d = a - FACE[facing]; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+  const centroidY = (rects) => {
+    const area = rects.reduce((sum, [, , , w, h]) => sum + w * h, 0);
+    return rects.reduce((sum, [, , y, w, h]) => sum + (y + h / 2) * w * h, 0) / area;
+  };
+
+  // Only while swinging: before the start and after attackUntil there is no streak.
+  for (const attack of [1, 1.4, 3]) {
+    const { s, view } = arena({ attack });
+    assert.equal(extra(s, view).rects.length, 0, `no streak outside the swing window (attack ${attack})`);
+  }
+  // Inside the real hitbox: angular sector (facing +- arc/2) and radius (<= reach), every facing, stance and size.
+  const cases = [
+    { track: 'guided', main: 'start-blade' },
+    { track: 'standard', main: 'switch-sword', stance: 'quick' },
+    { track: 'standard', main: 'switch-sword', stance: 'wide' },
+    { track: 'guided', main: null },
+  ];
+  const spread = {};
+  cases.forEach((c) => ['right', 'down', 'left', 'up'].forEach((facing) => [360, 960].forEach((css) => {
+    let maxR = 0; let area = 0; let lo = Infinity; let hi = -Infinity;
+    [0.05, 0.2, 0.35, 0.5, 0.7, 0.9].forEach((attack) => {
+      const { s, view, stats } = arena({ ...c, facing, attack, css });
+      const T = view.tile;
+      const rects = extra(s, view).rects;
+      assert.ok(rects.length > 0 && rects.length <= 48, `${c.main}/${c.stance}/${facing}@${attack}: a streak of a few dozen rects (${rects.length})`);
+      polar(rects, s, view).forEach((p) => {
+        // Pixel snapping and block size allow a small margin past the exact hitbox edge.
+        const margin = Math.atan2(T * 0.25, p.r);
+        const off = offBase(p.a, facing);
+        assert.ok(Math.abs(off) <= (stats.arc * Math.PI) / 360 + margin, `${facing}: streak rect at ${(off * 180 / Math.PI).toFixed(0)} deg is inside the ${stats.arc} deg arc`);
+        assert.ok(p.r <= stats.reach * T + T * 0.1, `${facing}: streak stays within reach`);
+        assert.ok(p.r >= stats.reach * T * 0.3, `${facing}: streak is a crescent, not a disc (r ${p.r.toFixed(1)} T ${T} ${c.main})`);
+        maxR = Math.max(maxR, p.r); area += p.area; lo = Math.min(lo, off); hi = Math.max(hi, off);
+      });
+    });
+    spread[`${c.main}/${c.stance || null}/${facing}/${css}`] = { maxR, area, span: hi - lo };
+  })));
+  ['right', 'down', 'left', 'up'].forEach((facing) => [360, 960].forEach((css) => {
+    const sword = spread[`start-blade/null/${facing}/${css}`];
+    const fist = spread[`null/null/${facing}/${css}`];
+    assert.ok(fist.maxR < sword.maxR && fist.area < sword.area * 0.6, `${facing}@${css}: bare-hands punch is smaller than the sword streak`);
+    const quick = spread[`switch-sword/quick/${facing}/${css}`];
+    const wide = spread[`switch-sword/wide/${facing}/${css}`];
+    assert.ok(wide.span > quick.span + 0.3 && wide.maxR > quick.maxR, `${facing}@${css}: wide stance streak is wider and longer`);
+  }));
+  // Pin the swoosh to blade height from the foot-level centre without consulting its lift constant.
+  // Mid-swing only: later the crescent has swept low (wide stance ends well below the blade).
+  [
+    { track: 'guided', main: 'start-blade' },
+    { track: 'standard', main: 'switch-sword', stance: 'quick' },
+    { track: 'standard', main: 'switch-sword', stance: 'wide' },
+  ].forEach((c) => ['right', 'left', 'up'].forEach((facing) => [360, 960].forEach((css) => [0.3].forEach((attack) => {
+    const { s, view } = arena({ ...c, facing, css, attack });
+    const y0 = view.offsetY + s.hero.y * view.tile;
+    const y = centroidY(extra(s, view).rects);
+    const above = (y0 - y) / view.tile;
+    const threshold = facing === 'up' ? 1.3 : 0.15;
+    assert.ok(above > threshold, `${c.main}/${c.stance || 'blade'}/${facing}@${css}/${attack}: swoosh is ${above.toFixed(3)} tiles above feet (>${threshold})`);
+  }))));
+  // The leading edge (the white tip) travels across the arc in the arm's turning direction.
+  const DIR = { right: 1, left: -1, down: -1, up: -1 };
+  ['right', 'down', 'left', 'up'].forEach((facing) => {
+    const tip = (attack) => {
+      const { s, view } = arena({ facing, attack });
+      const p = polar(extra(s, view).rects, s, view).filter((q) => q.c === '#ffffff');
+      assert.ok(p.length > 0, `${facing}@${attack}: leading edge drawn`);
+      return offBase(p[p.length - 1].a, facing);
+    };
+    assert.ok(tip(0.05) * DIR[facing] < 0 && tip(0.5) * DIR[facing] > 0, `${facing}: leading edge sweeps with the arm`);
+  });
+  // During the invisible half of hurt blink, hide the streak with the body; show both on the visible half.
+  ['right', 'down', 'left', 'up'].forEach((facing) => {
+    const off = arena({ attack: 0.3, facing });
+    off.s.hero.invulnUntil = off.s.time + 0.15;
+    assert.equal(extra(off.s, off.view).rects.length, 0, `${facing} blink-off: no swoosh`);
+    const offCapture = capture();
+    renderBattle(offCapture.ctx, off.s, off.view, 0);
+    assert.equal(offCapture.calls.filter(([color]) => color === '#e8833a').length, 0, `${facing} blink-off: no hero body`);
+    const on = arena({ attack: 0.3, facing });
+    on.s.hero.invulnUntil = on.s.time + 0.05;
+    assert.ok(extra(on.s, on.view).rects.length > 0, `${facing} blink-on: swoosh drawn`);
+    const onCapture = capture();
+    renderBattle(onCapture.ctx, on.s, on.view, 0);
+    assert.ok(onCapture.calls.filter(([color]) => color === '#e8833a').length > 0, `${facing} blink-on: hero body drawn`);
+  });
+  // Reduced motion: the whole arc, still (identical rects across the swing); normal motion: it moves.
+  {
+    const frame = (attack, reducedMotion) => { const { s, view } = arena({ attack }); return extra(s, { ...view, reducedMotion }).rects; };
+    assert.ok(frame(0.2, true).length > 0, 'reduced motion still shows the streak');
+    assert.deepEqual(frame(0.2, true), frame(0.7, true), 'reduced motion streak does not travel');
+    assert.notDeepEqual(frame(0.2, false), frame(0.7, false), 'normal streak travels');
+  }
+  // Impact burst: only while flashUntil > time, on the hero's side of the enemy, radiating (still in reduced motion).
+  {
+    const withSlime = (flashLeft, reducedMotion, dt = 0) => {
+      const { s, view } = arena({ attack: 2 });
+      s.hero.swing = null;
+      const e = spawnEnemy(s, 'slime', 11.2, 6, []);
+      e.flashUntil = s.time + flashLeft;
+      s.time += dt;
+      const on = capture();
+      renderBattle(on.ctx, s, { ...view, reducedMotion }, 0);
+      e.flashUntil = 0;
+      const off = capture();
+      renderBattle(off.ctx, s, { ...view, reducedMotion }, 0);
+      return { on: on.calls, off: off.calls, s, view };
+    };
+    const burstRects = (r) => r.on.slice(r.off.length);
+    const early = withSlime(0.1, false);
+    const burst = burstRects(early);
+    assert.ok(burst.length >= 5 && burst.length <= 12, `burst is a handful of squares (${burst.length})`);
+    const T = early.view.tile;
+    const heroSide = burst.filter(([, x, , w]) => x + w / 2 < early.view.offsetX + 11.2 * T).length;
+    assert.ok(heroSide > burst.length / 2, 'burst sits on the side facing the hero');
+    assert.equal(withSlime(0, false).on.length, withSlime(0, false).off.length, 'no burst once flashUntil <= time');
+    assert.equal(withSlime(0.05, false, 0.06).on.length, withSlime(0.05, false, 0.06).off.length, 'no burst after the flash ends');
+    const late = burstRects(withSlime(0.1, false, 0.07));
+    assert.equal(late.length, burst.length);
+    assert.notDeepEqual(late, burst, 'burst radiates over the flash window');
+    const spreadOf = (rects) => Math.max(...rects.map(([, x]) => x)) - Math.min(...rects.map(([, x]) => x));
+    assert.ok(spreadOf(late) > spreadOf(burst), 'burst grows outward');
+    const stillA = burstRects(withSlime(0.1, true));
+    const stillB = burstRects(withSlime(0.1, true, 0.07));
+    assert.ok(stillA.length > 0, 'reduced motion keeps the burst');
+    assert.deepEqual(stillA, stillB, 'reduced motion burst does not radiate');
+  }
+  // P8b draw order: facing up the slash is behind the hero (before any of his sprite rects); otherwise after him.
+  ['right', 'down', 'left', 'up'].forEach((facing) => {
+    const { s, view } = arena({ facing, attack: 0.35 });
+    const { rects, without } = extra(s, view);
+    assert.ok(rects.length > 0, `${facing}: slash drawn`);
+    const shirt = without.map((c, i) => (c[0] === '#e8833a' ? i : -1)).filter((i) => i >= 0);
+    assert.ok(shirt.length > 0, 'hero shirt rects found');
+    if (facing === 'up') assert.ok(lastInsert < shirt[0], 'up: slash is drawn before (behind) the hero');
+    else assert.ok(lastInsert > shirt[shirt.length - 1], `${facing}: slash is drawn after (in front of) the hero`);
+  });
+  // P8b guard: lifted to blade height, the swoosh still visibly touches a slime just inside reach straight ahead.
+  cases.forEach((c) => ['right', 'down', 'left'].forEach((facing) => [360, 960].forEach((css) => {
+    const probe = arena({ ...c, facing, css });
+    const d = { right: [1, 0], left: [-1, 0], down: [0, 1] }[facing];
+    const dist = probe.stats.reach - 0.1;
+    let touched = false;
+    [0.2, 0.35, 0.5, 0.7, 0.9].forEach((attack) => {
+      const { s, view } = arena({ ...c, facing, css, attack });
+      const e = spawnEnemy(s, 'slime', s.hero.x + d[0] * dist, s.hero.y + d[1] * dist, []);
+      e.state = 'idle';
+      const { rects, without } = extra(s, view);
+      const body = without.filter(([col]) => col === '#2fc6b6' || col === '#1b8f86');
+      assert.ok(body.length > 0, 'slime body drawn');
+      const bx0 = Math.min(...body.map((r) => r[1])); const bx1 = Math.max(...body.map((r) => r[1] + r[3]));
+      const by0 = Math.min(...body.map((r) => r[2])); const by1 = Math.max(...body.map((r) => r[2] + r[4]));
+      if (rects.some(([, x, y, w, h]) => x < bx1 && x + w > bx0 && y < by1 && y + h > by0)) touched = true;
+    });
+    assert.ok(touched, `${c.main}/${c.stance}/${facing}@${css}: the swoosh touches a slime just inside reach`);
+  })));
+  // P8b kill spark: every puff is a kill (addPuff's only caller is poof), so a fresh puff gets the burst for
+  // ENEMY_FLASH seconds, with no flashing enemy anywhere.
+  {
+    const withPuff = (age, reducedMotion) => {
+      const { s, view } = arena({ attack: 2 });
+      s.hero.swing = null;
+      s.puffs.push({ id: 4242, x: 11, y: 6, bornAt: s.time - age, until: s.time - age + 0.5, squares: 8 });
+      const c = capture();
+      renderBattle(c.ctx, s, { ...view, reducedMotion }, 0);
+      assert.equal(s.enemies.length, 0, 'no enemy on the field');
+      return c.calls;
+    };
+    const fresh = withPuff(0.01, false);
+    const later = withPuff(ENEMY_FLASH + 0.01, false);
+    assert.equal(fresh.length - later.length, 10, 'a fresh kill puff gets the 10-rect spark');
+    assert.equal(withPuff(ENEMY_FLASH, false).length, later.length, 'spark ends at ENEMY_FLASH');
+    const spark = fresh.slice(-10);
+    assert.ok(spark.some(([c]) => c === '#ffe066') && spark.some(([c]) => c === '#ffffff'), 'spark colors');
+    const T = fitView(960, 1).tile;
+    assert.ok(spark.filter(([, x, , w]) => x + w / 2 < 11 * T).length > 5, 'spark sits on the hero side of the puff');
+    assert.notDeepEqual(withPuff(0.01, false).slice(-10), withPuff(0.07, false).slice(-10), 'kill spark radiates');
+    const r1 = withPuff(0.01, true); const r2 = withPuff(0.07, true);
+    assert.equal(r1.length - withPuff(ENEMY_FLASH + 0.01, true).length, 10, 'reduced motion keeps the kill spark');
+    assert.deepEqual(r1.slice(-10), r2.slice(-10), 'reduced-motion kill spark is still');
+  }
+  // Deterministic: same state, same pixels.
+  {
+    const { s, view } = arena({ attack: 0.4 });
+    const a = capture(); const b = capture();
+    renderBattle(a.ctx, s, view, 0); renderBattle(b.ctx, s, view, 5000);
+    assert.deepEqual(a.calls, b.calls, 'renderer is a pure function of state');
+  }
 }
 
 // ---------- source rules ----------

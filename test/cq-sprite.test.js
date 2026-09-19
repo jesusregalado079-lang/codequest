@@ -168,4 +168,58 @@ assert.notDeepEqual(drawing({ attack: 0.5 }), drawing({ attack: 0 }));
 assert.deepEqual(drawing({ worn: { trail: 'trail-leaf', title: 'title-champion' } }), drawing({}), 'Titles and trails are not body art');
 assert.deepEqual(drawing({ equipped: { head: 'scam-spotter-helmet' }, worn: { hat: 'wizard-hat' } }), drawing({ equipped: { head: 'scam-spotter-helmet' } }), 'Helmet hides hat');
 assert.equal(JSON.stringify({ ITEMS, COSMETICS, DEFAULT_LOOK }), original, 'Frozen catalog remains unchanged');
+// Sword chop (P8): one overhand strike toward the facing side, never a windmill under or behind the body.
+// Blade centroid (area-weighted, both near and far shades) vs the body: unit 1, feet at 0, shoulders at y -24.
+{
+  const bladeColors = ['#b78249', '#e1b776', '#ce9957'];
+  const blade = new Set(bladeColors.concat(bladeColors.map((c) => shadeHex(c, 0.68))));
+  const centroid = (facing, attack) => {
+    const calls = drawing({ facing, attack, equipped: { mainHand: 'start-blade', offHand: 'stop-sign-shield' } });
+    let area = 0, sx = 0, sy = 0;
+    calls.forEach(([c, x, y, w, h]) => { if (blade.has(c)) { area += w * h; sx += (x + w / 2) * w * h; sy += (y + h / 2) * w * h; } });
+    assert.ok(area > 0, `${facing}@${attack}: blade is visible`);
+    return { x: sx / area, y: sy / area };
+  };
+  // After the strike lands (and through the hold) the blade sits out on the facing side.
+  const facingSide = {
+    right: ({ x }) => x > 6, left: ({ x }) => x < -6,
+    down: ({ y }) => y > -16, up: ({ y }) => y < -28,
+  };
+  for (const facing of ['right', 'left', 'down', 'up']) for (const attack of [0.3, 0.5, 0.75, 1]) {
+    const c = centroid(facing, attack);
+    assert.ok(facingSide[facing](c), `${facing}@${attack}: blade ends on the facing side, got ${c.x.toFixed(1)},${c.y.toFixed(1)}`);
+  }
+  // At no point in the swing does a profile blade drop below the shoulders behind the hero (the old windmill did).
+  for (const facing of ['right', 'left']) for (let k = 1; k <= 20; k++) {
+    const c = centroid(facing, k / 20);
+    const behind = facing === 'right' ? c.x < -2 : c.x > 2;
+    assert.ok(!(behind && c.y > -24), `${facing}@${k / 20}: blade never swings low behind the body`);
+    assert.ok(c.y < -10, `${facing}@${k / 20}: blade never passes under the body`);
+  }
+  // Snap, not a sweep: by 40% of the swing the blade is (almost) at its end pose, while the wind-up is far away.
+  for (const facing of ['right', 'left', 'down', 'up']) {
+    const end = centroid(facing, 1), mid = centroid(facing, 0.4), wind = centroid(facing, 0.1);
+    assert.ok(Math.hypot(mid.x - end.x, mid.y - end.y) < 2, `${facing}: most of the chop happens early`);
+    assert.ok(Math.hypot(wind.x - end.x, wind.y - end.y) > 10, `${facing}: wind-up is a distinct raised pose`);
+  }
+  // Bare hands chop too: the arm still moves.
+  const bareFist = drawing({ facing: 'right', attack: 1 });
+  assert.notDeepEqual(bareFist, drawing({ facing: 'right' }), 'bare-hands arm moves on attack');
+}
+// attack: 0 (idle, walking, hub preview, Typing Dojo, creator) must stay byte-identical to the pre-chop art.
+// Digests recorded from the previous sprite.js (FNV-1a over every draw call, see .foreman/scratch/p8/digest.mjs).
+{
+  const fnv = (str) => { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(16).padStart(8, '0'); };
+  const recorded = { down: 'de7f5e22', right: 'a5e8e0f8', up: 'bffc3db4', left: '88422922' };
+  const sets = [loadouts[0].equipped, loadouts[1].equipped, loadouts[2].equipped];
+  for (const facing of ['down', 'right', 'up', 'left']) {
+    let all = '';
+    for (const equipped of sets) for (const walk of [0, 0.25]) for (const blocking of [false, true]) {
+      const ctx = context();
+      drawCharacter(ctx, 40, 90, 3, { look: DEFAULT_LOOK, facing, walk, attack: 0, blocking, equipped, worn: { cape: 'cape-night' }, bob: 0.25 });
+      all += JSON.stringify(ctx.calls);
+    }
+    assert.equal(fnv(all), recorded[facing], `${facing}: attack 0 art is unchanged`);
+  }
+}
 console.log(`CQ sprite: ${frames} character frames + ${2 * (ITEMS.length + COSMETICS.length)} icons passed; colors, finite rectangles, legal loadouts, hair, movement and layer rules verified.`);
