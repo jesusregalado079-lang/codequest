@@ -13,6 +13,9 @@ import { mountLesson } from './lesson-ui.js';
 import { parseLessonHash, questCard } from './lesson-view.js';
 import { mountTyping } from './typing/typing-ui.js';
 import { isMode, LOCK_LABEL, MODE_TITLES, modeLocked, parseTypingHash, pickerHtml } from './typing/view.js';
+import { DAILY_WORK } from './daily-work/content.js';
+import { dailyWorkHtml, dailyWorkReady, itemMeta, updateDailyWork } from './daily-work/daily-work-ui.js';
+import { checkDailyParentPin, createDailyParentState, dailyParentHtml, gradeDailyWork, setDailyParentPin } from './daily-work/daily-work-parent.js';
 
 const SLOT_LABELS = { head: 'Head', body: 'Body', feet: 'Feet', mainHand: 'Hand', offHand: 'Off-hand', back: 'Back', magic1: 'Magic 1', magic2: 'Magic 2' };
 const FIELD_LABELS = { skin: 'Skin', hairStyle: 'Hair style', hairColor: 'Hair color', eyeColor: 'Eye color', shirtStyle: 'Shirt style', shirtColor: 'Shirt color', pantsColor: 'Pants', shoesColor: 'Shoes' };
@@ -20,6 +23,7 @@ const LAYER_LABELS = { hat: 'Hats', cape: 'Capes & wings', face: 'Face', hairFx:
 const FACINGS = ['down', 'right', 'up', 'left'];
 const FACING_LABELS = ['Front', 'Right', 'Back', 'Left'];
 const TABS = ['Gear', 'Wardrobe', 'Trader', 'Quests', 'Typing'];
+TABS.push('Daily Work');
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
 const app = document.getElementById('app');
@@ -28,6 +32,8 @@ let cq, draft, preview = false, facingIndex = 0, tab = 'Gear', selectedItem = nu
 let animation = 0, message = '';
 let lessonView = null, lessonEntry = '';
 let typingView = null, typingEntry = '', typingFocus = null;
+// Parent access is deliberately memory-only. A refresh recreates this locked state.
+let dailyParent = { open: false, unlocked: false, selectedDay: null, pinMessage: '' };
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 try { const saved = sessionStorage.getItem('cq-tab'); if (TABS.includes(saved)) tab = saved; } catch { /* Private mode. */ }
 
@@ -46,6 +52,7 @@ if (active) {
     draft = { ...(cq.look || DEFAULT_LOOK) };
     showRoute();
     app.addEventListener('click', onClick);
+    app.addEventListener('input', onInput);
     // #lesson/<id> and #practice/<id> show a lesson screen; #typing is the hub's Typing tab (mode picker) and
     // #typing/<mode> a typing run; no hash (or '#') is the hub. Browser Back returns to the hub.
     window.addEventListener('hashchange', showRoute);
@@ -241,6 +248,10 @@ function quests() {
       return `<article class="cq-quest cq-quest-${status} ${status === 'done' ? 'cq-passed' : ''}"><span class="cq-quest-number">${lesson.number}</span><div class="cq-quest-body"><span class="cq-eyebrow">LESSON ${esc(lesson.id.toUpperCase())} · ${esc(lesson.minutes)} MIN</span><h3>${esc(lesson.title)}</h3><span class="cq-quest-state">${esc(card.state)}</span><div class="cq-reward">${icon(item, status === 'locked', 40)}<span>${esc(item.name)}</span></div>${card.button ? button('open-lesson', esc(card.button), `data-id="${esc(lesson.id)}" data-route="${card.route}" aria-label="${esc(`${card.button.replace(/[▶🗝️]/gu, '').trim()}: Lesson ${lesson.id.toUpperCase()} ${lesson.title}`)}"`, 'cq-primary cq-quest-go') : ''}</div></article>`;
     }).join('')}</div>`;
 }
+function dailyWork() {
+  if (dailyParent.open) return `<div class="cq-dw-parent-shell"><div class="cq-actions cq-dw-parent-exit"><button type="button" class="cq-button" data-action="daily-parent-exit">Exit Parent Mode</button></div>${dailyParentHtml(cq, { content: DAILY_WORK, state: dailyParent })}</div>`;
+  return `${dailyWorkHtml(cq)}<div class="cq-dw-parent-entry"><button type="button" class="cq-link-button" data-action="daily-parent-open">🔒 Parent Mode</button></div>`;
+}
 function render() {
   cancelAnimationFrame(animation);
   const focus = document.activeElement;
@@ -251,7 +262,7 @@ function render() {
     <header class="cq-top"><a class="cq-map" href="index.html">← Map</a><div class="cq-identity"><span class="cq-eyebrow">COMPUTER QUEST</span><h1>${creator ? 'Create your hero' : esc(active.name)}</h1>${!creator && title ? `<p>${esc(title.name)}</p>` : ''}</div>${creator ? '' : `<div class="cq-wallet"><span class="cq-badge" ${rarity(rank)}>Hero Rank · ${esc(rank.name)}</span><strong aria-label="${cq.gems} gems">💎 ${cq.gems}</strong></div>`}</header>
     <p class="cq-status" role="status">${esc(message)}</p>
     <main class="cq-layout ${creator ? 'cq-creator' : ''}">${hero(creator)}<div class="cq-content">
-    ${creator ? `<div class="cq-panel">${editor(true)}</div>` : `<nav class="cq-tabs" aria-label="Hero hub">${TABS.map((name) => `<button type="button" data-action="tab" data-tab="${name}" aria-pressed="${tab === name}" aria-controls="cq-tab-panel">${name}</button>`).join('')}</nav><section id="cq-tab-panel" class="cq-panel" aria-label="${tab}">${({ Gear: gear, Wardrobe: wardrobe, Trader: trader, Quests: quests, Typing: () => pickerHtml(cq) })[tab]()}</section>`}
+    ${creator ? `<div class="cq-panel">${editor(true)}</div>` : `<nav class="cq-tabs" aria-label="Hero hub">${TABS.map((name) => `<button type="button" data-action="tab" data-tab="${name}" aria-pressed="${tab === name}" aria-controls="cq-tab-panel">${name}</button>`).join('')}</nav><section id="cq-tab-panel" class="cq-panel" aria-label="${tab}">${({ Gear: gear, Wardrobe: wardrobe, Trader: trader, Quests: quests, 'Daily Work': dailyWork, Typing: () => pickerHtml(cq) })[tab]()}</section>`}
     </div></main>`;
   app.querySelectorAll('[data-icon]').forEach((mount) => {
     const size = Number(mount.dataset.size), canvas = document.createElement('canvas');
@@ -284,11 +295,68 @@ function focusAction(action, id) {
   const target = Array.from(app.querySelectorAll('[data-action]')).find((b) => b.dataset.action === action && (!id || b.dataset.id === id));
   if (target) target.focus({ preventScroll: true });
 }
-function onClick(event) {
+// A small, purely-visual "just happened" cue on the one control a daily-* action just touched —
+// render() already replaced it with fresh markup, so this is a class add (which replays a CSS
+// keyframe), never a transition (nothing old survives the replacement to transition from). Never
+// used on anything that would hint whether a coin total is right — see cq-dw-coin's own rule.
+function pulseDailyWork(action, data) {
+  let el = null;
+  if (action === 'daily-coin-add' || action === 'daily-coin-remove' || action === 'daily-coin-clear') {
+    el = app.querySelector(`[data-item="${CSS.escape(data.item || '')}"] .cq-dw-coin-total strong`);
+  } else if (action === 'daily-scale') {
+    el = app.querySelector(`[data-item="${CSS.escape(data.item || '')}"][data-action="daily-scale"][aria-pressed="true"]`);
+  } else if (action === 'daily-submit') {
+    el = app.querySelector('.cq-dw-empty');
+  }
+  if (el) el.classList.add(action === 'daily-submit' ? 'cq-dw-enter' : 'cq-dw-pulse');
+}
+async function onClick(event) {
   if (lessonView || typingView) return; // Lesson and typing screens handle their own clicks.
   const b = event.target.closest('button[data-action]');
   if (!b || b.disabled) return;
   const action = b.dataset.action, id = b.dataset.id;
+  if (action.indexOf('daily-parent-') === 0) {
+    if (action === 'daily-parent-open') {
+      dailyParent = createDailyParentState(); dailyParent.open = true; render();
+    } else if (action === 'daily-parent-exit') {
+      dailyParent = createDailyParentState(); render();
+    } else if (action === 'daily-parent-set-pin') {
+      const pin = app.querySelector('[data-parent-pin="new"]');
+      const again = app.querySelector('[data-parent-pin="again"]');
+      const result = await setDailyParentPin(pin ? pin.value : '', again ? again.value : '');
+      dailyParent.pinMessage = result.message;
+      if (result.ok) dailyParent.unlocked = true;
+      render();
+    } else if (action === 'daily-parent-enter-pin') {
+      const pin = app.querySelector('[data-parent-pin="enter"]');
+      const result = await checkDailyParentPin(pin ? pin.value : '');
+      dailyParent.pinMessage = result.message;
+      if (result.unlocked) dailyParent.unlocked = true;
+      render();
+    } else if (action === 'daily-parent-forgot') {
+      dailyParent.pinMessage = 'Ask the grown-up who set it up to reset it from the main menu.'; render();
+    } else if (action === 'daily-parent-day') {
+      dailyParent.selectedDay = b.dataset.day; render();
+    } else if (action === 'daily-parent-grade') {
+      const key = b.dataset.gradeKey;
+      app.querySelectorAll(`[data-grade-key="${key}"]`).forEach((choice) => choice.setAttribute('aria-pressed', String(choice === b)));
+    } else if (action === 'daily-parent-save') {
+      const choices = {};
+      app.querySelectorAll('[data-action="daily-parent-grade"][aria-pressed="true"]').forEach((choice) => { choices[choice.dataset.gradeKey] = choice.dataset.choice; });
+      mutate((state) => gradeDailyWork(state, DAILY_WORK, b.dataset.week, b.dataset.day, choices, new Date().toISOString()), 'Work checked');
+    }
+    return;
+  }
+  if (action.indexOf('daily-') === 0) {
+    const data = { week: b.dataset.week, day: b.dataset.day, sheet: b.dataset.sheet, item: b.dataset.item, index: b.dataset.index, denom: b.dataset.denom };
+    const item = itemMeta(DAILY_WORK, cq.track, data);
+    if (item) { data.kind = item.kind; data.answer = item.answer; }
+    if (action === 'daily-submit' && !dailyWorkReady(cq)) return;
+    const value = action === 'daily-word' ? b.dataset.word : action === 'daily-scale' ? b.dataset.value : null;
+    mutate((state) => updateDailyWork(state, action, data, value, new Date().toISOString()), action === 'daily-submit' ? 'Work sent to your parent' : 'Saved');
+    pulseDailyWork(action, data);
+    return;
+  }
   if (action === 'rotate') {
     facingIndex = (facingIndex + Number(b.dataset.step) + 4) % 4;
     app.querySelector('.cq-facing').textContent = FACING_LABELS[facingIndex]; sound('tap');
@@ -327,5 +395,23 @@ function onClick(event) {
   else if (action === 'buy-no') { pendingBuy = null; render(); focusAction('buy', id); }
   else if (action === 'buy-yes') {
     if (mutate((state) => buyCosmetic(state, id), `${getCosmetic(id).name} added to your wardrobe`, 'collect')) { pendingBuy = null; focusAction('buy'); }
+  }
+}
+function onInput(event) {
+  const input = event.target.closest('[data-action="daily-input"]');
+  if (!input || !app.contains(input)) return;
+  const data = { week: input.dataset.week, day: input.dataset.day, sheet: input.dataset.sheet, item: input.dataset.item };
+  const item = itemMeta(DAILY_WORK, cq.track, data);
+  if (!item) return;
+  data.kind = item.kind;
+  try {
+    cq = preview ? normalizeCq(updateDailyWork(cq, 'daily-input', data, input.value))
+      : updateCq(active.id, (state) => updateDailyWork(state, 'daily-input', data, input.value));
+    const submit = app.querySelector('[data-action="daily-submit"]');
+    if (submit) submit.disabled = !dailyWorkReady(cq);
+  } catch {
+    message = 'Could not save that change. Please try again.';
+    const status = app.querySelector('.cq-status');
+    if (status) status.textContent = message;
   }
 }

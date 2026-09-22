@@ -4,6 +4,7 @@ import {
 } from './items.js';
 import { normalizeLessons, normalizeWindows } from './lesson-state.js';
 import { normalizeTyping } from './typing/state.js';
+import { normalizeDailyWork } from './daily-work/state.js';
 
 const validTracks = ['guided', 'standard'];
 const allLessons = [...TRACK_LESSONS.guided, ...TRACK_LESSONS.standard];
@@ -88,6 +89,7 @@ export function normalizeCq(value) {
     track, look: normalizeLook(source.look), owned, equipped, cosmetics, worn, gems, lessonsPassed, legendaryChoice,
     windows: normalizeWindows(source.windows), lessons: normalizeLessons(source.lessons),
     typing: normalizeTyping(source.typing),
+    dailyWork: normalizeDailyWork(source.dailyWork),
   };
 }
 

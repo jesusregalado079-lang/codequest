@@ -37,7 +37,7 @@ body .menu-wrap.cq { --cq-bg:#10263d; --cq-panel:#1d3b56; --cq-edge:#476b7b; --c
 .cq-slots { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin-top:8px; }
 .cq .cq-slot { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:87px; padding:7px 3px; gap:4px; background:#162f46; border:1px solid var(--rarity,#476b7b); border-radius:5px; font-size:11px; color:#d1e0e6; }
 .cq-slot small { font-size:9px; text-align:center; }.cq-empty-slot { font-size:26px; color:#57768a; height:36px; }.cq .cq-future { background:#152b40; color:#a4bbc7; }
-.cq-tabs { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:4px; margin-bottom:12px; }.cq-tabs button { min-height:48px; padding:8px 3px; border:1px solid var(--cq-edge); border-radius:5px; color:#bfd2db; background:#162f46; font-size:14px; }
+.cq-tabs { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:4px; margin-bottom:12px; }.cq-tabs button { min-height:48px; padding:8px 3px; border:1px solid var(--cq-edge); border-radius:5px; color:#bfd2db; background:#162f46; font-size:14px; }
 .cq-tabs button[aria-pressed='true'] { color:var(--gold); border-color:var(--gold); box-shadow:inset 0 -3px var(--gold); background:#294656; }
 .cq-panel { padding:20px; border:1px solid var(--cq-edge); border-radius:8px; background:var(--cq-panel); min-height:350px; }
 .cq-section-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-bottom:14px; }
@@ -54,6 +54,57 @@ body .menu-wrap.cq { --cq-bg:#10263d; --cq-panel:#1d3b56; --cq-edge:#476b7b; --c
 .cq-detail { padding:16px; margin:0 0 20px; border:1px solid var(--rarity); border-left:4px solid var(--rarity); background:#122d44; border-radius:5px; }.cq-detail-heading { display:flex; align-items:center; gap:10px; }.cq-detail-heading > div { flex:1; }.cq-detail-heading .cq-button { align-self:flex-start; flex-shrink:0; }.cq-detail p { font-size:14px; color:#b9d0da; }.cq-detail .cq-effect { color:#eddfb6; border-left:2px solid #aa8c4e; padding-left:12px; }
 .cq-divider { border-top:1px solid var(--cq-edge); padding-top:28px; margin-top:28px; }.cq-layer { margin-top:24px; }.cq-layer h3 { margin-bottom:12px; }.cq-empty { padding:16px; border:1px dashed #5e7d8d; color:#b9d0da; font-size:14px; line-height:1.5; }
 .cq-confirm { width:100%; }.cq-confirm p { font-size:13px; color:#f4e3b1; }.cq-confirm .cq-actions { gap:6px; }.cq-confirm .cq-button { width:auto; flex:1; }
+.cq-daily-work { display:grid; gap:14px; }.cq-dw-sheet { padding:16px; border:1px solid #476b7b; border-top:3px solid var(--gold); border-radius:6px; background:#163148; }.cq-dw-sheet h3 { margin:0 0 10px; }.cq-dw-sheet p { white-space:pre-line; }.cq-dw-intro { padding:10px 12px; margin:10px 0; border-left:3px solid #4a9df0; background:#16314a; color:#dbeaf2; }.cq-dw-example { padding:10px 12px; margin:10px 0; border:1px dashed var(--gold); background:#3a3323; color:#f5ebcc; }.cq-dw-items { display:grid; gap:12px; margin:14px 0 0; padding-left:28px; }.cq-dw-item { padding:10px 12px; border:1px solid #476b7b; border-radius:5px; background:#132c44; }.cq-dw-item p { margin:0 0 10px; }.cq-dw-item label { display:grid; gap:8px; color:#eef6f4; font-weight:650; }.cq-dw-input { width:100%; min-height:44px; padding:9px 10px; border:2px solid #6e9198; border-radius:5px; background:#0f2436; color:#f3f7e7; font:inherit; -webkit-user-select:text; user-select:text; }.cq-dw-input:focus-visible,.cq-dw-blank:focus-visible { outline:3px solid #fff0b2; outline-offset:3px; }.cq-dw-blanks { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }.cq .cq-dw-blank { min-width:86px; min-height:44px; padding:8px 12px; border:1px dashed var(--gold); border-radius:4px; background:#223e4e; color:#fff3c4; font:inherit; }.cq-dw-bank,.cq-dw-scale { margin-top:8px; }.cq-dw-locked { padding:10px 12px; border-left:3px solid #6fce8c; background:#1f4a39; color:#d9f7d5; }.cq-dw-coin { border-style:dashed; }.cq-dw-coin .cq-muted { margin:0; }.cq-dw-reopen { padding:10px 12px; border-left:3px solid var(--gold); background:#3a3323; color:#fff3c4; }.cq-dw-empty { padding:20px; border:1px dashed #5e7d8d; border-radius:6px; background:#163148; }.cq-dw-empty h2 { margin-top:0; }.cq-dw-finished { border-color:#6fce8c; }
+/* Coin-total interactive: tap a coin to add one, "−" to take one back, live running total. The
+   total never changes colour or wording to match the target — grading is parent-only. Coin sizes
+   follow real US coins (dime smallest, quarter biggest) so the shapes read at a glance. */
+.cq-dw-coin { border-style:solid; border-left:3px solid var(--gold); }
+.cq-dw-coin-target { margin:0 0 10px; color:var(--cq-muted); font-size:14px; }
+.cq-dw-tray { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
+.cq-dw-coin-row { display:flex; align-items:center; gap:5px; }
+.cq .cq-dw-coin-add { display:flex; align-items:center; gap:9px; min-height:56px; padding:7px 13px 7px 8px; border:1px solid #5b7a8e; border-radius:8px; background:#173249; color:#dbe9ef; font-size:14px; }
+.cq .cq-dw-coin-minus { display:grid; place-items:center; width:44px; min-height:44px; padding:0; border:1px solid #5b7a8e; border-radius:8px; background:#20415c; color:var(--gold); font-size:22px; line-height:1; }
+.cq-dw-coin-count { min-width:26px; color:var(--gold); font-weight:700; font-size:15px; }
+.cq-dw-coin-face { display:grid; place-items:center; width:38px; height:38px; flex-shrink:0; border:1px solid #6d7d88; border-radius:50%; background:linear-gradient(150deg,#eef3f7,#a3b3bf); color:#16303f; font:700 11px/1 ui-monospace,SFMono-Regular,Consolas,monospace; }
+.cq-dw-coin-face[data-denom='penny'] { width:34px; height:34px; border-color:#8a5a33; background:linear-gradient(150deg,#e8b087,#b9713f); }
+.cq-dw-coin-face[data-denom='dime'] { width:30px; height:30px; font-size:10px; }
+.cq-dw-coin-face[data-denom='quarter'] { width:44px; height:44px; font-size:12px; }
+.cq-dw-coin-face[data-denom='dollar-bill'] { width:48px; height:30px; border-radius:4px; border-color:#4f8a63; background:linear-gradient(150deg,#cfe8d4,#84b393); }
+.cq-dw-coin-total { margin:0; color:#dbe9ef; font-size:15px; }
+.cq-dw-coin-total strong { color:var(--gold); font-size:24px; }
+.cq-dw-coin-tools { margin-top:10px; }
+.cq .cq-dw-coin-clear { min-height:44px; padding:9px 14px; font-size:13px; }
+.cq-dw-pile { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; padding:0; list-style:none; }
+.cq-dw-pile li { display:flex; align-items:center; gap:9px; padding:6px 12px 6px 7px; border:1px solid #476b7b; border-radius:8px; background:#16314a; color:#dbe9ef; font-size:14px; }
+.cq-dw-coin-add:focus-visible,.cq-dw-coin-minus:focus-visible,.cq-dw-coin-clear:focus-visible { outline:3px solid #fff0b2; outline-offset:3px; }
+/* Daily Work parent mode. Kept separate from the kid cards so the check screen reads as a tool,
+   while retaining the same dark panel, gold action and large tap targets. */
+.cq-dw-parent-entry { margin-top:18px; text-align:center; }
+.cq .cq-link-button { padding:4px 6px; border:0; background:transparent; color:#b9d5e2; text-decoration:underline; font:inherit; cursor:pointer; }
+.cq .cq-link-button:hover,.cq .cq-link-button:focus-visible { color:#fff0b2; }
+.cq-dw-parent-exit { justify-content:flex-end; margin:0 0 10px; }
+.cq-dw-parent-gate { display:grid; gap:12px; max-width:430px; margin:12px auto; padding:18px; border:1px solid #5e7d8d; border-top:3px solid var(--gold); border-radius:6px; background:#163148; }
+.cq-dw-parent-gate h2 { margin:0; }.cq-dw-parent-gate p { margin:0; }.cq-dw-parent-gate label { display:grid; gap:7px; color:#eef6f4; font-weight:650; }
+.cq-dw-parent-error { min-height:22px; color:#ffb4a9; font-weight:700; }
+.cq-dw-parent { display:grid; gap:14px; }.cq-dw-parent .cq-section-head { margin-bottom:0; }
+.cq-dw-tracker { padding:12px; border:1px solid #527286; border-radius:6px; background:#132c44; }.cq-dw-tracker h3 { margin:0 0 9px; color:#fff0b2; }
+.cq-dw-tracker-days { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; }.cq .cq-dw-tracker-day { display:grid; gap:4px; min-height:62px; padding:6px 4px; border:1px solid #5e7d8d; border-radius:5px; background:#18364f; color:#dbe9ef; text-transform:capitalize; font-size:11px; }.cq-dw-tracker-day strong { color:#f5ebcc; text-transform:uppercase; }.cq-dw-tracker-day span { overflow-wrap:anywhere; }.cq .cq-dw-tracker-day.is-selected { outline:2px solid #fff0b2; outline-offset:1px; }
+.cq .cq-dw-status-not-started { background:#203547; }.cq .cq-dw-status-in-progress { border-color:#4a9df0; background:#173a57; }.cq .cq-dw-status-awaiting-check { border-color:var(--gold); background:#473d22; }.cq .cq-dw-status-needs-fixes { border-color:#e67f72; background:#512b30; }.cq .cq-dw-status-complete { border-color:#6fce8c; background:#1f4a39; }
+.cq-dw-day-picker { display:flex; flex-wrap:wrap; gap:7px; }.cq .cq-dw-day-picker button { min-height:42px; padding:8px 11px; border:1px solid #5e7d8d; border-radius:5px; background:#18364f; color:#dbe9ef; text-transform:capitalize; font:inherit; }.cq .cq-dw-day-picker button[aria-pressed='true'] { border-color:var(--gold); background:#3a3323; color:#fff0b2; }
+.cq-dw-check-sheet { border-top-color:#8ec4f9; }.cq-dw-check-items { display:grid; gap:11px; margin:12px 0 0; padding-left:0; list-style:none; }.cq-dw-check-item { padding:12px; border:1px solid #476b7b; border-radius:5px; background:#132c44; }.cq-dw-check-item p { margin:0 0 8px; }.cq-dw-check-prompt { color:#f2f6ef; font-weight:700; }.cq-dw-check-answer { color:#dbe9ef; }.cq-dw-suggestion { color:#fff0b2; font-weight:700; }
+.cq-dw-grade { display:flex; gap:8px; }.cq .cq-dw-grade button { min-height:42px; padding:8px 12px; border:1px solid #5e7d8d; border-radius:5px; background:#18364f; color:#dbe9ef; font:inherit; }.cq .cq-dw-grade button[aria-pressed='true'][data-choice='correct'] { border-color:#6fce8c; background:#1f4a39; color:#d9f7d5; }.cq .cq-dw-grade button[aria-pressed='true'][data-choice='wrong'] { border-color:#e67f72; background:#512b30; color:#ffd2cc; }
+@media(max-width:500px) { .cq-dw-tracker-days { gap:3px; }.cq .cq-dw-tracker-day { min-height:68px; font-size:10px; }.cq-dw-tracker-day span { font-size:9px; } }
+/* A few small, targeted animations (engagement pass): coins/scale pop on the exact control just
+   used, the submit button eases in as it becomes available, the "sent to your parent" panel
+   arrives instead of snapping in. All keyframe-driven (a class ui.js adds right after a fresh
+   render), since render() replaces the whole tab — a CSS transition has nothing old to animate
+   from. Never applied to anything that would hint whether a coin total is right (js:coinItem()). */
+@keyframes cq-dw-pop { 0% { transform:scale(1); } 40% { transform:scale(1.22); } 100% { transform:scale(1); } }
+.cq-dw-pulse { animation:cq-dw-pop .3s ease-out; }
+@keyframes cq-dw-rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.cq-dw-enter { animation:cq-dw-rise .3s ease-out; }
+.cq [data-action="daily-submit"] { transition:opacity .2s ease, box-shadow .2s ease; }
+@media(prefers-reduced-motion:reduce) { .cq-dw-pulse,.cq-dw-enter { animation:none; } }
 .cq-quests { display:grid; gap:12px; }.cq-quest { display:flex; gap:16px; padding:16px; border:1px solid #4c6c80; background:#163148; border-radius:5px; }.cq-quest-number { display:grid; place-items:center; flex-shrink:0; width:34px; height:34px; background:#284b61; color:#9ebfcd; font:700 16px ui-monospace,monospace; border:1px solid #527286; }.cq-quest-state { display:block; margin:10px 0; font-size:12px; color:#b5cbd5; }.cq-reward { display:flex; align-items:center; gap:8px; font-size:12px; color:#8ec4f9; }.cq-passed { border-color:#6c9e86; }.cq-passed .cq-quest-number { color:#ccedb9; border-color:#6c9e86; }
 .cq-dev { padding:12px; border:1px solid #f2b631; background:#4a3b1e; color:#ffe69d; margin-bottom:16px; font:700 12px ui-monospace,monospace; }.cq-gate h1 { margin-bottom:24px; }
 @media(min-width:900px) { .cq-layout { grid-template-columns:340px minmax(0,1fr); gap:28px; }.cq-hero-panel { position:sticky; top:22px; }.cq-inventory { grid-template-columns:repeat(3,minmax(0,1fr)); }.cq-creator .cq-panel { padding:26px; } }
