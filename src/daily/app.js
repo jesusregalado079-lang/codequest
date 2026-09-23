@@ -42,7 +42,7 @@ function showSaveAlert() {
     alert.id = 'cqd-save-alert';
     alert.className = 'cqd-save-alert';
     alert.setAttribute('role', 'alert');
-    alert.innerHTML = '<strong>This iPad is not saving right now.</strong> Keep this page open and tell a grown-up before you close it.';
+    alert.innerHTML = '<span class="cqd-save-alert-icon" aria-hidden="true">!</span><span class="cqd-save-alert-copy"><strong>This iPad is not saving right now.</strong><span>Keep this page open and tell a grown-up before you close it.</span></span>';
     document.body.appendChild(alert);
   }
   alert.hidden = saveOk;

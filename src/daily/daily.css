@@ -625,6 +625,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .cqd-tracker-day.cqd-status-complete { --status-ink: #2d7250; }
 .cqd-tracker-day.cqd-status-complete::after { content: '✓'; }
 .cqd-tracker-day.is-selected { border-color: #2b4557; box-shadow: inset 0 0 0 1px #2b4557; background: #eef5f7; }
+.cqd-empty-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 20px 0 14px; padding: 14px 16px; border: 1px solid #c1d4dc; border-radius: 13px; background: #dfecef; color: #2b4557; font-size: .94rem; font-weight: 700; }
+.cqd-empty-hint-days { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.cqd-empty-day { min-width: 44px; min-height: 44px; padding: 7px 16px; border: 2px solid #9eb8c5; border-radius: 999px; background: #fff; color: #2b4557; font-weight: 800; cursor: pointer; }
+.cqd-empty-day:hover { border-color: #2b4557; background: #f3f8fa; }
 .cqd-check-sheet { --subject: #4d6472; margin: 18px 0; padding: 0; background: #fff; box-shadow: 0 4px 0 #dbe3e5; }
 .cqd-check-sheet h3 { margin: 0; padding: 15px 20px; background: #4d6472; color: #fff; font-size: 1.35rem; }
 .cqd-check-items { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0 20px; list-style: none; }
@@ -1193,25 +1197,33 @@ button.cqd-month-cell.is-today:active { box-shadow: 0 2px 0 var(--season-ink); }
   .cqd-verse-card-full > * { opacity: 1 !important; }
 }
 
-/* Adaptive block bar for percent problems (2026-09-23). Functional baseline — the visual polish pass
-   comes after; the rules that matter are the >=44px targets and that blocks are real buttons. */
-.cqd-block-bar { display: grid; grid-template-columns: repeat(var(--cqd-block-cols, 4), minmax(0, 1fr)); gap: 8px; max-width: 680px; margin: 12px 0 8px; }
+/* Equal blocks stay the same size from four through twenty (60px, shrinking to 44px on a narrow iPad so a
+   ten-wide row never overflows its sheet); at most ten appear per row. */
+.cqd-block-bar { display: grid; grid-template-columns: repeat(var(--cqd-block-cols, 4), minmax(44px, 60px)); gap: 8px; max-width: 680px; margin: 12px 0 8px; }
 .cqd-block {
-  position: relative; display: flex; align-items: flex-end; justify-content: center;
-  min-width: 44px; min-height: 68px; padding: 0 2px 6px; border: 2px solid var(--subject, #286ca8); border-radius: 12px;
-  background: var(--cqd-card, #fff); color: var(--subject, #286ca8); cursor: pointer; touch-action: manipulation;
-  transition: background-color .15s ease, transform .12s ease;
+  position: relative; display: flex; align-items: center; justify-content: center;
+  min-width: 44px; min-height: 68px; padding: 2px; border: 2px solid var(--subject, #286ca8); border-radius: 12px;
+  background: var(--subject-soft, #e8f2fb); color: var(--subject, #286ca8); cursor: pointer; touch-action: manipulation;
+  transition: background-color .16s ease, box-shadow .16s ease, transform var(--cqd-press-time) var(--cqd-ease);
 }
-.cqd-block.is-filled { background: var(--subject, #286ca8); color: #fff; }
-.cqd-block:active { transform: translateY(1px); }
-.cqd-block-label { min-height: 1.1em; font-size: .8rem; font-weight: 900; line-height: 1; pointer-events: none; }
-.cqd-block-caption { margin: 6px 0 2px; color: #3d4c52; font-weight: 800; }
-.cqd-block-readout { margin: 2px 0 10px; color: var(--subject, #286ca8); font-family: 'Baloo 2', sans-serif; font-size: 1.25rem; font-weight: 800; }
-.cqd-field .cqd-block-input { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; }
+.cqd-block::before { content: ''; position: absolute; inset: 5px; border: 1px dashed currentColor; border-radius: 7px; opacity: .38; pointer-events: none; transition: opacity .16s ease; }
+.cqd-block.is-filled { background: var(--subject, #286ca8); color: #fff; box-shadow: inset 0 -6px 0 rgba(16, 49, 76, .24), 0 3px 0 rgba(16, 49, 76, .18); }
+.cqd-block.is-filled::before { opacity: 0; }
+.cqd-block:active { box-shadow: inset 0 2px 5px rgba(16, 49, 76, .18); }
+.cqd-block:focus-visible { outline: 3px solid #173e5c; outline-offset: 3px; }
+.cqd-block-label { position: relative; font-size: 16px; font-weight: 900; line-height: 1; letter-spacing: -.025em; white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
+.cqd-block-caption { display: table; margin: 10px 0 6px; padding: 4px 10px; border-left: 4px solid var(--subject, #286ca8); border-radius: 7px; background: var(--subject-soft, #e8f2fb); color: #294c67; font-size: .95rem; font-weight: 800; }
+.cqd-block-readout { margin: 2px 0 12px; color: #496579; font-size: 1rem; font-weight: 800; }
+.cqd-field .cqd-block-input { display: inline-flex; flex-direction: row; align-items: center; gap: 8px; white-space: nowrap; }
 .cqd-block-input .cqd-input { width: 9ch; flex: none; }
 .cqd-block-input b { font-size: 1.3rem; }
-@media (prefers-reduced-motion: reduce) { .cqd-block { transition: none; } .cqd-block:active { transform: none; } }
+@media (max-width: 700px) { .cqd-block-label { font-size: 13px; letter-spacing: -.04em; } }
+@media (prefers-reduced-motion: reduce) { .cqd-block, .cqd-block::before { transition: none; } .cqd-block:active { transform: none; } }
 
 /* Shown only when the iPad refuses to save answers (storage full or blocked); see app.js persist(). */
-.cqd-save-alert { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); z-index: 60; padding: 14px 16px; border-radius: 12px; background: #7a1f1f; color: #fff; font-weight: 700; line-height: 1.35; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
+.cqd-save-alert { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); z-index: 60; display: flex; align-items: center; gap: 13px; width: min(calc(100% - 24px), 820px); min-height: 44px; padding: 12px 16px; border: 1px solid #b2645d; border-radius: 15px; background: #762d2b; color: #fff; font-size: .9rem; line-height: 1.35; box-shadow: 0 5px 18px rgba(64, 27, 27, .23); transform: translateX(-50%); }
+.cqd-save-alert-icon { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border: 2px solid rgba(255, 255, 255, .8); border-radius: 50%; font-weight: 900; line-height: 1; }
+.cqd-save-alert-copy strong, .cqd-save-alert-copy span { display: block; }
+.cqd-save-alert-copy strong { font-weight: 900; }
 .cqd-save-alert[hidden] { display: none; }
+body:has(.cqd-save-alert:not([hidden])) #app { padding-bottom: calc(220px + env(safe-area-inset-bottom, 0px)); }

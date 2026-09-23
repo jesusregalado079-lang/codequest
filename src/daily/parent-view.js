@@ -164,7 +164,7 @@ function checkWorkHtml(store, state, todayIso) {
   const saved = storedDay(store, week.id, selectedDay);
   const others = dayStatuses(store, week).filter((row) => row.dayKey !== selectedDay && row.status !== 'not-started');
   const emptyHint = dayStatus(saved, sheets) === 'not-started' && others.length
-    ? `<p class="cqd-muted cqd-empty-hint">Nothing is saved for ${dayName(selectedDay)} yet. Work is saved for: ${others.map((row) => `<button type="button" class="cqd-link-button" data-action="daily-parent-day" data-day="${row.dayKey}">${dayName(row.dayKey)}</button>`).join(' ')}</p>` : '';
+    ? `<div class="cqd-empty-hint"><span>Nothing is saved for ${dayName(selectedDay)} yet. Work is saved for:</span><span class="cqd-empty-hint-days">${others.map((row) => `<button type="button" class="cqd-empty-day" data-action="daily-parent-day" data-day="${row.dayKey}">${dayName(row.dayKey)}</button>`).join(' ')}</span></div>` : '';
   return `<section class="cqd-parent"><header class="cqd-calendar-head"><span class="cqd-eyebrow">PARENT MODE · ${esc(week.label.toUpperCase())}</span><h1>Check work</h1></header>
     ${trackerHtml(store, week, selectedDay)}
     <p class="cqd-muted">${saved.submittedAt ? `Submitted ${esc(new Date(saved.submittedAt).toLocaleString())}` : 'Not submitted yet. You can still check any item.'}</p>
