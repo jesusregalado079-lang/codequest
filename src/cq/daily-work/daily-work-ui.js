@@ -250,7 +250,9 @@ function setItem(cq, data, value) {
 
 export function updateDailyWork(cq, action, data, value, nowIso) {
   if (action === 'daily-input') return setItem(cq, data, valueForInput(data.kind, value));
-  if (action === 'daily-scale') return setItem(cq, data, Number(value));
+  // daily-percent-set: the dedicated iPad page's 100-square percent grid — same "store a plain
+  // number" write as daily-scale, just a different picker UI over the same numeric item shape.
+  if (action === 'daily-scale' || action === 'daily-percent-set') return setItem(cq, data, Number(value));
   if (action === 'daily-word' || action === 'daily-blank') {
     const current = storedItem(storedDay(cq, data.week, data.day), data.sheet, data.item).value;
     const blanks = blankValues({ answer: data.answer }, current);

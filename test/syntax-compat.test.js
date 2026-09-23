@@ -1,7 +1,10 @@
 // The kids app (Computer Quest + the base app) ships untranspiled to older iPad Safari. ES2021+
 // syntax/builtins have broken it before (a `.at()` call caused the "World 2 glitch" in July): scan
 // every kids-app source file for the patterns that are known to be unsupported there. src/pro/ is
-// the grown-ups track, shipped separately, and is intentionally NOT scanned.
+// the grown-ups track, shipped separately, and is intentionally NOT scanned. src/daily/ (the
+// dedicated Daily Work iPad page) is also intentionally NOT scanned: it targets iOS 27 on a boy's
+// own iPad (confirmed via Settings → About 2026-09-22), which is fully current — the old-iPad-Safari
+// constraint this test exists for does not apply there.
 import assert from 'node:assert';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -64,6 +67,8 @@ const targets = [
 assert.ok(targets.length > 20, `found enough kids-app source files to scan (${targets.length})`);
 const proDir = `${join(ROOT, 'src/pro')}/`;
 assert.ok(!targets.some((path) => path.startsWith(proDir)), 'src/pro/ is never scanned (grown-ups track, off-limits)');
+const dailyDir = `${join(ROOT, 'src/daily')}/`;
+assert.ok(!targets.some((path) => path.startsWith(dailyDir)), 'src/daily/ is never scanned (dedicated iOS 27 iPad page, modern-JS is safe there)');
 
 const offenders = [];
 const dialogOffenders = [];

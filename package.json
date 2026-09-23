@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node test/engine.test.js && node test/pro.test.js && node test/computer.test.js && node test/cq.test.js && node test/cq-sprite.test.js && node test/cq-lessons.test.js && node test/cq-lesson-logic.test.js && node test/cq-lesson-ui.test.js && node test/cq-battle.test.js && node test/cq-battle-ui.test.js && node test/cq-typing.test.js && node test/cq-typing-ui.test.js && node test/syntax-compat.test.js && node test/cq-battle-record.test.js && node test/cq-key-moments.test.js && node test/cq-key-practice-ui.test.js && node test/cq-key-diagram.test.js && node test/cq-key-moment-integration.test.js && node test/cq-daily-work.test.js && node test/cq-daily-work-ui.test.js"
+    "test": "node test/engine.test.js && node test/pro.test.js && node test/computer.test.js && node test/cq.test.js && node test/cq-sprite.test.js && node test/cq-lessons.test.js && node test/cq-lesson-logic.test.js && node test/cq-lesson-ui.test.js && node test/cq-battle.test.js && node test/cq-battle-ui.test.js && node test/cq-typing.test.js && node test/cq-typing-ui.test.js && node test/syntax-compat.test.js && node test/cq-battle-record.test.js && node test/cq-key-moments.test.js && node test/cq-key-practice-ui.test.js && node test/cq-key-diagram.test.js && node test/cq-key-moment-integration.test.js && node test/cq-daily-work.test.js && node test/cq-daily-work-ui.test.js && node test/daily-page.test.js"
   },
   "dependencies": {
     "blockly": "^13.1.1",
