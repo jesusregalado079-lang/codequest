@@ -2,7 +2,9 @@
 // (salted SHA-256, 5-try lockout, 60s cooldown, last-10-resets log), copied rather than imported
 // since progress.js is hardwired to the shared codequest-v1 store. Kept in lockstep with that file
 // on purpose: any future change to the lockout rules there should be mirrored here by hand.
-import { load, save } from './store.js';
+import { load } from './store.js';
+
+const UNLOCK_MS = 60 * 60 * 1000;
 
 function salt() {
   const bytes = new Uint8Array(16);
@@ -20,50 +22,55 @@ function validPin(pin) {
   if (!/^\d{4}$/.test(pin)) throw new Error('PIN must be exactly four digits');
 }
 
-export function hasParentPin() {
-  const { pinHash, pinSalt } = load().parent;
+export function hasParentPin(store = load()) {
+  const { pinHash, pinSalt } = store.parent;
   return Boolean(pinHash && pinSalt);
 }
 
-export async function setParentPin(pin) {
-  validPin(pin);
-  const s = load();
-  const pinSalt = salt();
-  s.parent = { ...s.parent, pinSalt, pinHash: await hashPin(pin, pinSalt), failCount: 0, lockUntil: 0 };
-  save(s);
+export function parentUnlocked(store, now = Date.now()) {
+  const until = store.parent.unlockedUntil;
+  return Number.isFinite(until) && until > 0 && now < until;
 }
 
-export async function checkParentPin(pin, now = Date.now()) {
-  const s = load();
-  const parent = s.parent;
-  if (now < parent.lockUntil) return { ok: false, lockedMs: parent.lockUntil - now, triesLeft: 0 };
-  if (!parent.pinHash || !parent.pinSalt) return { ok: false, lockedMs: 0, triesLeft: 5 - parent.failCount };
+export function lockParent(store) {
+  return { ...store, parent: { ...store.parent, unlockedUntil: 0 } };
+}
+
+export async function setParentPin(store, pin, now = Date.now()) {
+  validPin(pin);
+  const pinSalt = salt();
+  return { ...store, parent: { ...store.parent, pinSalt, pinHash: await hashPin(pin, pinSalt), failCount: 0, lockUntil: 0, unlockedUntil: now + UNLOCK_MS } };
+}
+
+export async function checkParentPin(store, pin, now = Date.now()) {
+  const parent = store.parent;
+  if (now < parent.lockUntil) return { store, ok: false, lockedMs: parent.lockUntil - now, triesLeft: 0 };
+  if (!parent.pinHash || !parent.pinSalt) return { store, ok: false, lockedMs: 0, triesLeft: 5 - parent.failCount };
   const ok = /^\d{4}$/.test(pin) && await hashPin(pin, parent.pinSalt) === parent.pinHash;
+  const nextParent = { ...parent };
   if (ok) {
-    parent.failCount = 0;
-    parent.lockUntil = 0;
+    nextParent.failCount = 0;
+    nextParent.lockUntil = 0;
+    nextParent.unlockedUntil = now + UNLOCK_MS;
   } else {
-    parent.failCount += 1;
-    if (parent.failCount >= 5) {
-      parent.lockUntil = now + 60000;
-      parent.failCount = 0;
+    nextParent.failCount += 1;
+    if (nextParent.failCount >= 5) {
+      nextParent.lockUntil = now + 60000;
+      nextParent.failCount = 0;
     }
   }
-  save(s);
-  const lockedMs = ok ? 0 : Math.max(0, parent.lockUntil - now);
-  return { ok, lockedMs, triesLeft: lockedMs ? 0 : 5 - parent.failCount };
+  const lockedMs = ok ? 0 : Math.max(0, nextParent.lockUntil - now);
+  return { store: { ...store, parent: nextParent }, ok, lockedMs, triesLeft: lockedMs ? 0 : 5 - nextParent.failCount };
 }
 
-export function resetParentPin(now = Date.now()) {
-  const s = load();
-  s.parent = { ...s.parent, pinHash: null, pinSalt: null, failCount: 0, lockUntil: 0,
-    resets: [...s.parent.resets, new Date(now).toISOString()].slice(-10) };
-  save(s);
+export function resetParentPin(store, now = Date.now()) {
+  return { ...store, parent: { ...store.parent, pinHash: null, pinSalt: null, failCount: 0, lockUntil: 0, unlockedUntil: 0,
+    resets: [...store.parent.resets, new Date(now).toISOString()].slice(-10) } };
 }
 
-export function recentPinResets(now = Date.now()) {
+export function recentPinResets(store, now = Date.now()) {
   const cutoff = now - 30 * 86400000;
-  return load().parent.resets.filter((time) => {
+  return store.parent.resets.filter((time) => {
     const resetAt = Date.parse(time);
     return Number.isFinite(resetAt) && resetAt >= cutoff && resetAt <= now;
   });

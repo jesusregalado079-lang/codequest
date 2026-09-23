@@ -1,11 +1,13 @@
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
-import { storedDay } from '../cq/daily-work/daily-work-ui.js';
-import { load, save, setTrack, drawingFor, saveDrawing, snapshotHistory } from './store.js';
+import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
+import { blockFillFor, load, save, setBlockFill, setTrack, drawingFor, saveDrawing, snapshotHistory } from './store.js';
+import { blockPlan, nextFill } from './blocks.js';
 import { currentWeekSnapshots, renderCalendar, renderVerseScreen } from './calendar.js';
 import { applyDailyAction, dayComplete, dayReady, dayReopened, renderSheetArticle, sheetsForDay } from './sheet-view.js';
 import { attachDrawing, loadDrawing, sizeCanvas } from './drawing.js';
 import { createDailyMotion } from './motion.js';
+import { lockParent, parentUnlocked } from './pin.js';
 import {
   checkDailyParentPin, createParentState, gradeDailyWork, renderParent, setDailyParentPin,
 } from './parent-view.js';
@@ -16,6 +18,8 @@ let store = load();
 let route = { screen: 'calendar', dayKey: null, sheetIndex: 0 };
 let parentState = createParentState();
 let drawingController = null;
+let pinPending = false;
+let parentSession = 0;
 
 function todayIso() {
   const date = new Date();
@@ -87,16 +91,22 @@ function sheetScreenHtml() {
   const ready = dayReady(dayState, allSheets);
   return `${nav}
     ${reopened ? '<p class="cqd-reopen">A parent sent back a few answers to fix. Your finished answers are locked.</p>' : ''}
-    <div class="cqd-sheet-wrap">
+    <div class="cqd-drawing-toolbar" role="toolbar" aria-label="Worksheet tools">
       <div class="cqd-mode-toggle" role="group" aria-label="Type or draw">
-        <button type="button" class="cqd-mode-btn is-active" data-action="set-mode" data-mode="type">⌨️ Type</button>
-        <button type="button" class="cqd-mode-btn" data-action="set-mode" data-mode="draw">✏️ Draw</button>
+        <button type="button" class="cqd-mode-btn is-active" data-action="set-mode" data-mode="type" aria-pressed="true">⌨️ Type</button>
+        <button type="button" class="cqd-mode-btn" data-action="set-mode" data-mode="draw" aria-pressed="false">✏️ Draw</button>
       </div>
-      <div class="cqd-sheet-stage" data-mode="type">
-        ${renderSheetArticle(week, route.dayKey, sheet, dayState, reopened)}
-        <canvas class="cqd-ink" aria-label="Draw here to show your work"></canvas>
+      <div class="cqd-tool-toggle" role="group" aria-label="Drawing tool">
+        <button type="button" class="cqd-tool-btn is-active" data-action="set-tool" data-tool="pen" aria-pressed="true">✏️ Pen</button>
+        <button type="button" class="cqd-tool-btn" data-action="set-tool" data-tool="eraser" aria-pressed="false">◻ Eraser</button>
       </div>
       <button type="button" class="cqd-link-button cqd-clear-drawing" data-action="clear-drawing">Clear drawing on this page</button>
+    </div>
+    <div class="cqd-sheet-wrap">
+      <div class="cqd-sheet-stage" data-mode="type">
+        ${renderSheetArticle(week, route.dayKey, sheet, dayState, reopened, (item) => blockFillFor(store, week.id, route.dayKey, sheet.id, item.id))}
+        <canvas class="cqd-ink" aria-label="Draw here to show your work"></canvas>
+      </div>
     </div>
     ${pager}
     <div class="cqd-actions"><button type="button" class="cqd-button cqd-primary" data-action="daily-submit" data-week="${week.id}" data-day="${route.dayKey}" ${ready ? '' : 'disabled'}>I’m done — go get a parent!</button></div>`;
@@ -122,7 +132,8 @@ function render(motionIntent) {
   const previousVisuals = motion.capture(motionIntent);
   if (!store.track) { app.innerHTML = trackPickerHtml(); }
   else if (route.screen === 'parent') {
-    app.innerHTML = `<div class="cqd-parent-exit"><button type="button" class="cqd-link-button" data-action="daily-parent-exit">← Exit Parent Mode</button></div>${renderParent(store, parentState, todayIso())}`;
+    const now = Date.now();
+    app.innerHTML = `<div class="cqd-parent-exit"><button type="button" class="cqd-link-button" data-action="daily-parent-exit">← Exit Parent Mode</button>${parentUnlocked(store, now) ? '<button type="button" class="cqd-parent-lock" data-action="daily-parent-lock">🔒 Lock now</button>' : ''}</div>${renderParent(store, parentState, todayIso(), now)}`;
   }
   else if (route.screen === 'sheet') { app.innerHTML = sheetScreenHtml(); setupDrawing(); }
   else if (route.screen === 'verse') {
@@ -133,6 +144,17 @@ function render(motionIntent) {
     app.innerHTML = `${renderCalendar(store, todayIso(), viewedMonth.year, viewedMonth.month)}<div class="cqd-parent-entry"><button type="button" class="cqd-link-button" data-action="daily-parent-open">🔒 Parent Mode</button></div>`;
   }
   motion.play(previousVisuals, `${store.track || 'picker'}/${route.screen}/${route.dayKey || ''}/${route.sheetIndex}/${viewedMonth.year}-${viewedMonth.month}`);
+}
+
+function setSheetMode(mode) {
+  const stage = app.querySelector('.cqd-sheet-stage');
+  if (!stage || (mode !== 'type' && mode !== 'draw')) return;
+  stage.dataset.mode = mode;
+  app.querySelectorAll('.cqd-mode-btn').forEach((button) => {
+    const active = button.dataset.mode === mode;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
 }
 
 function onClick(event) {
@@ -163,9 +185,19 @@ function onClick(event) {
     return;
   }
   if (action === 'set-mode') {
-    const stage = app.querySelector('.cqd-sheet-stage');
-    if (stage) stage.dataset.mode = button.dataset.mode;
-    app.querySelectorAll('.cqd-mode-btn').forEach((b) => b.classList.toggle('is-active', b === button));
+    setSheetMode(button.dataset.mode);
+    return;
+  }
+  if (action === 'set-tool') {
+    const tool = button.dataset.tool;
+    if (!drawingController || (tool !== 'pen' && tool !== 'eraser')) return;
+    drawingController.setTool(tool);
+    app.querySelectorAll('.cqd-tool-btn').forEach((choice) => {
+      const active = choice.dataset.tool === tool;
+      choice.classList.toggle('is-active', active);
+      choice.setAttribute('aria-pressed', String(active));
+    });
+    setSheetMode('draw');
     return;
   }
   if (action === 'clear-drawing') {
@@ -188,23 +220,34 @@ function onClick(event) {
   }
 
   if (action.indexOf('daily-parent-') === 0) {
-    if (action === 'daily-parent-open') { detachDrawing(); parentState = createParentState(); parentState.open = true; route = { screen: 'parent', dayKey: null, sheetIndex: 0 }; render(); return; }
-    if (action === 'daily-parent-exit') { parentState = createParentState(); route = { screen: 'calendar', dayKey: null, sheetIndex: 0 }; render(); return; }
+    if (action === 'daily-parent-open') { detachDrawing(); parentSession += 1; parentState = createParentState(); parentState.open = true; route = { screen: 'parent', dayKey: null, sheetIndex: 0 }; render(); return; }
+    if (action === 'daily-parent-exit') { parentSession += 1; parentState = createParentState(); route = { screen: 'calendar', dayKey: null, sheetIndex: 0 }; render(); return; }
+    if (action === 'daily-parent-lock') { parentSession += 1; persist(lockParent(store)); parentState = createParentState(); route = { screen: 'calendar', dayKey: null, sheetIndex: 0 }; render(); return; }
     if (action === 'daily-parent-set-pin') {
+      if (pinPending) return;
       const pin = app.querySelector('[data-parent-pin="new"]');
       const again = app.querySelector('[data-parent-pin="again"]');
-      setDailyParentPin(pin ? pin.value : '', again ? again.value : '').then((result) => {
+      const session = parentSession;
+      pinPending = true;
+      setDailyParentPin(store, pin ? pin.value : '', again ? again.value : '').then((result) => {
+        if (result.store.parent !== store.parent) persist({ ...store, parent: result.store.parent });
+        pinPending = false;
+        if (session !== parentSession || route.screen !== 'parent') return;
         parentState.pinMessage = result.message;
-        if (result.ok) parentState.unlocked = true;
         render();
       });
       return;
     }
     if (action === 'daily-parent-enter-pin') {
+      if (pinPending) return;
       const pin = app.querySelector('[data-parent-pin="enter"]');
-      checkDailyParentPin(pin ? pin.value : '').then((result) => {
+      const session = parentSession;
+      pinPending = true;
+      checkDailyParentPin(store, pin ? pin.value : '').then((result) => {
+        if (result.store.parent !== store.parent) persist({ ...store, parent: result.store.parent });
+        pinPending = false;
+        if (session !== parentSession || route.screen !== 'parent') return;
         parentState.pinMessage = result.message;
-        if (result.unlocked) parentState.unlocked = true;
         render();
       });
       return;
@@ -223,6 +266,19 @@ function onClick(event) {
       render();
       return;
     }
+    return;
+  }
+
+  if (action === 'daily-block-fill') {
+    // The block count comes from the authored problem, never from the DOM, so a tampered attribute
+    // can't store a nonsense fill.
+    const data = { week: button.dataset.week, day: button.dataset.day, sheet: button.dataset.sheet, item: button.dataset.item };
+    const item = itemMeta(DAILY_WORK, store.track, data);
+    const plan = item && blockPlan(item.part, item.whole);
+    if (!plan) return;
+    const next = nextFill(blockFillFor(store, data.week, data.day, data.sheet, data.item), Number(button.dataset.block), plan.count);
+    persist(setBlockFill(store, data.week, data.day, data.sheet, data.item, next));
+    render();
     return;
   }
 
@@ -267,7 +323,22 @@ function onGridClick(event) {
   render();
 }
 
+// Safari can adjust the visual viewport again after focus when the keyboard opens. Keep the
+// focused answer below the sticky tools in both the initial focus and that later resize.
+function keepFocusedAnswerVisible() {
+  const field = document.activeElement;
+  if (!field || !field.matches('.cqd-sheet-stage input, .cqd-sheet-stage textarea') || !app.contains(field)) return;
+  const toolbar = app.querySelector('.cqd-drawing-toolbar');
+  if (!toolbar) return;
+  const overlap = toolbar.getBoundingClientRect().bottom + 12 - field.getBoundingClientRect().top;
+  if (overlap > 0) window.scrollBy(0, -overlap);
+}
+
+function checkFocusedAnswer() { requestAnimationFrame(keepFocusedAnswerVisible); }
+
 app.addEventListener('click', onClick);
 app.addEventListener('click', onGridClick);
 app.addEventListener('input', onInput);
+app.addEventListener('focusin', checkFocusedAnswer);
+if (globalThis.visualViewport) globalThis.visualViewport.addEventListener('resize', checkFocusedAnswer);
 render();

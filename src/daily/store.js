@@ -17,7 +17,7 @@ const safeKey = (value) => typeof value === 'string' && value.length > 0 && valu
   && value !== '__proto__' && value !== 'constructor' && value !== 'prototype';
 
 function defaultParent() {
-  return { pinHash: null, pinSalt: null, failCount: 0, lockUntil: 0, resets: [] };
+  return { pinHash: null, pinSalt: null, failCount: 0, lockUntil: 0, unlockedUntil: 0, resets: [] };
 }
 
 function normalizeParent(value) {
@@ -27,6 +27,7 @@ function normalizeParent(value) {
     pinSalt: typeof p.pinSalt === 'string' ? p.pinSalt : null,
     failCount: Number.isInteger(p.failCount) && p.failCount >= 0 ? p.failCount : 0,
     lockUntil: Number.isFinite(p.lockUntil) && p.lockUntil > 0 ? p.lockUntil : 0,
+    unlockedUntil: Number.isFinite(p.unlockedUntil) && p.unlockedUntil > 0 ? p.unlockedUntil : 0,
     resets: Array.isArray(p.resets) ? p.resets.filter((t) => typeof t === 'string').slice(-10) : [],
   };
 }
@@ -85,8 +86,59 @@ function normalizeHistory(value) {
   return history;
 }
 
+// Which blocks a kid has tapped on a percent problem's block bar — visual working-out only, never
+// the graded answer (that's the number he types, kept in dailyWork). Its own bucket so a re-render or
+// reload doesn't lose his picture, without touching the shared per-item answer shape. Keyed
+// week -> day -> sheet -> item -> how many blocks (0..MAX_BLOCK_FILL) are filled, left to right.
+const MAX_BLOCK_FILL = 50;
+
+function normalizeBlockFills(value) {
+  const weeks = {};
+  const source = object(value);
+  Object.keys(source).forEach((weekId) => {
+    if (!safeKey(weekId)) return;
+    const days = {};
+    const sourceDays = object(source[weekId]);
+    Object.keys(sourceDays).forEach((dayKey) => {
+      if (!safeKey(dayKey)) return;
+      const sheets = {};
+      const sourceSheets = object(sourceDays[dayKey]);
+      Object.keys(sourceSheets).forEach((sheetId) => {
+        if (!safeKey(sheetId)) return;
+        const items = {};
+        const sourceItems = object(sourceSheets[sheetId]);
+        Object.keys(sourceItems).forEach((itemId) => {
+          const n = sourceItems[itemId];
+          if (safeKey(itemId) && Number.isInteger(n) && n > 0 && n <= MAX_BLOCK_FILL) items[itemId] = n;
+        });
+        if (Object.keys(items).length) sheets[sheetId] = items;
+      });
+      if (Object.keys(sheets).length) days[dayKey] = sheets;
+    });
+    if (Object.keys(days).length) weeks[weekId] = days;
+  });
+  return weeks;
+}
+
+export function blockFillFor(store, weekId, dayKey, sheetId, itemId) {
+  const n = ((((object(store.blockFills)[weekId] || {})[dayKey] || {})[sheetId] || {})[itemId]);
+  return Number.isInteger(n) && n > 0 ? n : 0;
+}
+
+// Returns a new store with one item's filled-block count set (0 removes it).
+export function setBlockFill(store, weekId, dayKey, sheetId, itemId, count) {
+  const next = JSON.parse(JSON.stringify(store));
+  const weeks = next.blockFills || (next.blockFills = {});
+  const days = weeks[weekId] || (weeks[weekId] = {});
+  const sheets = days[dayKey] || (days[dayKey] = {});
+  const items = sheets[sheetId] || (sheets[sheetId] = {});
+  if (Number.isInteger(count) && count > 0) items[itemId] = Math.min(count, MAX_BLOCK_FILL);
+  else delete items[itemId];
+  return next;
+}
+
 export function emptyStore() {
-  return { track: null, parent: defaultParent(), dailyWork: emptyDailyWorkState(), drawings: {}, history: {} };
+  return { track: null, parent: defaultParent(), dailyWork: emptyDailyWorkState(), drawings: {}, history: {}, blockFills: {} };
 }
 
 function normalize(value) {
@@ -97,6 +149,7 @@ function normalize(value) {
     dailyWork: normalizeDailyWork(s.dailyWork),
     drawings: normalizeDrawings(s.drawings),
     history: normalizeHistory(s.history),
+    blockFills: normalizeBlockFills(s.blockFills),
   };
 }
 

@@ -7,8 +7,7 @@
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek, weekdayKey } from '../cq/daily-work/schedule.js';
 import { coinCounts, coinSummary, coinTotal, displayValue, storedDay, storedItem } from '../cq/daily-work/daily-work-ui.js';
-import { checkParentPin, hasParentPin, setParentPin } from './pin.js';
-import { load } from './store.js';
+import { checkParentPin, hasParentPin, parentUnlocked, setParentPin } from './pin.js';
 import { dayStatus } from './calendar.js';
 import { sheetsForDay } from './sheet-view.js';
 
@@ -16,7 +15,7 @@ const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const esc = (value) => String(value).replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 
 export function createParentState() {
-  return { open: false, unlocked: false, selectedDay: null, pinMessage: '' };
+  return { open: false, selectedDay: null, pinMessage: '' };
 }
 
 function gradeSuggestion(item, value) {
@@ -67,33 +66,34 @@ export function gradeDailyWork(store, weekId, dayKey, choices, nowIso) {
   return { ...store, dailyWork: next };
 }
 
-export async function setDailyParentPin(pin, again) {
-  if (pin !== again) return { ok: false, message: 'Those PINs do not match.' };
+export async function setDailyParentPin(store, pin, again, now) {
+  if (pin !== again) return { store, ok: false, message: 'Those PINs do not match.' };
   try {
-    await setParentPin(pin);
-    return { ok: true, message: '' };
+    const nextStore = await setParentPin(store, pin, now);
+    return { store: nextStore, ok: true, message: '' };
   } catch {
-    return { ok: false, message: 'Use exactly 4 digits.' };
+    return { store, ok: false, message: 'Use exactly 4 digits.' };
   }
 }
 
-export async function checkDailyParentPin(pin, now) {
+export async function checkDailyParentPin(store, pin, now) {
   try {
-    const result = await checkParentPin(pin, now);
-    if (result.ok) return { unlocked: true, message: '' };
+    const result = await checkParentPin(store, pin, now);
+    if (result.ok) return { store: result.store, unlocked: true, message: '' };
     return {
+      store: result.store,
       unlocked: false,
       message: result.lockedMs
         ? `Too many tries — wait ${Math.ceil(result.lockedMs / 1000)} seconds`
         : `Wrong PIN — ${result.triesLeft} tries left before a 1-minute wait`,
     };
   } catch {
-    return { unlocked: false, message: 'Could not check the PIN. Please try again.' };
+    return { store, unlocked: false, message: 'Could not check the PIN. Please try again.' };
   }
 }
 
-function pinGateHtml(state) {
-  if (!hasParentPin()) {
+function pinGateHtml(store, state) {
+  if (!hasParentPin(store)) {
     return `<section class="cqd-parent-gate"><h1>Set a grown-up PIN</h1>
     <p>Choose a 4-digit PIN. This is a simple kids-only boundary, not a password.</p>
     <label class="cqd-field"><span>New 4-digit PIN</span><input class="cqd-input" type="password" inputmode="numeric" maxlength="4" data-parent-pin="new" aria-label="New 4 digit PIN"></label>
@@ -101,7 +101,7 @@ function pinGateHtml(state) {
     <p class="cqd-parent-error" aria-live="polite">${esc(state.pinMessage || '')}</p>
     <button type="button" class="cqd-button cqd-primary" data-action="daily-parent-set-pin">Save PIN</button></section>`;
   }
-  const remaining = Math.max(0, load().parent.lockUntil - Date.now());
+  const remaining = Math.max(0, store.parent.lockUntil - Date.now());
   const locked = remaining > 0;
   return `<section class="cqd-parent-gate"><h1>Grown-ups only</h1>
     <label class="cqd-field"><span>4-digit PIN</span><input class="cqd-input" type="password" inputmode="numeric" maxlength="4" data-parent-pin="enter" aria-label="4 digit PIN" ${locked ? 'disabled' : ''}></label>
@@ -149,6 +149,6 @@ function checkWorkHtml(store, state, todayIso) {
     <div class="cqd-actions"><button type="button" class="cqd-button cqd-primary" data-action="daily-parent-save" data-week="${esc(week.id)}" data-day="${selectedDay}">Save</button></div></section>`;
 }
 
-export function renderParent(store, state, todayIso) {
-  return state.unlocked ? checkWorkHtml(store, state, todayIso) : pinGateHtml(state);
+export function renderParent(store, state, todayIso, now = Date.now()) {
+  return parentUnlocked(store, now) ? checkWorkHtml(store, state, todayIso) : pinGateHtml(store, state);
 }

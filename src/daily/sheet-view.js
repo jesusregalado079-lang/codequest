@@ -6,6 +6,7 @@
 // full-page-per-sheet layout, so this file writes its own markup against the same data model.
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { quantityVessel, shadeCells, tallyMarks } from './manipulatives.js';
+import { blockView } from './blocks.js';
 import {
   OK_STATUS, allItems, coinCounts, coinTotal, displayValue, hasFixes, isComplete, itemMeta,
   itemWithSheet, ready, storedItem, updateDailyWork,
@@ -144,7 +145,28 @@ function percentGridItem(data, item, state) {
   </li>`;
 }
 
-function renderItem(week, dayKey, sheet, item, state, locked) {
+// The adaptive block bar for a percent problem (see blocks.js): equal blocks sized to the question,
+// tapped to fill left to right, with as much labelling as the sheet's `help` level allows. The graded
+// answer is still the percent he TYPES below — the blocks are working-out only and never say whether
+// anything is right. Each block is a real button (a max of 10 per row, so every one is a big target).
+function blockBarItem(data, item, state, view) {
+  const value = state.value === null || state.value === undefined ? '' : String(state.value);
+  const blocks = Array.from({ length: view.count }, (_, i) => {
+    const block = i + 1;
+    const label = view.labels[i];
+    const name = `Block ${block} of ${view.count}${label ? `, ${label}` : ''}`;
+    return `<button type="button" class="cqd-block ${block <= view.filled ? 'is-filled' : ''} ${label ? 'has-label' : ''}" data-action="daily-block-fill" data-block="${block}" data-count="${view.count}" aria-pressed="${block <= view.filled}" aria-label="${esc(name)}" ${data}><span class="cqd-block-label" aria-hidden="true">${label ? esc(label) : ''}</span></button>`;
+  }).join('');
+  return `<li class="cqd-item cqd-item-blocks" data-help="${esc(view.help)}">
+    <p class="cqd-item-prompt">${esc(item.prompt)}</p>
+    <div class="cqd-block-bar" role="group" aria-label="${view.count} equal blocks make the whole" style="--cqd-block-count:${view.count};--cqd-block-cols:${view.cols}">${blocks}</div>
+    <p class="cqd-block-caption">${esc(view.caption)}</p>
+    ${view.readout ? `<p class="cqd-block-readout" aria-live="polite">${esc(view.readout)}</p>` : ''}
+    <label class="cqd-field cqd-block-answer"><span>What percent?</span><span class="cqd-block-input"><input class="cqd-input" type="text" inputmode="decimal" value="${esc(value)}" data-action="daily-input" data-kind="numeric" ${data}><b aria-hidden="true">%</b></span></label>
+  </li>`;
+}
+
+function renderItem(week, dayKey, sheet, item, state, locked, fillOf) {
   const data = dataAttrs(week, dayKey, sheet, item);
   if (locked) return `<li class="cqd-item cqd-item-locked">${lockedRow(item, state)}</li>`;
   if (item.kind === 'coin-total') return coinItem(week, dayKey, sheet, item, state);
@@ -162,6 +184,10 @@ function renderItem(week, dayKey, sheet, item, state, locked) {
       <div class="cqd-scale" aria-label="Choose a number">${Array.from({ length: item.scaleMax || 0 }, (_, index) => { const value = index + 1; return `<button type="button" class="cqd-chip" data-action="daily-scale" data-value="${value}" aria-pressed="${state.value === value}" ${data}>${value}</button>`; }).join('')}</div>
     </li>`;
   }
+  if (item.kind === 'numeric' && item.help) {
+    const view = blockView(item, fillOf ? fillOf(item) : 0);
+    if (view) return blockBarItem(data, item, state, view);
+  }
   if (item.kind === 'numeric' && item.unit === 'percent' && Number.isInteger(item.answer)) {
     return percentGridItem(data, item, state);
   }
@@ -175,7 +201,7 @@ function renderItem(week, dayKey, sheet, item, state, locked) {
 
 // One sheet's worked-example header plus its items — the page chrome (subject bar, prev/next,
 // submit) is added by app.js, which also knows the sheet's position among the day's other sheets.
-export function renderSheetArticle(week, dayKey, sheet, dayState, reopened) {
+export function renderSheetArticle(week, dayKey, sheet, dayState, reopened, fillOf) {
   return `<article class="cqd-sheet" data-subject="${esc(sheet.subject)}">
     <header class="cqd-sheet-head">
       <span class="cqd-subject-icon" aria-hidden="true"></span>
@@ -187,7 +213,7 @@ export function renderSheetArticle(week, dayKey, sheet, dayState, reopened) {
     ${sheet.citation ? `<p class="cqd-citation">${esc(sheet.citation)}</p>` : ''}
     <ol class="cqd-items">${(sheet.items || []).map((item) => {
       const state = storedItem(dayState, sheet.id, item.id);
-      return renderItem(week, dayKey, sheet, item, state, state.status === OK_STATUS && reopened);
+      return renderItem(week, dayKey, sheet, item, state, state.status === OK_STATUS && reopened, fillOf);
     }).join('')}</ol>
     <footer class="cqd-sheet-foot" aria-hidden="true"><span class="cqd-sheet-foot-dot"></span><span class="cqd-sheet-foot-rule"></span></footer>
   </article>`;

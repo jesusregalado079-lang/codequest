@@ -26,6 +26,12 @@ const numeric = (id, prompt, answer) => Item(id, 'numeric', prompt, { answer });
 // Same numeric item, plus a `unit` the dedicated iPad page's percent-shading grid checks for
 // (src/daily/sheet-view.js) — purely additive, the hub's plain-numeric renderer never looks at it.
 const percent = (id, prompt, answer) => Item(id, 'numeric', prompt, { answer, unit: 'percent' });
+// A percent problem shown with the adaptive block bar (src/daily/blocks.js): `part` out of `whole`,
+// and `help` = how much the bar labels for the kid on that sheet ('all' | 'unit' | 'clues' | 'none' —
+// authored to fade across the week). The answer is (part * 100) / whole so it stays an exact integer
+// (0.3 * 100 is 30.000000000000004 in JS). Only additive fields, so the hub and older readers ignore them.
+const blocks = (id, prompt, part, whole, help) => Item(id, 'numeric', prompt, { answer: (part * 100) / whole, unit: 'percent', part, whole, help });
+const STEPS = '(1) Count the blocks in the whole. (2) Find what ONE block is worth: 100 ÷ the number of blocks. (3) Count the blocks you have, then multiply.';
 const coin = (id, prompt, targetCents, coinSet = coins) => CoinItem(id, prompt, targetCents, coinSet);
 const codeQuest = (id) => Sheet(id, 'codequest', 'CodeQuest',
   'Time to play! Fill this out after you finish.\n\n🎮 CodeQuest Day! Play CodeQuest today for at least 15–20 minutes. Try to reach a new level!', null, [
@@ -129,53 +135,64 @@ const standard = Week('week-11', 'Week 11', [
         percent('pages', 'You read 21 out of 30 pages. Estimate the percent.', 70),
       ]),
   ]),
+  // Tue-Fri were re-authored 2026-09-23 as a gentle ramp after Monday's sheet proved too big a jump for
+  // the 10yo (docs/computer-quest/daily-work.md §2a): the SAME three steps every day, blocks that fit
+  // each question, and less help each sheet — all labels (Tue) -> just the unit (Wed) -> one or two clue
+  // blocks (Thu) -> none (Fri). Monday is untouched: it was already finished on the old 100-square grid.
   tuesday: Day([
     Sheet('finding-the-percent', 'math', 'Finding the Percent',
-      'Keep practicing the same method: write the fraction, simplify it, then name the percent. If the simplified fraction is not one of your benchmarks, think about what it would be out of 100.',
-      '12 out of 20 = 12/20 = 3/5 = 60%. (3/5 is the same as 6/10, which is 60 out of 100.)', [
-        percent('12-of-20', '12 out of 20 = ?', 60), percent('14-of-20', '14 out of 20 = ?', 70),
-        percent('9-of-12', '9 out of 12 = ?', 75), percent('7-of-28', '7 out of 28 = ?', 25),
-        percent('20-of-25', '20 out of 25 = ?', 80),
+      `Percent means "out of 100." Big numbers are hard, so we break the whole into equal blocks — small, easy pieces.\n\nEvery problem today comes with blocks to help you. Do the same 3 steps each time: ${STEPS} Tap the blocks to fill them in, then type the percent.`,
+      '3 out of 4. The whole is 4 blocks. 100 ÷ 4 = 25, so 1 block = 25%. You have 3 blocks: 3 × 25 = 75. So 3 out of 4 = 75%.', [
+        blocks('1-of-4', '1 out of 4 is what percent?', 1, 4, 'all'),
+        blocks('2-of-5', '2 out of 5 is what percent?', 2, 5, 'all'),
+        blocks('3-of-10', '3 out of 10 is what percent?', 3, 10, 'all'),
+        blocks('2-of-8', '2 out of 8 is what percent?', 2, 8, 'all'),
+        blocks('6-of-10', '6 out of 10 is what percent?', 6, 10, 'all'),
       ]),
     codeQuest('codequest'),
   ]),
   wednesday: Day([
     Sheet('finding-the-percent', 'math', 'Finding the Percent',
-      'Here is another way to find the percent: figure out what you would need to multiply the bottom number by to reach 100, then multiply the top number by that same amount. That gives you the percent directly.',
-      '17 out of 20 = 17/20. Since 20 × 5 = 100, multiply the top too: 17 × 5 = 85. So 85%.', [
-        percent('17-of-20', '17 out of 20 = ?', 85), percent('11-of-20', '11 out of 20 = ?', 55),
-        percent('22-of-25', '22 out of 25 = ?', 88), percent('6-of-24', '6 out of 24 = ?', 25),
+      `Same 3 steps today — but the blocks show you less. You still see what ONE block is worth; you do the counting and the multiplying.\n\nSome totals are big, like 12. Then a block holds a group: 12 split into 4 blocks means each block holds 3, and 100 ÷ 4 = 25, so each block is 25%. ${STEPS}`,
+      '6 out of 12. Split 12 into 4 blocks of 3. 100 ÷ 4 = 25, so 1 block = 25%. 6 is 2 blocks (3 + 3): 2 × 25 = 50. So 6 out of 12 = 50%.', [
+        blocks('3-of-5', '3 out of 5 is what percent?', 3, 5, 'unit'),
+        blocks('7-of-10', '7 out of 10 is what percent?', 7, 10, 'unit'),
+        blocks('4-of-8', '4 out of 8 is what percent?', 4, 8, 'unit'),
+        blocks('3-of-12', '3 out of 12 is what percent?', 3, 12, 'unit'),
+        blocks('9-of-12', '9 out of 12 is what percent?', 9, 12, 'unit'),
       ]),
     codeQuest('codequest'),
   ]),
   thursday: Day([
     Sheet('finding-the-percent', 'math', 'Finding the Percent',
-      'This is exactly how test scores, sports stats, and surveys get turned into percents in real life. Use the same method: fraction first, then simplify to find the percent.',
-      'Basketball: 15 out of 20 free throws made. 15/20 = 3/4 = 75%.', [
-        percent('test', '27 out of 30 on a test = ?', 90),
-        percent('basketball', 'Basketball: 15 out of 20 free throws made = ?', 75),
-        percent('survey', 'Survey: 40 out of 50 students prefer pizza = ?', 80),
-        percent('spelling', 'Spelling: 17 out of 20 correct = ?', 85),
+      `Today the blocks give you only a clue or two. Use them to figure out what ONE block is worth, then count and multiply like always.\n\nBig totals are grouped into blocks: 20 becomes 4 blocks of 5, so each block is 25%. ${STEPS}`,
+      '15 out of 20. Group 20 into 4 blocks of 5. 100 ÷ 4 = 25, so 1 block = 25%. 15 is 3 blocks (5 + 5 + 5): 3 × 25 = 75. So 15 out of 20 = 75%.', [
+        blocks('10-of-20', '10 out of 20 is what percent?', 10, 20, 'clues'),
+        blocks('20-of-25', '20 out of 25 is what percent?', 20, 25, 'clues'),
+        blocks('21-of-30', '21 out of 30 is what percent?', 21, 30, 'clues'),
+        blocks('5-of-25', '5 out of 25 is what percent?', 5, 25, 'clues'),
       ]),
     Sheet('word-problems', 'word-problems', 'Word Problems',
-      'Same method as Math, applied to real situations. Write the fraction, simplify, then name the percent.',
-      'Video game: beat 45 out of 50 levels. 45/50 = 9/10 = 90%.', [
-        percent('video-game', 'Video game: beat 45 out of 50 levels. What percent?', 90),
-        percent('summer', 'Survey of 40 kids: 32 like summer best. What percent?', 80),
-        numeric('free-throws', 'Free throws in practice: 14 out of 16 made. What percent?', 87.5),
+      'Read the story. The TOTAL is the whole, and the piece you have is the part. Then use the same 3 steps with the blocks.',
+      'You hit 6 out of 8 targets. The whole is 8 blocks. 100 ÷ 8 = 12.5, so 1 block = 12.5%. 6 × 12.5 = 75. So you hit 75% of the targets.', [
+        blocks('shots', 'Your team made 12 out of 16 shots. What percent?', 12, 16, 'clues'),
+        blocks('levels', 'You finished 6 out of 24 levels. What percent?', 6, 24, 'clues'),
       ]),
   ]),
   friday: Day([
     Sheet('finding-the-percent', 'math', 'Finding the Percent',
-      "Some of these ask you to find a percent OF a number (your old skill). Others ask what percent one number IS of another (your new skill this week). Read each one carefully before you start.\n\nMixed review: some ask 'what percent is A of B,' others ask 'what is X% of a number.' Read carefully to see which direction each question goes.", null, [
-        percent('15-of-20', 'What percent is 15 out of 20?', 75), percent('25-percent-of-60', '25% of 60 = ?', 15),
-        percent('9-of-12', 'What percent is 9 out of 12?', 75), percent('90-percent-of-40', '90% of 40 = ?', 36),
-        percent('6-of-8', 'What percent is 6 out of 8?', 75),
+      `Show what you know! The blocks are here, but with no labels — you work out what ONE block is worth all by yourself. Same 3 steps: ${STEPS}`,
+      null, [
+        blocks('5-of-20', '5 out of 20 is what percent?', 5, 20, 'none'),
+        blocks('17-of-20', '17 out of 20 is what percent?', 17, 20, 'none'),
+        blocks('8-of-16', '8 out of 16 is what percent?', 8, 16, 'none'),
+        blocks('40-of-50', '40 out of 50 is what percent?', 40, 50, 'none'),
+        blocks('21-of-28', '21 out of 28 is what percent?', 21, 28, 'none'),
       ]),
     Sheet('word-problems', 'word-problems', 'Word Problems',
-      'Work through each one using the fraction method you practiced all week. Show your fraction before you write the final percent.\n\nShow What You Know! Try these on your own.', null, [
-        percent('big-test', 'You get 42 out of 50 on a big test. What percent?', 84),
-        percent('soccer', 'Your soccer team wins 9 out of 12 games. What percent?', 75),
+      'Show what you know! Find the whole and the part in each story, then use the blocks.', null, [
+        blocks('big-test', 'You got 45 out of 50 on a big test. What percent?', 45, 50, 'none'),
+        blocks('soccer', 'Your soccer team wins 9 out of 12 games. What percent?', 9, 12, 'none'),
       ]),
   ]),
 });
