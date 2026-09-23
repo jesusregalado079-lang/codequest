@@ -1,7 +1,7 @@
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
 import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
-import { blockFillFor, load, save, setBlockFill, setTrack, drawingFor, saveDrawing, snapshotHistory } from './store.js';
+import { blockFillFor, commit, drawingFor, historyFor, load, refreshed, saveDrawing, setBlockFill, snapshotHistory, withTrack } from './store.js';
 import { blockPlan, nextFill } from './blocks.js';
 import { currentWeekSnapshots, renderCalendar, renderVerseScreen } from './calendar.js';
 import { applyDailyAction, dayComplete, dayReady, dayReopened, renderSheetArticle, sheetsForDay } from './sheet-view.js';
@@ -31,22 +31,47 @@ let viewedMonth = { year: today.getFullYear(), month: today.getMonth() };
 const MIN_MONTHS_BACK = 12; // how far into history the boys can look back, from today
 const MAX_MONTHS_FORWARD = 1; // never more than "next month" — there is no future content to show
 
-function persist(nextStore) {
-  store = nextStore;
-  save(store);
+// Every write goes through here. The change is applied to the latest saved answers (see store.js's
+// commit), and a failed save is shown to the kid instead of being lost silently.
+let saveOk = true;
+
+function showSaveAlert() {
+  let alert = document.getElementById('cqd-save-alert');
+  if (!alert) {
+    alert = document.createElement('div');
+    alert.id = 'cqd-save-alert';
+    alert.className = 'cqd-save-alert';
+    alert.setAttribute('role', 'alert');
+    alert.innerHTML = '<strong>This iPad is not saving right now.</strong> Keep this page open and tell a grown-up before you close it.';
+    document.body.appendChild(alert);
+  }
+  alert.hidden = saveOk;
+}
+
+function persist(change, options) {
+  const result = commit(store, change, options);
+  store = result.store;
+  if (result.core) { saveOk = result.core.ok; showSaveAlert(); }
+}
+
+// Pulls in answers another tab saved since this one loaded (never replacing unsaved ones).
+function syncStore() {
+  const latest = refreshed(store);
+  if (latest) store = latest;
 }
 
 // Folds the current real week's live status into history under real calendar dates, so it
 // survives once this week's content eventually rotates out (see store.js's snapshotHistory).
-// Safe to call on every calendar render — it's an upsert, not an append log. Accumulates all of
-// this week's entries into one store value before persisting once, not one save() per entry.
+// Only writes when a day's status actually changed, so simply looking at the calendar never
+// rewrites (and can never overwrite) saved answers.
 function snapshotToday() {
   const iso = todayIso();
-  let next = store;
-  currentWeekSnapshots(store, iso).forEach((entry) => {
-    next = snapshotHistory(next, entry.iso, entry.weekId, entry.dayKey, entry.status);
+  const changed = currentWeekSnapshots(store, iso).filter((entry) => {
+    const saved = historyFor(store, entry.iso);
+    return !saved || saved.status !== entry.status || saved.weekId !== entry.weekId || saved.dayKey !== entry.dayKey;
   });
-  if (next !== store) persist(next);
+  if (!changed.length) return;
+  persist((s) => changed.reduce((next, entry) => snapshotHistory(next, entry.iso, entry.weekId, entry.dayKey, entry.status), s));
 }
 
 function detachDrawing() {
@@ -124,11 +149,12 @@ function setupDrawing() {
   sizeCanvas(canvas, stage);
   loadDrawing(canvas, drawingFor(store, week.id, route.dayKey, sheet.id));
   drawingController = attachDrawing(canvas, {
-    onStroke: (dataUrl) => { persist(saveDrawing(store, week.id, route.dayKey, sheet.id, dataUrl)); },
+    onStroke: (dataUrl) => { persist((s) => saveDrawing(s, week.id, route.dayKey, sheet.id, dataUrl), { core: false, ink: true, keep: [week.id, route.dayKey, sheet.id] }); },
   });
 }
 
 function render(motionIntent) {
+  syncStore();
   const previousVisuals = motion.capture(motionIntent);
   if (!store.track) { app.innerHTML = trackPickerHtml(); }
   else if (route.screen === 'parent') {
@@ -163,7 +189,7 @@ function onClick(event) {
   const action = button.dataset.action;
 
   if (action === 'pick-track') {
-    persist(setTrack(button.dataset.track));
+    persist((s) => withTrack(s, button.dataset.track));
     render();
     return;
   }
@@ -222,7 +248,7 @@ function onClick(event) {
   if (action.indexOf('daily-parent-') === 0) {
     if (action === 'daily-parent-open') { detachDrawing(); parentSession += 1; parentState = createParentState(); parentState.open = true; route = { screen: 'parent', dayKey: null, sheetIndex: 0 }; render(); return; }
     if (action === 'daily-parent-exit') { parentSession += 1; parentState = createParentState(); route = { screen: 'calendar', dayKey: null, sheetIndex: 0 }; render(); return; }
-    if (action === 'daily-parent-lock') { parentSession += 1; persist(lockParent(store)); parentState = createParentState(); route = { screen: 'calendar', dayKey: null, sheetIndex: 0 }; render(); return; }
+    if (action === 'daily-parent-lock') { parentSession += 1; persist((s) => lockParent(s)); parentState = createParentState(); route = { screen: 'calendar', dayKey: null, sheetIndex: 0 }; render(); return; }
     if (action === 'daily-parent-set-pin') {
       if (pinPending) return;
       const pin = app.querySelector('[data-parent-pin="new"]');
@@ -230,7 +256,7 @@ function onClick(event) {
       const session = parentSession;
       pinPending = true;
       setDailyParentPin(store, pin ? pin.value : '', again ? again.value : '').then((result) => {
-        if (result.store.parent !== store.parent) persist({ ...store, parent: result.store.parent });
+        if (result.store.parent !== store.parent) persist((s) => ({ ...s, parent: result.store.parent }));
         pinPending = false;
         if (session !== parentSession || route.screen !== 'parent') return;
         parentState.pinMessage = result.message;
@@ -244,7 +270,7 @@ function onClick(event) {
       const session = parentSession;
       pinPending = true;
       checkDailyParentPin(store, pin ? pin.value : '').then((result) => {
-        if (result.store.parent !== store.parent) persist({ ...store, parent: result.store.parent });
+        if (result.store.parent !== store.parent) persist((s) => ({ ...s, parent: result.store.parent }));
         pinPending = false;
         if (session !== parentSession || route.screen !== 'parent') return;
         parentState.pinMessage = result.message;
@@ -262,7 +288,7 @@ function onClick(event) {
     if (action === 'daily-parent-save') {
       const choices = {};
       app.querySelectorAll('[data-action="daily-parent-grade"][aria-pressed="true"]').forEach((choice) => { choices[choice.dataset.gradeKey] = choice.dataset.choice; });
-      persist(gradeDailyWork(store, button.dataset.week, button.dataset.day, choices, new Date().toISOString()));
+      persist((s) => gradeDailyWork(s, button.dataset.week, button.dataset.day, choices, new Date().toISOString()));
       render();
       return;
     }
@@ -277,7 +303,7 @@ function onClick(event) {
     const plan = item && blockPlan(item.part, item.whole);
     if (!plan) return;
     const next = nextFill(blockFillFor(store, data.week, data.day, data.sheet, data.item), Number(button.dataset.block), plan.count);
-    persist(setBlockFill(store, data.week, data.day, data.sheet, data.item, next));
+    persist((s) => setBlockFill(s, data.week, data.day, data.sheet, data.item, next));
     render();
     return;
   }
@@ -286,7 +312,7 @@ function onClick(event) {
     const data = { week: button.dataset.week, day: button.dataset.day, sheet: button.dataset.sheet, item: button.dataset.item, index: button.dataset.index, denom: button.dataset.denom };
     if (action === 'daily-submit' && !dayReadyForSubmit()) return;
     const value = action === 'daily-word' ? button.dataset.word : action === 'daily-scale' ? button.dataset.value : null;
-    persist(applyDailyAction(store, action, data, value, new Date().toISOString()));
+    persist((s) => applyDailyAction(s, action, data, value, new Date().toISOString()));
     render();
   }
 }
@@ -302,7 +328,7 @@ function onInput(event) {
   const input = event.target.closest('[data-action="daily-input"]');
   if (!input || !app.contains(input)) return;
   const data = { week: input.dataset.week, day: input.dataset.day, sheet: input.dataset.sheet, item: input.dataset.item };
-  persist(applyDailyAction(store, 'daily-input', data, input.value, new Date().toISOString()));
+  persist((s) => applyDailyAction(s, 'daily-input', data, input.value, new Date().toISOString()));
   const submit = app.querySelector('[data-action="daily-submit"]');
   if (submit) submit.disabled = !dayReadyForSubmit();
 }
@@ -319,7 +345,7 @@ function onGridClick(event) {
   const row = Math.min(9, Math.max(0, Math.floor((event.clientY - rect.top) / (rect.height / 10))));
   const count = row * 10 + col + 1;
   const data = { week: grid.dataset.week, day: grid.dataset.day, sheet: grid.dataset.sheet, item: grid.dataset.item };
-  persist(applyDailyAction(store, 'daily-percent-set', data, count, new Date().toISOString()));
+  persist((s) => applyDailyAction(s, 'daily-percent-set', data, count, new Date().toISOString()));
   render();
 }
 
@@ -335,6 +361,22 @@ function keepFocusedAnswerVisible() {
 }
 
 function checkFocusedAnswer() { requestAnimationFrame(keepFocusedAnswerVisible); }
+
+// Another tab (or this one, restored from the background) may have saved answers meanwhile. Nothing is
+// ever lost either way, because writes merge onto the latest saved copy; this just keeps the screen current.
+// The sheet screen is left alone so a refresh never steals focus from an answer being typed.
+function refreshScreen() {
+  if (route.screen === 'calendar') render();
+  else syncStore();
+}
+window.addEventListener('storage', refreshScreen);
+window.addEventListener('pageshow', (event) => { if (event.persisted) refreshScreen(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshScreen();
+  else if (!saveOk) persist((s) => s); // one more try to save anything typed while storage was full
+});
+// Ask Safari not to clear this site's saved answers when the iPad is short on space (best effort).
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch { /* optional */ }
 
 app.addEventListener('click', onClick);
 app.addEventListener('click', onGridClick);

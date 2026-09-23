@@ -4,6 +4,21 @@
 // worksheet beneath the canvas shows through. Clear still wipes the whole canvas.
 const MAX_SIDE = 1600; // backing-buffer cap: keeps a saved frame's data URL well under store.js's limit
 const ERASER_WIDTH = 24;
+const MAX_INK_CHARS = 450000; // one sheet's saved drawing; store.js also budgets the total across sheets
+
+// The saved frame for a stroke: WebP where the browser can encode it (Safari cannot, and quietly returns
+// a far bigger PNG instead), redrawn at half size once if that is still too large, or null if it will not
+// fit at all. A null frame is simply not saved; the drawing stays on screen for this visit.
+export function encodeInk(canvas) {
+  const first = canvas.toDataURL('image/webp', 0.8);
+  if (first.length <= MAX_INK_CHARS) return first;
+  const small = document.createElement('canvas');
+  small.width = Math.max(1, Math.round(canvas.width / 2));
+  small.height = Math.max(1, Math.round(canvas.height / 2));
+  small.getContext('2d').drawImage(canvas, 0, 0, small.width, small.height);
+  const second = small.toDataURL('image/webp', 0.8);
+  return second.length <= MAX_INK_CHARS ? second : null;
+}
 
 export function sizeCanvas(canvas, container) {
   const rect = container.getBoundingClientRect();
@@ -65,7 +80,8 @@ export function attachDrawing(canvas, { color = '#1c3d5a', lineWidth = 4, onStro
     activePointer = null;
     ctx.restore();
     try { canvas.releasePointerCapture(event.pointerId); } catch { /* already released */ }
-    if (onStroke) onStroke(canvas.toDataURL('image/webp', 0.8));
+    const frame = encodeInk(canvas);
+    if (onStroke && frame) onStroke(frame);
   }
 
   canvas.addEventListener('pointerdown', down);
@@ -83,7 +99,7 @@ export function attachDrawing(canvas, { color = '#1c3d5a', lineWidth = 4, onStro
       if (onStroke) onStroke(null);
     },
     toDataUrl() {
-      return canvas.toDataURL('image/webp', 0.8);
+      return encodeInk(canvas);
     },
     detach() {
       canvas.removeEventListener('pointerdown', down);

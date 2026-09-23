@@ -1211,3 +1211,7 @@ button.cqd-month-cell.is-today:active { box-shadow: 0 2px 0 var(--season-ink); }
 .cqd-block-input .cqd-input { width: 9ch; flex: none; }
 .cqd-block-input b { font-size: 1.3rem; }
 @media (prefers-reduced-motion: reduce) { .cqd-block { transition: none; } .cqd-block:active { transform: none; } }
+
+/* Shown only when the iPad refuses to save answers (storage full or blocked); see app.js persist(). */
+.cqd-save-alert { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); z-index: 60; padding: 14px 16px; border-radius: 12px; background: #7a1f1f; color: #fff; font-weight: 700; line-height: 1.35; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
+.cqd-save-alert[hidden] { display: none; }

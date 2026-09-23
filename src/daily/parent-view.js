@@ -134,17 +134,41 @@ function checkedItemHtml(sheet, item, state) {
     ${state.checkedAt ? `<p class="cqd-muted">Checked ${esc(new Date(state.checkedAt).toLocaleString())}</p>` : ''}</li>`;
 }
 
+const dayName = (dayKey) => dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+
+function dayStatuses(store, week) {
+  return DAY_KEYS.map((dayKey) => ({ dayKey, status: dayStatus(storedDay(store, week.id, dayKey), sheetsForDay(week, dayKey)) }));
+}
+
+// The day the check-work page opens on. Opening on today is wrong once a kid is behind: on a Wednesday
+// with only Monday done, that showed "Not answered" for everything. So: a day waiting on a parent comes
+// first (the latest one), then today if it has work, then the latest day with any work, then today.
+export function suggestedDay(store, week, todayIso) {
+  const rows = dayStatuses(store, week);
+  const waiting = rows.filter((row) => row.status === 'awaiting-check');
+  if (waiting.length) return waiting[waiting.length - 1].dayKey;
+  const todayKey = weekdayKey(todayIso);
+  const today = rows.find((row) => row.dayKey === todayKey);
+  if (today && today.status !== 'not-started') return todayKey;
+  const started = rows.filter((row) => row.status !== 'not-started');
+  if (started.length) return started[started.length - 1].dayKey;
+  return today ? todayKey : 'monday';
+}
+
 function checkWorkHtml(store, state, todayIso) {
   const week = currentWeek(DAILY_WORK, store.track, todayIso);
   if (!week) return '<section class="cqd-empty"><h1>No Daily Work yet</h1></section>';
-  const todayKey = weekdayKey(todayIso);
-  const selectedDay = DAY_KEYS.includes(state.selectedDay) ? state.selectedDay : (DAY_KEYS.includes(todayKey) ? todayKey : 'monday');
+  const selectedDay = DAY_KEYS.includes(state.selectedDay) ? state.selectedDay : suggestedDay(store, week, todayIso);
   state.selectedDay = selectedDay;
   const sheets = sheetsForDay(week, selectedDay);
   const saved = storedDay(store, week.id, selectedDay);
+  const others = dayStatuses(store, week).filter((row) => row.dayKey !== selectedDay && row.status !== 'not-started');
+  const emptyHint = dayStatus(saved, sheets) === 'not-started' && others.length
+    ? `<p class="cqd-muted cqd-empty-hint">Nothing is saved for ${dayName(selectedDay)} yet. Work is saved for: ${others.map((row) => `<button type="button" class="cqd-link-button" data-action="daily-parent-day" data-day="${row.dayKey}">${dayName(row.dayKey)}</button>`).join(' ')}</p>` : '';
   return `<section class="cqd-parent"><header class="cqd-calendar-head"><span class="cqd-eyebrow">PARENT MODE · ${esc(week.label.toUpperCase())}</span><h1>Check work</h1></header>
     ${trackerHtml(store, week, selectedDay)}
     <p class="cqd-muted">${saved.submittedAt ? `Submitted ${esc(new Date(saved.submittedAt).toLocaleString())}` : 'Not submitted yet. You can still check any item.'}</p>
+    ${emptyHint}
     ${sheets.length ? sheets.map((sheet) => `<article class="cqd-sheet cqd-check-sheet"><h3>${esc(sheet.title)}</h3><ol class="cqd-check-items">${sheet.items.map((item) => checkedItemHtml(sheet, item, storedItem(saved, sheet.id, item.id))).join('')}</ol></article>`).join('') : '<p class="cqd-muted">No work for this day.</p>'}
     <div class="cqd-actions"><button type="button" class="cqd-button cqd-primary" data-action="daily-parent-save" data-week="${esc(week.id)}" data-day="${selectedDay}">Save</button></div></section>`;
 }

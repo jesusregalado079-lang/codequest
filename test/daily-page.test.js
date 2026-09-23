@@ -511,3 +511,162 @@ assert.equal(({}).d, undefined, 'the prototype was never polluted');
 assert.deepEqual(fills.blockFills['week-11'].tuesday['finding-the-percent'], { ok: 4 }, 'zero, negative, fractional, oversized, string and constructor entries are all rejected');
 
 console.log('ok — daily blocks.js: plans/grouping, fill rule, help levels, stable clues, neutrality, store fills');
+
+// --- store.js: answers must always save (full storage, stale tabs, drawings split off) -----------
+// Root cause being guarded: answers a boy typed never reached storage, so the parent's check page said
+// "not answered". Three ways that happened: (1) drawings shared the answers' localStorage blob and the
+// iPad's small quota filled up, so every later save threw; (2) a second/stale tab wrote its old copy over
+// newer answers; (3) nothing told anyone a save had failed.
+
+class QuotaStorage {
+  #data = new Map();
+  constructor(limit) { this.limit = limit; }
+  get used() { let n = 0; this.#data.forEach((v, k) => { n += k.length + v.length; }); return n; }
+  getItem(key) { return this.#data.has(key) ? this.#data.get(key) : null; }
+  setItem(key, value) {
+    const next = this.used - (this.#data.has(key) ? key.length + this.#data.get(key).length : 0) + key.length + String(value).length;
+    if (next > this.limit) throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    this.#data.set(key, String(value));
+  }
+  removeItem(key) { this.#data.delete(key); }
+  clear() { this.#data.clear(); }
+}
+const CORE_KEY = 'codequest-daily-v1';
+const INK_KEY = 'codequest-daily-ink-v1';
+const { applyDailyAction } = await import('../src/daily/sheet-view.js');
+const itemA = { week: 'week-11', day: 'monday', sheet: 'finding-the-percent', item: '10-of-20' };
+const itemB = { week: 'week-11', day: 'monday', sheet: 'word-problems', item: 'quiz' };
+const NOW = '2026-09-23T15:00:00.000Z';
+const typed = (s, data, text) => applyDailyAction(s, 'daily-input', data, text, NOW);
+const answerOf = (s, data) => s.dailyWork.weeks[data.week].days[data.day].sheets[data.sheet].items[data.item].value;
+const fresh = (limit = Infinity) => { globalThis.localStorage = new QuotaStorage(limit); };
+const bigInk = (n) => `data:image/webp;base64,${'A'.repeat(n)}`;
+
+// A store saved before drawings had their own key: drawings move across, answers stay, nothing is lost.
+fresh();
+localStorage.setItem(CORE_KEY, JSON.stringify({
+  track: 'standard',
+  dailyWork: { weeks: { 'week-11': { days: { monday: { sheets: { 'finding-the-percent': { items: { '10-of-20': { value: 50, status: 'answered', checkedAt: null } } } }, submittedAt: null } } } } },
+  drawings: { 'week-11': { monday: { 'finding-the-percent': bigInk(2000) } } },
+}));
+const migrated = store.load();
+assert.equal(answerOf(migrated, itemA), 50, 'migration keeps the answer');
+assert.equal(store.drawingFor(migrated, 'week-11', 'monday', 'finding-the-percent'), bigInk(2000), 'migration keeps the drawing');
+assert.equal('drawings' in JSON.parse(localStorage.getItem(CORE_KEY)), false, 'the answers blob no longer carries drawings');
+assert.equal(JSON.parse(localStorage.getItem(INK_KEY))['week-11'].monday['finding-the-percent'], bigInk(2000), 'the drawing now lives under its own key');
+assert.deepEqual(store.load(), migrated, 'loading again after migration gives the same store');
+
+// A full iPad: the answer still saves by dropping the scratch drawings, and nothing throws.
+fresh();
+let s1 = store.emptyStore();
+s1 = { ...store.withTrack(s1, 'standard') };
+s1 = store.saveDrawing(s1, 'week-11', 'monday', 'finding-the-percent', bigInk(5000));
+assert.equal(store.save(s1).ok, true);
+localStorage.limit = localStorage.used + 60; // room for a few characters, not for a real answer
+const fullResult = store.commit(s1, (s) => typed(s, itemA, '50'));
+assert.equal(fullResult.core.ok, true, 'the answer saved even though storage was full');
+assert.equal(fullResult.core.evictedInk, true, 'by dropping saved drawings, not answers');
+assert.equal(answerOf(store.load(), itemA), 50, 'the answer is really in storage');
+assert.equal(localStorage.getItem(INK_KEY), null, 'saved drawings were freed');
+assert.equal(store.drawingFor(fullResult.store, 'week-11', 'monday', 'finding-the-percent'), bigInk(5000), 'the drawing is still on screen this visit');
+
+// Storage that refuses everything: no throw, the failure is reported, and the answers are kept in memory
+// and saved as soon as storage works again (the next commit must not throw away the unsaved ones).
+fresh(20);
+const dead = store.commit(store.emptyStore(), (s) => typed(store.withTrack(s, 'standard'), itemA, '50'));
+assert.equal(dead.core.ok, false, 'a failed save is reported, never thrown');
+assert.equal(answerOf(dead.store, itemA), 50, 'the typed answer is still held in memory');
+assert.equal(store.refreshed(dead.store), null, 'unsaved answers are never replaced by older saved data');
+const dead2 = store.commit(dead.store, (s) => typed(s, itemB, '9'));
+assert.equal(answerOf(dead2.store, itemA), 50, 'a second failing save keeps the first unsaved answer');
+localStorage.limit = Infinity;
+const healed = store.commit(dead2.store, (s) => s);
+assert.equal(healed.core.ok, true, 'saving works again once there is room');
+const afterHeal = store.load();
+assert.equal(answerOf(afterHeal, itemA), 50, 'the answer typed while storage was full is saved after all');
+assert.equal(answerOf(afterHeal, itemB), 9, '...and so is the one typed after it');
+
+// A save that failed earlier must not be lost when the next one works: the unsaved answer is only in
+// memory, and the (older) saved copy must not be used as the base for the next change.
+fresh();
+const c1 = store.commit(store.emptyStore(), (s) => typed(store.withTrack(s, 'standard'), itemA, '50'));
+localStorage.limit = localStorage.used; // no room for the blob to grow
+const c2 = store.commit(c1.store, (s) => typed(s, itemB, '9'));
+assert.equal(c2.core.ok, false, 'no room: the second answer could not be saved');
+localStorage.limit = Infinity;
+const c3 = store.commit(c2.store, (s) => typed(s, { ...itemA, item: '6-of-12' }, '50'));
+const c3saved = store.load();
+assert.equal(answerOf(c3saved, itemB), 9, 'the answer that could not be saved is saved with the next successful save');
+assert.equal(answerOf(c3saved, { ...itemA, item: '6-of-12' }), 50);
+assert.equal(answerOf(c3saved, itemA), 50);
+assert.equal(c3.core.ok, true);
+
+// Two tabs: the stale one must not erase what the other saved.
+fresh();
+store.commit(store.emptyStore(), (s) => store.withTrack(s, 'standard'));
+const tabA = store.load();
+const tabB = store.load(); // loaded before tab A saved anything, so it never sees A's answer
+store.commit(tabA, (s) => typed(s, itemA, '50'));
+const staleWrite = store.commit(tabB, (s) => typed(s, itemB, '9'));
+const both = store.load();
+assert.equal(answerOf(both, itemA), 50, "a stale tab's later save keeps the other tab's answer");
+assert.equal(answerOf(both, itemB), 9, 'and adds its own');
+assert.equal(answerOf(staleWrite.store, itemA), 50, 'the stale tab now shows the newest answers too');
+// Merely viewing (a history snapshot with unchanged data) from a stale tab is equally harmless.
+store.commit(store.load(), (s) => store.snapshotHistory(s, '2026-09-23', 'week-11', 'wednesday', 'not-started'));
+store.commit(tabB, (s) => store.snapshotHistory(s, '2026-09-22', 'week-11', 'tuesday', 'not-started'));
+assert.equal(answerOf(store.load(), itemA), 50, "a stale tab's calendar snapshot keeps saved answers");
+assert.equal(Object.keys(store.load().history).length, 2, 'both tabs\' history entries are kept');
+
+// Saved answers wiped behind the page's back (cleared site data): what is on screen is not thrown away.
+fresh();
+const wipedTab = store.commit(store.emptyStore(), (s) => typed(store.withTrack(s, 'standard'), itemA, '50')).store;
+localStorage.removeItem(CORE_KEY);
+store.commit(wipedTab, (s) => typed(s, itemB, '9'));
+assert.equal(answerOf(store.load(), itemA), 50, 'answers held in memory are re-saved after storage was wiped');
+assert.equal(answerOf(store.load(), itemB), 9);
+
+// The answers blob never contains drawings, however much ink there is.
+fresh();
+const inked = store.saveDrawing(store.emptyStore(), 'week-11', 'monday', 'finding-the-percent', bigInk(30000));
+store.saveCore(inked);
+assert.equal(localStorage.getItem(CORE_KEY).includes('base64'), false, 'saveCore writes no drawings');
+assert.ok(localStorage.used < 3000, 'the answers blob stays small');
+
+// Ink budget: too many drawings drop the OLDEST sheets first and never the sheet being drawn.
+fresh();
+let many = store.emptyStore();
+many = store.saveDrawing(many, 'week-9', 'friday', 'a', bigInk(400000));
+many = store.saveDrawing(many, 'week-10', 'monday', 'a', bigInk(400000));
+many = store.saveDrawing(many, 'week-11', 'monday', 'a', bigInk(400000));
+assert.equal(store.saveInk(many, ['week-11', 'monday', 'a']).ok, true);
+let inkOnDisk = JSON.parse(localStorage.getItem(INK_KEY));
+assert.equal(inkOnDisk['week-9'], undefined, 'the oldest week is dropped first');
+assert.ok(inkOnDisk['week-10'] && inkOnDisk['week-11'], 'newer weeks are kept');
+assert.equal(store.saveInk(many, ['week-9', 'friday', 'a']).ok, true);
+inkOnDisk = JSON.parse(localStorage.getItem(INK_KEY));
+assert.ok(inkOnDisk['week-9'], 'the sheet being drawn is never the one dropped, even if it is oldest');
+assert.equal(inkOnDisk['week-10'], undefined, 'so the next oldest goes instead');
+
+// --- parent-view.js: the check page opens on the day that needs checking, not blindly on today -------
+const { suggestedDay } = await import('../src/daily/parent-view.js');
+const week11 = DAILY_WORK.standard.weeks['week-11'];
+const withAnswer = (dayKey, data) => typed(store.withTrack(store.emptyStore(), 'standard'), { ...data, day: dayKey }, '50');
+const submitted = (s, dayKey) => {
+  const next = JSON.parse(JSON.stringify(s));
+  const weeks = next.dailyWork.weeks['week-11'] || (next.dailyWork.weeks['week-11'] = { days: {} });
+  const day = weeks.days[dayKey] || (weeks.days[dayKey] = { sheets: {}, submittedAt: null });
+  day.submittedAt = NOW;
+  return next;
+};
+const WED = '2026-09-23';
+const SAT = '2026-09-26';
+assert.equal(suggestedDay(submitted(store.emptyStore(), 'monday'), week11, WED), 'monday', 'Monday waiting on a parent beats an empty Wednesday');
+assert.equal(suggestedDay(submitted(submitted(store.emptyStore(), 'monday'), 'tuesday'), week11, WED), 'tuesday', 'the latest waiting day wins');
+assert.equal(suggestedDay(store.emptyStore(), week11, WED), 'wednesday', 'nothing started: today');
+assert.equal(suggestedDay(store.emptyStore(), week11, SAT), 'monday', 'nothing started on a weekend: Monday');
+assert.equal(suggestedDay(withAnswer('monday', itemA), week11, WED), 'monday', 'answers typed but not submitted still lead to that day');
+assert.equal(suggestedDay(typed(withAnswer('monday', itemA), { ...itemA, day: 'wednesday', sheet: 'finding-the-percent', item: '3-of-5' }, '60'), week11, WED), 'wednesday', "today's own work wins when nothing is waiting");
+assert.equal(suggestedDay(typed(submitted(withAnswer('monday', itemA), 'monday'), { ...itemA, day: 'wednesday', sheet: 'finding-the-percent', item: '3-of-5' }, '60'), week11, WED), 'monday', 'a day waiting on a parent still comes first');
+
+console.log('ok — daily store.js: answers always save (full storage, stale tabs, wiped storage, drawings split off, ink budget); check page opens on the day that needs it');
