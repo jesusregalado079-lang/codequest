@@ -50,6 +50,9 @@ export const FIREFLY_COLORS = [FIREFLY, FIREFLY_GLOW];
 export const PUFF_LIFE = 0.5;
 export const PUFF_LIFE_REDUCED = 0.25;
 export const PARTICLE_LIFE = 0.9;
+export const FX_LIFE = { swing: 0.07, hit: 0.17, poof: 0.42, hurt: 0.25, block: 0.18, pickup: 0.32, drop: 0.36 };
+export const MAX_FX = 16;
+export const SHAKE_LIFE = 0.15;
 
 // ---------- tiny drawing kernel (module state avoids per-rect closures) ----------
 let C = null;
@@ -58,6 +61,8 @@ let OY = 0;
 let U = 1;
 let MIRROR = false;
 let FLASH = null;
+let FX_SHIFT_X = 0;
+let FX_SHIFT_Y = 0;
 
 function setOrigin(x, y, unit, mirror) {
   OX = x; OY = y; U = unit; MIRROR = Boolean(mirror);
@@ -76,6 +81,16 @@ function box(x, y, w, h, color) {
   const top = Math.round(y);
   C.fillStyle = color;
   C.fillRect(left, top, Math.max(1, Math.round(x + w) - left), Math.max(1, Math.round(y + h) - top));
+}
+// Effect pixels stay on the canvas even when an event happens against the arena wall.
+function fxBox(view, x, y, w, h, color) {
+  const left = Math.max(-FX_SHIFT_X, Math.round(x));
+  const top = Math.max(-FX_SHIFT_Y, Math.round(y));
+  const right = Math.min(view.widthPx - FX_SHIFT_X, Math.round(x + w));
+  const bottom = Math.min(view.heightPx - FX_SHIFT_Y, Math.round(y + h));
+  if (right <= left || bottom <= top) return;
+  C.fillStyle = color;
+  C.fillRect(left, top, right - left, bottom - top);
 }
 // Deterministic 0..1 hash.
 export function hash01(a, b) {
@@ -404,6 +419,7 @@ function drawEnemy(e, state, view) {
   else if (e.type === 'mimic') drawMimic(e, time, T, X, Y - (T * size) / 2);
   else if (e.type === 'big-glitch') drawBigGlitch(e, time, view.reducedMotion);
   FLASH = null;
+  drawHitSmear(e, state, view);
   const topY = Y - (T * size) / 2 - T * 0.15;
   if (e.stunUntil && e.stunUntil > time) drawStunStars(X, topY, T, time, size);
   if (e.boss) {
@@ -418,6 +434,130 @@ function drawEnemy(e, state, view) {
 }
 
 // ---------- effects ----------
+export function shakeOffset(view, time) {
+  const shake = view && view.shake;
+  if (!shake || view.reducedMotion) return { x: 0, y: 0 };
+  const age = time - shake.born;
+  if (!(age >= 0 && age < SHAKE_LIFE - 1e-9)) return { x: 0, y: 0 };
+  const unit = Math.max(1, Math.round(view.tile / 16));
+  const amount = Math.min(3, shake.strength) * unit * (1 - age / SHAKE_LIFE);
+  const sign = hash01(shake.id || 0, 23) < 0.5 ? -1 : 1;
+  return { x: sign * Math.round(amount), y: -sign * Math.round(amount * 0.5) };
+}
+
+function activeFx(view, state, type, id) {
+  const list = view.effects || [];
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const fx = list[i];
+    if (fx.type === type && fx.id === id && state.time >= fx.born && state.time - fx.born < FX_LIFE[type] - 1e-9) return fx;
+  }
+  return null;
+}
+
+// A two-frame streak on the struck edge, after the sprite flash. It stays narrower than the target.
+function drawHitSmear(e, state, view) {
+  if (view.reducedMotion) return;
+  const fx = activeFx(view, state, 'hit', e.id);
+  if (!fx || state.time - fx.born >= 0.04) return;
+  const T = view.tile;
+  const size = ENEMIES[e.type] && ENEMIES[e.type].size >= 2 ? 2 : 1;
+  const X = view.offsetX + e.x * T;
+  const Y = view.offsetY + e.y * T;
+  const px = Math.max(1, Math.round(T / 16));
+  const color = fx.source === 'bolt' ? '#b8f7ff' : '#fff5b8';
+  const sx = fx.dx || 1;
+  const sy = fx.dy || 0;
+  box(X - sx * T * size * 0.24 - px * 2, Y - sy * T * size * 0.24 - px, px * 5, px, color);
+  box(X - sx * T * size * 0.12 - px, Y - sy * T * size * 0.12 + px, px * 4, px, '#ffffff');
+}
+
+function drawEventFx(state, view, upper) {
+  if (view.reducedMotion || !view.effects) return;
+  const T = view.tile;
+  const px = Math.max(1, Math.round(T / 16));
+  for (let i = 0; i < view.effects.length; i += 1) {
+    const fx = view.effects[i];
+    const life = FX_LIFE[fx.type];
+    const age = state.time - fx.born;
+    if (!(age >= 0 && age < life - 1e-9)) continue;
+    const top = fx.type === 'hurt' || fx.type === 'block' || fx.type === 'pickup';
+    if (top !== upper) continue;
+    const p = age / life;
+    const X = view.offsetX + fx.x * T;
+    const Y = view.offsetY + fx.y * T;
+    if (fx.type === 'poof') {
+      const mega = fx.enemy === 'mega-slime';
+      const goblin = fx.enemy === 'goblin';
+      const n = mega ? 12 : 8;
+      const colors = goblin ? ['#7cc66c', '#a7773b', '#cf9a52'] : ['#8ae3d5', '#4caeab', '#b6f1dc'];
+      for (let k = 0; k < n; k += 1) {
+        const a = hash01(fx.id, k + 11) * 6.283;
+        const distance = T * (mega ? 1.2 : 0.8) * p;
+        const arc = -T * (0.3 + hash01(k, fx.id) * 0.3) * 4 * p * (1 - p);
+        const s = px * (mega ? 4 : 3) * (p > 0.7 ? 0.5 : 1);
+        box(X + Math.cos(a) * distance - s / 2, Y + Math.sin(a) * distance * 0.6 + arc - s / 2, s, s, colors[k % 3]);
+      }
+      if (mega && p < 0.65) {
+        const gy = Y - T * (0.7 + p * 0.5);
+        box(X - px * 3, gy, px * 6, px, '#ffeaa0');
+        box(X - px / 2, gy - px * 3, px, px * 7, '#fff9dc');
+        box(X - px, gy - px * 4, px * 2, px, '#ffeaa0');
+      }
+    } else if (fx.type === 'hit') {
+      const bolt = fx.source === 'bolt';
+      for (let k = 0; k < 2; k += 1) {
+        const side = k ? 1 : -1;
+        const d = T * (0.38 + p * 0.55);
+        const x = X + fx.dx * d - fx.dy * side * T * 0.13;
+        const y = Y + fx.dy * d + fx.dx * side * T * 0.13;
+        box(x - px, y - px / 2, px * (p > 0.6 ? 1 : 2), px, bolt ? '#c6f7ff' : '#ffe17b');
+      }
+    } else if (fx.type === 'pickup' || fx.type === 'drop') {
+      const collected = fx.type === 'pickup';
+      const n = collected ? 6 : 3;
+      for (let k = 0; k < n; k += 1) {
+        const a = -Math.PI + (k + 0.5) * Math.PI / (collected ? 3 : 1.5);
+        const d = T * (collected ? 0.48 + p * 0.58 : 0.24 + p * 0.28);
+        const x = X + Math.cos(a) * d;
+        const y = Y - (collected ? T * 0.48 : 0) + Math.sin(a) * d * 0.48 - p * T * (collected ? 0.55 : 0.12);
+        const color = k % 2 ? '#fff6da' : '#ffb6bd';
+        const size = px * 2;
+        fxBox(view, x - size / 2, y - size / 2, size, size, color);
+        if (collected && p < 0.65) {
+          fxBox(view, x - px / 2, y - px * 2, px, px, color);
+          fxBox(view, x - px / 2, y + px, px, px, color);
+        }
+      }
+    } else if (fx.type === 'block') {
+      const side = fx.facing === 'left' ? 1 : fx.facing === 'right' || fx.facing === 'up' ? -1 : 1;
+      const cx = X + side * T * 0.31;
+      const cy = Y - T * 0.48;
+      const d = T * (0.27 + p * 0.32);
+      for (let k = 0; k < 8; k += 1) {
+        const a = k * Math.PI / 4;
+        const x = cx + Math.cos(a) * d;
+        const y = cy + Math.sin(a) * d;
+        const color = k % 2 ? '#8cdded' : '#e8ffff';
+        fxBox(view, x - px * 1.5, y - px * 1.5, px * 3, px * 3, color);
+      }
+      for (let k = 0; k < 2; k += 1) {
+        const x = cx + side * (d + px * (2 + k));
+        const y = cy + (k ? -1 : 1) * d * 0.6;
+        fxBox(view, x - px, y - px, px * 2, px * 2, '#baf4f8');
+      }
+    } else if (fx.type === 'hurt') {
+      const vectors = [[-0.8, -0.45], [-1, 0.12], [-0.55, 0.82], [0.9, -0.35], [1, 0.3], [0.55, 0.9]];
+      for (let k = 0; k < vectors.length; k += 1) {
+        const [vx, vy] = vectors[k];
+        const d = T * (0.37 + p * 0.67);
+        const x = X + vx * d;
+        const y = Y - T * 0.48 + vy * d + p * p * T * 0.25;
+        const size = px * (p > 0.74 ? 2 : 3);
+        fxBox(view, x - size / 2, y - size / 2, size, size, k % 3 === 1 ? '#fff2ec' : '#df5e69');
+      }
+    }
+  }
+}
 function drawHeart(cx, cy, s) {
   const left = cx - s * 3.5;
   const top = cy - s * 3;
@@ -462,21 +602,16 @@ function drawPickups(state, view) {
     const Y = view.offsetY + p.y * T;
     box(X - T * 0.22, Y + T * 0.25, T * 0.44, T * 0.08, '#00000030');
     drawHeart(X, Y + bob, T / 16);
-    // Two little cross-shaped glints that twinkle in and out beside the heart, each in its own fixed spot,
-    // so a dropped heart catches the eye without anything flashing.
-    const gt = view.reducedMotion ? 0 : state.time;
-    const s = Math.max(1, T * 0.055);
-    for (let k = 0; k < 2; k += 1) {
-      const ph = (gt * 0.9 + k * 0.5 + hash01(p.id + 1, 4)) % 1;
-      if (ph > 0.45) continue;
-      const grow = ph < 0.22 ? ph / 0.22 : (0.45 - ph) / 0.23;
-      const a = hash01(p.id + 1, 6 + k) * 6.283 + k * Math.PI;
-      const gx = X + Math.cos(a) * T * 0.3;
-      const gy = Y + bob + Math.sin(a) * T * 0.22;
-      const len = s * (0.8 + grow * 1.8);
-      box(gx - len / 2, gy - s / 2, len, s, k ? SPARK_B : SPARK_A);
-      box(gx - s / 2, gy - len / 2, s, len, k ? SPARK_B : SPARK_A);
-    }
+    // One slow, chunky cross grows and recedes once a second beside a dropped heart.
+    const unit = Math.max(1, Math.round(T / 16));
+    const phase = view.reducedMotion ? 0.5 : (state.time + hash01(p.id + 1, 4)) % 1;
+    const reach = unit * (3 + 2 * (1 - Math.abs(phase * 2 - 1)));
+    const gx = X + T * 0.34;
+    const gy = Y + bob - T * 0.28;
+    fxBox(view, gx - reach / 2, gy - unit / 2, reach, unit, SPARK_A);
+    fxBox(view, gx - unit / 2, gy - reach / 2, unit, reach, SPARK_A);
+    if (view.reducedMotion || (phase > 0.28 && phase < 0.72))
+      fxBox(view, gx - unit, gy - unit, unit * 2, unit * 2, SPARK_B);
   }
 }
 
@@ -555,9 +690,42 @@ function drawTrail(state, view) {
 
 const FACE_ANGLE = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
 
-function heroBlinkedOut(state) {
+function heroBlinkedOut(state, view) {
   const hero = state.hero;
+  if (view && !view.reducedMotion) {
+    const hurt = view.effects && view.effects.some((fx) => fx.type === 'hurt' && state.time >= fx.born && state.time - fx.born < FX_LIFE.hurt);
+    if (hurt) return false;
+  }
   return state.time < hero.invulnUntil && Math.floor((hero.invulnUntil - state.time) / 0.1) % 2 === 1;
+}
+
+function heroHurtAge(state, view) {
+  if (view.reducedMotion || !view.effects) return -1;
+  for (let i = view.effects.length - 1; i >= 0; i -= 1) {
+    const fx = view.effects[i];
+    const age = state.time - fx.born;
+    if (fx.type === 'hurt' && age >= 0 && age < 0.12) return age;
+  }
+  return -1;
+}
+
+// Repaint the actual character rectangles as a white silhouette for three frames, then put a red
+// one-unit rim behind the normal sprite. The source sprite and its equipment remain untouched.
+function drawHurtHero(ctx, view, x, feet, unit, options, age) {
+  const white = age < 0.05;
+  const rim = Math.max(1, Math.round(unit));
+  const paint = {
+    save() {}, restore() {}, set fillStyle(_color) {},
+    fillRect(left, top, width, height) {
+      if (white) fxBox(view, left, top, width, height, '#ffffff');
+      else {
+        fxBox(view, left - rim, top, width + rim * 2, height, '#df5e69');
+        fxBox(view, left, top - rim, width, height + rim * 2, '#df5e69');
+      }
+    },
+  };
+  drawCharacter(paint, x, feet, unit, options);
+  if (!white) drawCharacter(ctx, x, feet, unit, options);
 }
 
 // Light run dust kicked up behind the hero, independent of the worn 'trail' cosmetic (which stays a
@@ -601,7 +769,7 @@ function drawHero(state, view, now) {
   const X = view.offsetX + hero.x * T;
   const feet = view.offsetY + (hero.y + HERO_RADIUS) * T;
   box(X - T * 0.35, feet - T * 0.08, T * 0.7, T * 0.14, '#00000038');
-  if (heroBlinkedOut(state)) return;
+  if (heroBlinkedOut(state, view)) return;
   drawHeroDust(state, view);
   const attacking = time < hero.attackUntil && hero.attackStartedAt >= 0;
   const attack = attacking ? Math.max(0.01, Math.min(1, (time - hero.attackStartedAt) / SWING_TIME)) : 0;
@@ -613,7 +781,7 @@ function drawHero(state, view, now) {
       box(X + Math.cos(a) * T * 0.62 - s / 2, feet - T + Math.sin(a) * T * 0.7 - s / 2, s, s, k === 1 ? '#fff1a6' : '#f2b631');
     }
   }
-  drawCharacter(C, X, feet, T / 16, {
+  const character = {
     look: view.look,
     equipped: view.equipped,
     worn: view.worn,
@@ -625,7 +793,10 @@ function drawHero(state, view, now) {
     // Standing still: a slow breath. drawCharacter snaps bob to whole grid units, so this reads as one
     // pixel-art unit rising and settling roughly every three and a half seconds.
     bob: !hero.moving && !attacking && !hero.blocking && !view.reducedMotion ? (time * 0.28) % 1 : 0,
-  });
+  };
+  const hurtAge = heroHurtAge(state, view);
+  if (hurtAge >= 0) drawHurtHero(C, view, X, feet, T / 16, character, hurtAge);
+  else drawCharacter(C, X, feet, T / 16, character);
 }
 
 // Slash streak: a chunky crescent on the ground in front of the hero, spanning the real hitbox (the
@@ -688,6 +859,14 @@ function drawSlash(state, view, attack) {
       box(cx - size / 2, cy - size / 2, size, size, color);
     }
   }
+  // A single bright start bead; it disappears before the crescent has swept across the target.
+  const started = view.effects && view.effects.some((fx) => fx.type === 'swing' && state.time >= fx.born && state.time - fx.born < FX_LIFE.swing - 1e-9);
+  if (!view.reducedMotion && started && attack < 0.11) {
+    const x = X + Math.cos(start) * outer;
+    const y = Y + Math.sin(start) * outer;
+    box(x - px * 2, y - px * 2, px * 4, px * 4, '#fff7d6');
+    box(x - px, y - px, px * 2, px * 2, '#ffffff');
+  }
 }
 
 // Impact burst: bright squares radiating from the side of the target that faces the hero, shrinking over
@@ -717,8 +896,8 @@ function drawImpact(x, y, id, left, size, state, view) {
     box(ix - small / 2, iy - small / 2, small, small, '#f2b631');
     box(bx - s / 2, by - s / 2, s, s, '#ffe066');
   }
-  box(X - s * 0.6, Y - s * 0.6, s * 1.2, s * 1.2, '#f2b631');
-  box(X - s * 0.3, Y - s * 0.3, s * 0.6, s * 0.6, '#ffffff');
+  box(X - s * 0.65, Y - s * 0.65, s * 1.3, s * 1.3, '#f2b631');
+  box(X - s * 0.35, Y - s * 0.35, s * 0.7, s * 0.7, '#ffffff');
 }
 function drawEnemyImpact(e, state, view) {
   const def = ENEMIES[e.type];
@@ -733,14 +912,20 @@ function drawKillSparks(state, view) {
 }
 
 // ---------- entry points ----------
-// view: { widthPx, heightPx, tile, offsetX, offsetY, look, equipped, worn, glow, reducedMotion, particles? }
+// view: { widthPx, heightPx, tile, offsetX, offsetY, look, equipped, worn, glow, reducedMotion, particles?, effects?, shake? }
 export function renderBattle(ctx, state, view, now) {
   if (!ctx || !state || !view || !(view.tile > 0)) return;
   C = ctx;
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = '#0c2034';
   ctx.fillRect(0, 0, view.widthPx, view.heightPx);
+  const shake = shakeOffset(view, state.time);
+  const shifted = (shake.x !== 0 || shake.y !== 0) && typeof ctx.translate === 'function';
+  if (shifted) { ctx.save(); ctx.translate(shake.x, shake.y); }
+  FX_SHIFT_X = shifted ? shake.x : 0;
+  FX_SHIFT_Y = shifted ? shake.y : 0;
   drawArena(view, state.time);
+  drawEventFx(state, view, false);
   drawChestProp(view, state.time);
   drawStone(state, view);
   drawPickups(state, view);
@@ -749,7 +934,7 @@ export function renderBattle(ctx, state, view, now) {
   const heroY = hero.y;
   const slashing = Boolean(hero.swing) && state.time < hero.attackUntil && hero.attackStartedAt >= 0;
   const attack = slashing ? Math.max(0.01, Math.min(1, (state.time - hero.attackStartedAt) / SWING_TIME)) : 0;
-  const blinkedOut = heroBlinkedOut(state);
+  const blinkedOut = heroBlinkedOut(state, view);
   // Facing up the slash is behind the hero (after the enemies behind him); every other facing is in front
   // of all sprites so a hit enemy never hides the streak.
   const behind = hero.facing === 'up';
@@ -762,7 +947,11 @@ export function renderBattle(ctx, state, view, now) {
   drawBolts(state, view);
   drawPuffs(state, view);
   drawKillSparks(state, view);
+  drawEventFx(state, view, true);
   drawParticles(state, view);
+  if (shifted) ctx.restore();
+  FX_SHIFT_X = 0;
+  FX_SHIFT_Y = 0;
   C = null;
 }
 

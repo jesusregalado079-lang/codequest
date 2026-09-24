@@ -7,6 +7,7 @@ import {
   passedForTrack, randomLook, rankFor, setProgress, takeOff, trackItems, traderStock, unequip, wear,
 } from './character.js';
 import { characterCanvas, drawCharacter, drawIcon } from './sprite.js';
+import { drawHeroStage, makeHeroStageLayer } from './hero-stage.js';
 import { getLesson, trackLessons } from './lessons/pack1.js';
 import { lessonStatus } from './lesson-logic.js';
 import { mountLesson } from './lesson-ui.js';
@@ -30,6 +31,7 @@ const app = document.getElementById('app');
 const active = requireUnlockedProfile();
 let cq, draft, preview = false, facingIndex = 0, tab = 'Gear', selectedItem = null, pendingBuy = null;
 let animation = 0, message = '';
+let stageVisibility = null;
 let lessonView = null, lessonEntry = '';
 let typingView = null, typingEntry = '', typingFocus = null;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -181,7 +183,6 @@ function hero(creator) {
   return `<aside class="cq-hero-panel">
     <div class="cq-stage"><span class="cq-stage-label">${creator ? 'HERO PREVIEW' : 'YOUR HERO'}</span>
       <button type="button" class="cq-hero" data-action="rotate" data-step="1" aria-label="Rotate hero right"><span class="cq-canvas-mount"></span></button>
-      <div class="cq-platform" aria-hidden="true"></div>
     </div>
     <div class="cq-rotation">${button('rotate', '◀', 'data-step="-1" aria-label="Rotate hero left"')}<span class="cq-facing" aria-live="polite">${FACING_LABELS[facingIndex]}</span>${button('rotate', '▶', 'data-step="1" aria-label="Rotate hero right"')}</div>
     ${creator ? '<p class="cq-muted cq-preview-note">Your hero. Your style.<br>Change your look anytime.</p>' : `<div class="cq-set"><strong>${esc(set.name)} ${set.have}/${set.total}</strong><progress max="${set.total}" value="${set.have}" aria-label="${esc(set.name)} equipped"></progress><span>${set.active ? `✨ Set bonus active: +${extraHearts} ${extraHearts === 1 ? 'heart' : 'hearts'}` : 'Equip the full set for a bonus heart.'}</span></div>`}
@@ -247,6 +248,7 @@ function quests() {
 }
 function render() {
   cancelAnimationFrame(animation);
+  if (stageVisibility) stageVisibility.abort();
   const focus = document.activeElement;
   const focusKey = focus && app.contains(focus) ? [focus.dataset.action, focus.dataset.id, focus.dataset.slot, focus.dataset.tab] : null;
   const creator = cq.look === null;
@@ -269,12 +271,36 @@ function render() {
   const canvas = characterCanvas(320, heroOptions(0));
   app.querySelector('.cq-canvas-mount').append(canvas);
   const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const makeCanvas = (width, height) => {
+    const layer = document.createElement('canvas');
+    layer.width = width; layer.height = height;
+    return layer;
+  };
+  const stoneLayer = makeHeroStageLayer({ width: canvas.width, height: canvas.height, makeCanvas });
+  const stageCanvas = makeCanvas(canvas.width, canvas.height);
+  const stageCtx = stageCanvas.getContext('2d');
+  stageCtx.imageSmoothingEnabled = false;
+  const glow = setProgress(cq).active;
+  let lastStageFrame = -Infinity;
   const frame = (time) => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawCharacter(ctx, canvas.width / 2, canvas.height * 0.86, Math.max(1, Math.floor(canvas.width / 50)), heroOptions(reducedMotion.matches ? 0 : (time % 3200) / 3200));
+    if (document.hidden || !canvas.isConnected) { animation = 0; return; }
+    const bob = reducedMotion.matches ? 0 : (time % 3200) / 3200;
+    if (time - lastStageFrame >= 50) {
+      drawHeroStage(stageCtx, { width: canvas.width, height: canvas.height, time: time / 1000,
+        reduced: reducedMotion.matches, glow, bob, facing: FACINGS[facingIndex], stoneLayer });
+      lastStageFrame = time;
+    }
+    ctx.drawImage(stageCanvas, 0, 0);
+    drawCharacter(ctx, canvas.width / 2, canvas.height * 0.84, Math.max(1, Math.floor(canvas.width / 50)), heroOptions(bob));
     animation = requestAnimationFrame(frame);
   };
-  animation = requestAnimationFrame(frame);
+  stageVisibility = new AbortController();
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { cancelAnimationFrame(animation); animation = 0; }
+    else if (!animation && canvas.isConnected) animation = requestAnimationFrame(frame);
+  }, { signal: stageVisibility.signal });
+  if (!document.hidden) animation = requestAnimationFrame(frame);
   if (focusKey) {
     const match = Array.from(app.querySelectorAll('button')).find((b) => [b.dataset.action, b.dataset.id, b.dataset.slot, b.dataset.tab].every((v, i) => v === focusKey[i]));
     if (match) match.focus({ preventScroll: true });

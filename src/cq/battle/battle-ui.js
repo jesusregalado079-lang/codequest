@@ -3,7 +3,7 @@
 import { normalizeCq, setProgress } from '../character.js';
 import { drawIcon } from '../sprite.js';
 import { createBattle, resultOf, step, waveTotal } from './engine.js';
-import { drawSlotIcon, PARTICLE_LIFE, renderBattle } from './render.js';
+import { drawSlotIcon, FX_LIFE, MAX_FX, PARTICLE_LIFE, renderBattle } from './render.js';
 import {
   blankInput, doneOnce, fitView, formatClock, HOWTO_TIP, howToKeys, hudSlots, isActivationKey, isInteractiveOutside, keyAction, keyId,
   slotStatus, waveBanner, waveLabel,
@@ -14,6 +14,7 @@ const MAX_STEPS = 5;
 const NO_KEYBOARD_MS = 3000;
 const HOWTO_MS = 8000;
 const MAX_PARTICLES = 24;
+const SHAKE_GAP = 0.25;
 const esc = (value) => String(value == null ? '' : value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 function howToKey(profileId) {
@@ -24,6 +25,34 @@ function howToSeen(profileId) {
 }
 function markHowToSeen(profileId) {
   try { localStorage.setItem(howToKey(profileId), '1'); } catch { /* Shown again next time; no gameplay change. */ }
+}
+
+// Record only event data. Rendering derives every chip position from the id and simulation time.
+export function recordBattleEffects(view, events, time, hero) {
+  if (!view.effects) view.effects = [];
+  const list = view.effects;
+  let write = 0;
+  for (let i = 0; i < list.length; i += 1) {
+    if (time - list[i].born < FX_LIFE[list[i].type] - 1e-9) list[write++] = list[i];
+  }
+  list.length = write;
+  for (let i = 0; i < events.length; i += 1) {
+    const ev = events[i];
+    if (!FX_LIFE[ev.type]) continue;
+    const x = ev.type === 'pickup' ? hero.x : ev.x;
+    const y = ev.type === 'pickup' ? hero.y : ev.y;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (list.length >= MAX_FX) list.shift();
+    list.push({ type: ev.type, id: ev.id == null ? i : ev.id, x, y, born: time,
+      enemy: ev.enemy, source: ev.source, facing: ev.facing || hero.facing,
+      dx: x === hero.x && y === hero.y ? 1 : (x - hero.x) / (Math.hypot(x - hero.x, y - hero.y) || 1),
+      dy: (y - hero.y) / (Math.hypot(x - hero.x, y - hero.y) || 1) });
+    const strength = ev.type === 'hurt' ? 2 : ev.type === 'poof' && ev.enemy === 'mega-slime' ? 3 : 0;
+    if (!view.reducedMotion && strength && !(time < (view.nextShakeAt || 0))) {
+      view.shake = { born: time, strength, id: ev.id == null ? i : ev.id };
+      view.nextShakeAt = time + SHAKE_GAP;
+    }
+  }
 }
 
 // ---------- tiny WebAudio tones ----------
@@ -52,7 +81,7 @@ export function mountBattle(container, {
   const view = {
     widthPx: 0, heightPx: 0, tile: 0, offsetX: 0, offsetY: 0,
     look: normalized.look, equipped: normalized.equipped, worn: normalized.worn,
-    glow: Boolean(set && set.active), reducedMotion: Boolean(reducedMotion), particles: [],
+    glow: Boolean(set && set.active), reducedMotion: Boolean(reducedMotion), particles: [], effects: [], shake: null, nextShakeAt: 0,
   };
   const slots = hudSlots(state.gear);
   const doc = container.ownerDocument || document;
@@ -231,6 +260,7 @@ export function mountBattle(container, {
 
   // ---------- pause ----------
   function handleEvents(events) {
+    recordBattleEffects(view, events, state.time, state.hero);
     let sounds = 0;
     const played = {};
     const once = (name) => { if (!played[name] && sounds < 4) { played[name] = true; sounds += 1; playSound(name); } };

@@ -53,6 +53,7 @@ export function mountTyping({ app, mode, profileId = null, getCq, save, sound, o
   let session = null;
   let scene = null;
   let raf = 0;
+  let lastDrawAt = -Infinity;
   let flashTimer = 0;
   let resultsTimer = 0;
   let recorded = false;
@@ -98,6 +99,7 @@ export function mountTyping({ app, mode, profileId = null, getCq, save, sound, o
     clearTimeout(resultsTimer); resultsTimer = 0;
     clearTimeout(flashTimer); flashTimer = 0;
     win.cancelAnimationFrame(raf); raf = 0;
+    lastDrawAt = -Infinity;
     const cq = cqNow();
     items = itemsFor(mode, cq, LESSONS, rng);
     session = createSession({ mode, items });
@@ -149,6 +151,7 @@ export function mountTyping({ app, mode, profileId = null, getCq, save, sound, o
     fit();
     updateHud(false);
     els.play.focus({ preventScroll: true });
+    if (!reducedMotion) kick();
   }
 
   function fit() {
@@ -166,16 +169,25 @@ export function mountTyping({ app, mode, profileId = null, getCq, save, sound, o
   function now() { return win.performance ? win.performance.now() : Date.now(); }
   function draw() {
     if (!els.ctx || !scene) return;
-    renderRun(els.ctx, scene, now());
+    const t = now();
+    renderRun(els.ctx, scene, t);
+    lastDrawAt = t;
   }
   function frame() {
     raf = 0;
-    if (!mounted) return;
-    draw();
-    if (animating(scene, now())) raf = win.requestAnimationFrame(frame);
+    if (!mounted || phase === 'results' || doc.hidden || reducedMotion || !els.ctx) return;
+    const t = now();
+    if (animating(scene, t) || t - lastDrawAt >= 1000 / 30) draw();
+    raf = win.requestAnimationFrame(frame);
   }
   function kick() {
-    if (!raf && mounted) raf = win.requestAnimationFrame(frame);
+    if (!mounted || phase === 'results' || doc.hidden) return;
+    if (reducedMotion) { draw(); return; }
+    if (!raf && els.ctx) raf = win.requestAnimationFrame(frame);
+  }
+  function onVisibility() {
+    if (doc.hidden) { win.cancelAnimationFrame(raf); raf = 0; return; }
+    if (mounted && phase !== 'results') { draw(); if (!reducedMotion) kick(); }
   }
 
   function updateHud(wrong) {
@@ -320,6 +332,7 @@ export function mountTyping({ app, mode, profileId = null, getCq, save, sound, o
 
   win.addEventListener('keydown', onKeyDown);
   win.addEventListener('resize', onResize);
+  doc.addEventListener('visibilitychange', onVisibility);
   root.addEventListener('click', onClick);
   startRun();
 
@@ -343,6 +356,7 @@ export function mountTyping({ app, mode, profileId = null, getCq, save, sound, o
       clearTimeout(resultsTimer);
       win.removeEventListener('keydown', onKeyDown);
       win.removeEventListener('resize', onResize);
+      doc.removeEventListener('visibilitychange', onVisibility);
       root.removeEventListener('click', onClick);
       if (audio) { try { audio.close(); } catch { /* Already closed. */ } audio = null; }
       if (root.parentNode) root.parentNode.removeChild(root);
