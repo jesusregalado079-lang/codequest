@@ -201,26 +201,53 @@ p.cq-feedback.cq-good { background:#1f4a39; }p.cq-feedback.cq-miss { background:
 .cq-lesson-card.cq-kind-battle { padding:12px; }
 .cq-lesson-card .cq-battle-skip { background:transparent; border-color:transparent; color:#b0c9d2; text-decoration:underline; font-size:15px !important; min-height:44px !important; padding:8px 10px !important; }
 .cq-lesson-card .cq-battle-skip:hover:not(:disabled) { background:#1a3550; }
-.cq-battle { position:relative; outline:none; min-width:0; }
+.cq-battle { position:relative; outline:none; min-width:0; container-type:inline-size; }
 .cq-battle-top { display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; padding:4px 2px 8px; font:700 16px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace; color:#f1f6ed; }
 .cq-battle-hearts { display:flex; flex-wrap:wrap; gap:3px; }
 .cq-bh { display:block; width:21px; height:18px; background:#e04f5f; clip-path:polygon(14.29% 0,42.86% 0,42.86% 16.67%,57.14% 16.67%,57.14% 0,85.71% 0,85.71% 16.67%,100% 16.67%,100% 50%,85.71% 50%,85.71% 66.67%,71.43% 66.67%,71.43% 83.33%,57.14% 83.33%,57.14% 100%,42.86% 100%,42.86% 83.33%,28.57% 83.33%,28.57% 66.67%,14.29% 66.67%,14.29% 50%,0 50%,0 16.67%,14.29% 16.67%); }
 .cq-bh.cq-bh-empty { background:#3a4a5c; }
 .cq-battle-wave { color:var(--gold); }
-.cq-battle-esc { margin-left:auto; font-size:12px; font-weight:400; color:var(--cq-muted); }
+.cq-battle-pause { margin-left:auto; min-height:44px; padding:6px 10px; border:1px solid #7297a7; border-radius:4px; background:#29475b; color:#fff; font:700 14px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace; cursor:pointer; }
+.cq-battle-pause:focus-visible { outline:3px solid var(--gold); outline-offset:2px; }
+.cq-battle-esc { font-size:12px; font-weight:400; color:#d2e2e8; }
 .cq-battle-stage { position:relative; width:100%; max-width:960px; margin:0 auto; line-height:0; background:#0c2034; border:2px solid #0c2034; border-radius:4px; overflow:hidden; }
 .cq-battle-canvas { display:block; max-width:100%; image-rendering:pixelated; image-rendering:crisp-edges; }
-.cq-lesson-card p.cq-battle-banner { position:absolute; left:50%; top:18%; margin:0; transform:translateX(-50%); padding:8px 18px; border:2px solid #fff0b2; border-radius:4px; background:#10263de6; color:var(--gold); font:800 clamp(16px,3.4vw,28px)/1.2 ui-monospace,SFMono-Regular,Consolas,monospace; white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .2s; }
+.cq-lesson-card p.cq-battle-banner { position:absolute; z-index:2; left:50%; top:16%; width:max-content; max-width:calc(100% - 18px); margin:0; transform:translateX(-50%); padding:8px 16px; border:2px solid #fff0b2; border-radius:2px; background:#10263def; color:var(--gold); font:800 clamp(15px,3.4vw,28px)/1.15 ui-monospace,SFMono-Regular,Consolas,monospace; text-align:center; overflow-wrap:anywhere; opacity:0; pointer-events:none; box-shadow:4px 4px 0 #0b1828, inset 0 0 0 2px #3d5970; text-shadow:2px 2px 0 #0b1828; transition:opacity .18s; }
 .cq-lesson-card p.cq-battle-banner.cq-on { opacity:1; }
-.cq-battle-overlay { position:absolute; inset:0; display:grid; place-items:center; padding:10px; background:#0c2034b8; line-height:1.4; overflow:auto; }
+.cq-battle-banner-title { display:block; }
+.cq-battle-banner-skill { display:block; margin-top:5px; color:#e6f5fc; font-size:clamp(10px,1.5vw,14px); font-weight:700; text-shadow:none; }
+.cq-lesson-card p.cq-battle-banner-special { border-width:3px; border-color:#f9db80; padding:12px 22px; background:#0c2034f5; color:#fff0a9; box-shadow:5px 5px 0 #101c2e, inset 0 0 0 3px #517089; }
+.cq-lesson-card p.cq-battle-banner-special.cq-on { animation:cq-banner-pop .22s steps(3,end) both; }
+@keyframes cq-banner-pop { from { transform:translateX(-50%) scale(.86); } to { transform:translateX(-50%) scale(1); } }
+.cq-battle-overlay { position:absolute; z-index:5; inset:0; display:grid; place-items:center; padding:8px; background:#0c2034b8; line-height:1.4; overflow:hidden; }
 .cq-battle-overlay[hidden] { display:none; }
-.cq-battle-card { width:min(440px,100%); padding:16px 18px; border:2px solid var(--gold); border-radius:6px; background:var(--cq-panel); }
+.cq-battle-card { width:min(440px,100%); max-height:100%; overflow-y:auto; padding:16px 18px; border:2px solid var(--gold); border-radius:6px; background:var(--cq-panel); }
+.cq-battle-pause-card { display:flex; flex-direction:column; overflow:hidden; }
+.cq-battle-pause-card h3,.cq-battle-pause-card .cq-actions { flex:none; }
+.cq-battle-pause-controls { flex:1 1 auto; min-height:0; overflow-y:auto; }
+.cq-battle-pause-card .cq-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.cq-battle-pause-card .cq-actions .cq-battle-go { grid-column:1/-1; }
+.cq-lesson-card .cq-battle-pause-card .cq-actions .cq-button { min-height:44px; padding:6px 8px; font-size:14px; }
 .cq-battle-card h3 { margin:0 0 8px; font-size:22px; }
 .cq-lesson-card .cq-battle-card p { margin:0 0 8px; font-size:16px; }
 .cq-battle-card .cq-actions { margin-top:10px; }
 .cq-battle-keys { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
 .cq-lesson-card .cq-battle-keys li { display:flex; align-items:center; gap:10px; font-size:15px; line-height:1.3; }
 .cq-battle kbd { display:inline-block; min-width:30px; padding:2px 6px; border:1px solid #6e9198; border-bottom-width:3px; border-radius:4px; background:#0f2436; color:var(--gold); font:700 12px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace; text-align:center; white-space:nowrap; }
+.cq-training-marker { position:absolute; z-index:2; transform:translate(-50%,-50%); color:#ffe289; font-size:30px; line-height:1; text-shadow:0 0 6px #ffe289,2px 2px #472f23; pointer-events:none; }
+.cq-training-marker[hidden],.cq-training-panel[hidden] { display:none; }
+.cq-training-panel { position:absolute; z-index:3; top:6px; left:6px; width:min(40%,270px); max-height:calc(100% - 12px); overflow-y:auto; line-height:1.3; }
+.cq-training-card { padding:8px; border:2px solid var(--gold); border-radius:5px; background:#203b52f4; color:#fff; font-size:13px; }
+.cq-training-card strong { display:block; color:var(--gold); font-size:15px; }
+.cq-training-skip { display:block; min-height:44px; margin:3px 0; padding:5px 7px; border:1px solid #8daab5; border-radius:4px; background:#29475b; color:#fff; font-weight:700; cursor:pointer; }
+.cq-lesson-card .cq-training-card p { margin:5px 0; font-size:13px; }
+.cq-training-card ul { margin:4px 0; padding-left:16px; }
+.cq-training-card li { margin:2px 0; }
+.cq-training-keycaps { display:flex; flex-wrap:wrap; gap:2px; }
+.cq-training-keycaps kbd.cq-lit { background:var(--gold); color:#10263d; }
+.cq-training-actions { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.cq-training-actions button { min-height:44px; padding:5px 7px; border:1px solid #8daab5; border-radius:4px; background:#29475b; color:#fff; font-weight:700; cursor:pointer; }
+.cq-training-actions button.cq-primary { background:var(--gold); color:#10263d; }
 .cq-battle-slots { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:10px 0 0; padding:0; list-style:none; }
 .cq-lesson-card li.cq-battle-slot { position:relative; display:flex; flex-direction:column; align-items:center; gap:4px; width:64px; margin:0; padding:6px 4px; border:2px solid #476b7b; border-radius:5px; background:#132c44; font-size:12px; line-height:1; --cd:0; }
 .cq-battle-slot-art { position:relative; display:grid; place-items:center; width:34px; height:34px; }
@@ -239,9 +266,24 @@ p.cq-feedback.cq-good { background:#1f4a39; }p.cq-feedback.cq-miss { background:
   .cq-battle-top { font-size:13px; gap:4px 10px; }
   .cq-bh { width:14px; height:12px; }
   .cq-battle-esc { display:none; }
+  .cq-training-panel { width:43%; }
+  .cq-training-card { font-size:11px; padding:5px; }
+  .cq-lesson-card .cq-training-card p { font-size:11px; }
+  .cq-training-card strong { font-size:12px; }
   .cq-lesson-card li.cq-battle-slot { width:54px; }
 }
-@media(prefers-reduced-motion:reduce) { .cq-lesson-card p.cq-battle-banner { transition:none; } }
+@media(max-width:850px) { .cq-battle-power { flex:1 1 100%; order:2; } .cq-battle-pause { order:1; } }
+@container (max-width:560px) {
+  .cq-training-panel { position:static; width:100%; max-height:none; overflow:visible; padding:6px 0 0; }
+  .cq-training-card { font-size:13px; padding:8px; }
+  .cq-lesson-card .cq-training-card p { font-size:13px; }
+  .cq-training-card strong { font-size:15px; }
+  .cq-battle-pause-card { padding:8px; }
+  .cq-battle-pause-card h3 { margin-bottom:4px; font-size:19px; }
+  .cq-battle-pause-card .cq-actions { margin-top:4px; }
+}
+@media(max-width:600px) { .cq-lesson-card p.cq-battle-banner-special { padding:9px 12px; } }
+@media(prefers-reduced-motion:reduce) { .cq-lesson-card p.cq-battle-banner-special.cq-on { animation:none; } }
 
 /* Typing Dojo: picker cards in the hub, then a run with a canvas path, text strip and finger-tinted keyboard. */
 @media(max-width:500px) { .cq-tabs button { font-size:12px; padding:8px 1px; overflow-wrap:anywhere; } }
@@ -314,3 +356,18 @@ p.cq-feedback.cq-good { background:#1f4a39; }p.cq-feedback.cq-miss { background:
   .cq-ty-strip { gap:4px 14px; }
 }
 @media(prefers-reduced-motion:reduce) { .cq-kb-key.cq-kb-next { transition:none; } }
+
+/* Twelve framed cells correspond to the twelve POWER points. */
+.cq-battle-power { display:inline-flex; flex-wrap:wrap; align-items:center; gap:5px 8px; min-width:0; }
+.cq-bp-label { font-size:.8em; letter-spacing:1px; color:#cfe3ea; }
+.cq-bp-bar { position:relative; display:inline-block; flex:none; width:144px; height:18px; border:3px solid #758da0; border-radius:1px; background:#0c1826; box-shadow:0 3px 0 #0a1522, inset 0 0 0 2px #172c3d; overflow:hidden; }
+.cq-bp-bar::after { content:''; position:absolute; inset:0; background-image:linear-gradient(to right,transparent calc(100% - 3px),#0c1826 0); background-size:8.333333% 100%; pointer-events:none; }
+.cq-bp-fill { position:absolute; inset:0 auto 0 0; width:0; background:linear-gradient(#fff0a6 0 25%,#f6c858 25% 75%,#c98936 75%); transition:width .3s steps(12,end); }
+.cq-battle-power kbd { min-width:26px; padding:2px 6px; border:2px solid #e6f0f7; border-bottom-width:4px; border-radius:2px; background:#e6f0f7; color:#14263a; text-align:center; box-shadow:2px 2px 0 #0a1522; }
+.cq-bp-name { display:none; min-width:0; font-size:.8em; color:#fff0a6; overflow-wrap:anywhere; }
+.cq-bp-name::before { content:'READY  '; color:#fff; }
+.cq-battle-power.cq-ready .cq-bp-name { display:inline; }
+.cq-battle-power.cq-ready .cq-bp-bar { border-color:#ffe48b; box-shadow:0 3px 0 #0a1522, 0 0 7px #f7d46a7a; animation:cq-power-ready 1.4s ease-in-out infinite; }
+@keyframes cq-power-ready { 50% { box-shadow:0 3px 0 #0a1522, 0 0 12px #f7d46a9c; border-color:#fff1b4; } }
+@media(max-width:500px) { .cq-bp-bar { width:132px; } .cq-bp-name { flex-basis:100%; } }
+@media(prefers-reduced-motion:reduce) { .cq-bp-fill { transition:none; } .cq-battle-power.cq-ready .cq-bp-bar { animation:none; } }

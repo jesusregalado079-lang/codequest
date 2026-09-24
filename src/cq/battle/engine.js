@@ -7,6 +7,7 @@
 import { BARE_HANDS, ITEMS } from '../items.js';
 import { maxHearts, normalizeCq } from '../character.js';
 import { ARENA, enemyHp, ENEMIES, isSolid, spawnPoint, wavePlan } from './content.js';
+import { POWER_GAIN, SPECIAL_MAX, specialFor } from './specials.js';
 
 export const BATTLE_SECONDS = 300;
 export const HERO_SPEED = 4.5;
@@ -41,6 +42,7 @@ export const PUFF_TIME = 0.5;
 export const CHICKEN_SPEED = 1.2;
 export const CHICKEN_TURN = 0.5;
 export const MAX_DT = 0.1;
+const CLEAR_DAMAGE = 999; // Pop-up Blocker: more than any regular monster's HP
 
 const EPS = 1e-9;
 const itemById = {};
@@ -50,8 +52,8 @@ export const FACING_VECTORS = {
   up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 },
 };
 
-const EDGE_KEYS = ['attack', 'ability', 'stance', 'undo', 'apple', 'stone', 'pause'];
-const INPUT_KEYS = ['up', 'down', 'left', 'right', 'attack', 'block', 'ability', 'stance', 'undo', 'apple', 'stone', 'pause'];
+const EDGE_KEYS = ['attack', 'ability', 'stance', 'undo', 'apple', 'stone', 'special', 'pause'];
+const INPUT_KEYS = ['up', 'down', 'left', 'right', 'attack', 'block', 'ability', 'stance', 'undo', 'apple', 'stone', 'special', 'pause'];
 
 function blankInput() {
   const input = {};
@@ -173,6 +175,8 @@ export function createBattle({ cq, lesson, rng }) {
     lessonNumber: number,
     track,
     gear,
+    special: specialFor(track, number), // this battle's spell (plain data): see specials.js
+    casting: false, // true only while a special resolves, so its own poofs add no power
     seed,
     nextId: 1,
     hero: {
@@ -197,6 +201,11 @@ export function createBattle({ cq, lesson, rng }) {
       history: [{ t: 0, x: spawn.x, y: spawn.y, hearts }],
       shieldReduceReadyAt: 0, // helmet damage-reduction gate (name kept from the ticket)
       blockGraceUntil: 0, // shield: blocked hits before this time are absorbed without re-pushing
+      power: 0, // special-move meter, 0..SPECIAL_MAX; filled by poofs, spent by the F key
+      fortUntil: 0, // Folder Fort: hero cannot be hurt and enemies inside fortRadius are shoved out until then
+      fortRadius: 0,
+      fortPush: 0,
+      shieldUntil: 0, // Quick Save: the shield bubble the renderer draws until then (invulnUntil does the protecting)
     },
     enemies: [],
     bolts: [],
@@ -243,6 +252,7 @@ export function spawnEnemy(state, type, x, y, events) {
     warned: false,
     nextScrapAt: def.scrapEvery ? state.time + def.scrapEvery : 0,
     stunUntil: 0, // melee bonk: no movement or contact damage before this time
+    frozenUntil: 0, // STOP!: like a stun, but drawn frozen
     slideDir: 0, // obstacle slide direction (-1/+1) along the free axis while a straight chase is blocked
   };
   state.enemies.push(enemy);
@@ -258,6 +268,12 @@ function poof(state, enemy, events) {
   addPuff(state, enemy.x, enemy.y);
   events.push({ type: 'poof', id: enemy.id, enemy: enemy.type, x: enemy.x, y: enemy.y });
   const def = ENEMIES[enemy.type];
+  if (!state.casting) {
+    const hero = state.hero;
+    const before = hero.power;
+    hero.power = Math.min(SPECIAL_MAX, hero.power + (POWER_GAIN[enemy.type] || 0));
+    if (before < SPECIAL_MAX && hero.power >= SPECIAL_MAX) events.push({ type: 'power', ready: true });
+  }
   if (!def.boss && nextRandom(state) < HEART_DROP_CHANCE) {
     const pickup = { id: state.nextId++, type: 'heart', x: enemy.x, y: enemy.y, until: state.time + HEART_PICKUP_LIFE };
     state.pickups.push(pickup);
@@ -404,6 +420,8 @@ function updateHero(state, input, pressed, dt, events) {
     if (gear.staff) fireStaff(state, events);
     else if (gear.rune) castRune(state, events);
   }
+  // F: the special move (needs a full power meter)
+  if (pressed.special) castSpecial(state, events);
   // Attack
   if (pressed.attack && state.time >= hero.attackCooldownUntil) {
     const stats = meleeStats(gear, hero.stance);
@@ -461,6 +479,160 @@ function castRune(state, events) {
   events.push({ type: 'chicken', id: target.id, x: target.x, y: target.y });
 }
 
+// ---------- special moves (specials.js has the data; the meter fills in poof()) ----------
+
+function stunEnemy(state, enemy, seconds) {
+  enemy.stunUntil = Math.max(enemy.stunUntil || 0, state.time + seconds);
+}
+
+// Shove an enemy `dist` tiles straight away from (fromX, fromY), walls and blocks respected.
+function pushEnemy(state, enemy, fromX, fromY, dist) {
+  const dx = enemy.x - fromX;
+  const dy = enemy.y - fromY;
+  const len = Math.hypot(dx, dy);
+  const f = FACING_VECTORS[state.hero.facing];
+  const ux = len > EPS ? dx / len : f.x;
+  const uy = len > EPS ? dy / len : f.y;
+  moveBody(enemy, ux * dist, uy * dist, ENEMIES[enemy.type].radius);
+}
+
+const inReach = (state, enemy, radius) => {
+  const hero = state.hero;
+  return Math.hypot(enemy.x - hero.x, enemy.y - hero.y) <= radius + (ENEMIES[enemy.type].size >= 2 ? 0.5 : 0) + EPS;
+};
+
+// Folder Fort: while it lasts (hero.fortUntil) every enemy inside the ring is shoved back out.
+function applyFort(state, dt) {
+  const hero = state.hero;
+  if (!(state.time < hero.fortUntil) || state.phase !== 'playing') return;
+  for (let i = 0; i < state.enemies.length; i += 1) {
+    const enemy = state.enemies[i];
+    const gap = hero.fortRadius + (ENEMIES[enemy.type].size >= 2 ? 0.5 : 0) - Math.hypot(enemy.x - hero.x, enemy.y - hero.y);
+    if (gap > EPS) pushEnemy(state, enemy, hero.x, hero.y, Math.min(gap, hero.fortPush * dt));
+  }
+}
+
+// F pressed. Returns true when the spell was cast. A full meter is spent whole. Poofs the spell itself
+// causes add no power (state.casting), so a screen-clearing spell can't instantly refill the meter.
+function castSpecial(state, events) {
+  const hero = state.hero;
+  const sp = state.special;
+  if (!sp || state.phase !== 'playing') return false;
+  if (hero.power < SPECIAL_MAX) {
+    events.push({ type: 'special-wait', power: hero.power, max: SPECIAL_MAX });
+    return false;
+  }
+  hero.power = 0;
+  state.casting = true;
+  const cast = { type: 'special', id: sp.id, name: sp.name, skill: sp.skill, kind: sp.kind, x: hero.x, y: hero.y, fromX: hero.x, fromY: hero.y, facing: hero.facing };
+  events.push(cast);
+  const list = state.enemies.slice();
+  // Where every monster stood at the moment of the cast (some are gone by the end of the step).
+  cast.targets = list.map((enemy) => ({ id: enemy.id, type: enemy.type, x: enemy.x, y: enemy.y, boss: ENEMIES[enemy.type].boss }));
+  const alive = (enemy) => state.enemies.indexOf(enemy) !== -1;
+  if (sp.kind === 'burst') {
+    list.forEach((enemy) => {
+      if (!inReach(state, enemy, sp.radius)) return;
+      const boss = ENEMIES[enemy.type].boss;
+      damageEnemy(state, enemy, sp.dmg, hero.x, hero.y, 'special', events);
+      if (!alive(enemy)) return;
+      pushEnemy(state, enemy, hero.x, hero.y, boss ? sp.knock / 2 : sp.knock);
+      stunEnemy(state, enemy, boss ? sp.stun / 2 : sp.stun);
+    });
+    cast.radius = sp.radius;
+  } else if (sp.kind === 'dash') {
+    const f = FACING_VECTORS[hero.facing];
+    const struck = {};
+    let travelled = 0;
+    while (travelled < sp.distance - EPS) {
+      const len = Math.min(0.2, sp.distance - travelled);
+      const bx = hero.x;
+      const by = hero.y;
+      moveBody(hero, f.x * len, f.y * len, HERO_RADIUS);
+      travelled += len;
+      state.enemies.slice().forEach((enemy) => {
+        if (struck[enemy.id]) return;
+        const reach = sp.width / 2 + ENEMIES[enemy.type].radius + 0.2;
+        if (Math.hypot(enemy.x - hero.x, enemy.y - hero.y) > reach) return;
+        struck[enemy.id] = true;
+        damageEnemy(state, enemy, sp.dmg, hero.x - f.x, hero.y - f.y, 'special', events);
+        if (alive(enemy)) stunEnemy(state, enemy, sp.stun);
+      });
+      if (Math.abs(hero.x - bx) + Math.abs(hero.y - by) < EPS) break; // a wall stops the dash
+    }
+    hero.invulnUntil = Math.max(hero.invulnUntil, state.time + sp.invuln);
+    cast.x = hero.x; // fromX/fromY keep where the dash began; x/y are where it ended
+    cast.y = hero.y;
+    cast.width = sp.width;
+  } else if (sp.kind === 'fort') {
+    hero.fortUntil = state.time + sp.duration;
+    hero.fortRadius = sp.radius;
+    hero.fortPush = sp.push;
+    hero.invulnUntil = Math.max(hero.invulnUntil, hero.fortUntil);
+    list.forEach((enemy) => {
+      if (!inReach(state, enemy, sp.radius)) return;
+      damageEnemy(state, enemy, sp.dmg, hero.x, hero.y, 'special', events);
+    });
+    cast.radius = sp.radius;
+    cast.duration = sp.duration;
+  } else if (sp.kind === 'rename') {
+    list.forEach((enemy) => {
+      if (ENEMIES[enemy.type].boss) { stunEnemy(state, enemy, sp.bossStun); return; }
+      if (isChicken(state, enemy)) return;
+      enemy.chickenUntil = state.time + sp.duration;
+      enemy.stateUntil = 0;
+      events.push({ type: 'chicken', id: enemy.id, x: enemy.x, y: enemy.y });
+    });
+    cast.duration = sp.duration;
+  } else if (sp.kind === 'freeze') {
+    list.forEach((enemy) => {
+      const seconds = ENEMIES[enemy.type].boss ? sp.bossDuration : sp.duration;
+      stunEnemy(state, enemy, seconds);
+      enemy.frozenUntil = state.time + seconds; // renderer: frozen look (a melee stun alone is not frozen)
+      if (enemy.type === 'big-glitch') { enemy.nextTeleportAt += seconds; enemy.warned = false; enemy.state = 'chase'; }
+    });
+    cast.duration = sp.duration;
+  } else if (sp.kind === 'save') {
+    const before = hero.hearts;
+    hero.hearts = Math.min(hero.maxHearts, hero.hearts + sp.heal);
+    events.push({ type: 'heal', source: 'special', amount: hero.hearts - before, hearts: hero.hearts });
+    hero.invulnUntil = Math.max(hero.invulnUntil, state.time + sp.invuln);
+    hero.shieldUntil = state.time + sp.invuln;
+    list.forEach((enemy) => {
+      if (!inReach(state, enemy, sp.radius)) return;
+      const boss = ENEMIES[enemy.type].boss;
+      pushEnemy(state, enemy, hero.x, hero.y, boss ? sp.knock / 2 : sp.knock);
+      stunEnemy(state, enemy, boss ? sp.stun / 2 : sp.stun);
+    });
+    cast.radius = sp.radius;
+  } else if (sp.kind === 'volley') {
+    const ids = [];
+    for (let ring = 0; ring < 2; ring += 1) {
+      for (let i = 0; i < sp.dirs; i += 1) {
+        const angle = (i * Math.PI * 2) / sp.dirs;
+        const bolt = {
+          id: state.nextId++, x: hero.x, y: hero.y, dx: Math.cos(angle), dy: Math.sin(angle),
+          travelled: 0, range: sp.range, dmg: sp.dmg, twin: ring === 1, special: true, wait: ring === 1 ? sp.pasteDelay : 0,
+        };
+        state.bolts.push(bolt);
+        ids.push(bolt.id);
+      }
+    }
+    cast.ids = ids;
+  } else if (sp.kind === 'blast') {
+    list.forEach((enemy) => {
+      damageEnemy(state, enemy, sp.dmg, hero.x, hero.y, 'special', events);
+      if (alive(enemy)) stunEnemy(state, enemy, sp.stun);
+    });
+  } else if (sp.kind === 'clear') {
+    list.forEach((enemy) => {
+      damageEnemy(state, enemy, ENEMIES[enemy.type].boss ? sp.bossDmg : CLEAR_DAMAGE, hero.x, hero.y, 'special', events);
+    });
+  }
+  state.casting = false;
+  return true;
+}
+
 function updateSwing(state, events) {
   const hero = state.hero;
   if (!hero.swing) return;
@@ -486,6 +658,7 @@ function updateBolts(state, dt, events) {
   let write = 0;
   for (let i = 0; i < state.bolts.length; i += 1) {
     const bolt = state.bolts[i];
+    if (bolt.wait > 0) { bolt.wait = Math.max(0, bolt.wait - dt); state.bolts[write++] = bolt; continue; } // a pasted copy waits at its start
     let alive = true;
     const total = Math.min(BOLT_SPEED * dt, bolt.range - bolt.travelled);
     const steps = Math.max(1, Math.ceil(total / 0.1));
@@ -499,7 +672,9 @@ function updateBolts(state, dt, events) {
         const enemy = state.enemies[e];
         const r = ENEMIES[enemy.type].size >= 2 ? 1.0 : 0.5;
         if (Math.hypot(enemy.x - bolt.x, enemy.y - bolt.y) <= r) {
+          state.casting = Boolean(bolt.special); // kills by a special's own bolts add no power either
           damageEnemy(state, enemy, bolt.dmg, bolt.x - bolt.dx, bolt.y - bolt.dy, 'bolt', events);
+          state.casting = false;
           alive = false;
           break;
         }
@@ -759,6 +934,7 @@ export function step(state, input, dt) {
   updateBolts(state, d, events);
   spawnDue(state, events);
   updateEnemies(state, d, events);
+  applyFort(state, d);
   updateSwing(state, events);
   if (state.phase === 'playing') updatePickups(state, events);
   updatePuffs(state);

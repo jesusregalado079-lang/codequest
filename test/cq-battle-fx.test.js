@@ -36,7 +36,7 @@ const colors = {
 };
 
 // Every transient comes from its event, draws the same pixels twice, and ends on its lifetime boundary.
-for (const type of Object.keys(FX_LIFE).filter((name) => name !== 'swing')) {
+for (const type of Object.keys(FX_LIFE).filter((name) => name !== 'swing' && name !== 'special')) {
   const { state, view } = scene();
   const event = { type, id: 42, x: 10, y: 6, enemy: 'slime', source: 'melee' };
   assert.equal(capture(state, view).some(([c]) => c === colors[type]), false, `${type}: absent before event`);

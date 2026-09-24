@@ -6,7 +6,7 @@ import { GEMS, LEGENDARY_CHOICES, RARITY } from './items.js';
 import { chooseLegendary, equip, getCosmetic, getItem, packComplete } from './character.js';
 import {
   addActiveMs, completePractice, emptyLessonState, lessonStatus, missionStepDone, normalizeLessons, openChest,
-  quizQuestionsToAsk, recordBattle, recordChestAnswer, recordParentCheck, recordQuizAttempt, recordSpotIt, recordWarmup, setPosition,
+  quizQuestionsToAsk, recordBattle, recordBattleRetry, recordChestAnswer, recordParentCheck, recordQuizAttempt, recordSpotIt, recordWarmup, setPosition,
   setWindows, startLesson, tickMission,
 } from './lesson-logic.js';
 import { mountKeyDiagram } from './lessons/diagram-ui.js';
@@ -338,10 +338,10 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
     key: () => (stateNow().battle
       ? `<p class="cq-key-art" aria-hidden="true">🗝️</p>${heading('🗝️ You earned a key!', 'KEY')}
       <p>Your grown-up checked your real computer task. This key opens the lesson’s treasure chest.</p>
-      <div class="cq-actions">${btn('key-continue', 'Open your chest ▶', '', 'cq-primary')}</div>`
+      <div class="cq-actions">${btn('key-continue', 'Open your chest ▶', '', 'cq-primary')}${btn('battle-retry', '⚔️ Play the battle again')}${btn('battle-learn', '🎓 Learn the controls')}</div>`
       : `<p class="cq-key-art" aria-hidden="true">🗝️</p>${heading('🗝️ You earned a key!', 'KEY')}
       <p>Your grown-up checked your real computer task. Monsters want your treasure chest. Defend it, then open it!</p>
-      <div class="cq-actions">${btn('battle-skip', 'Skip to the chest', '', 'cq-battle-skip')}${btn('battle-start', '⚔️ Defend the chest!', '', 'cq-primary')}</div>`),
+      <div class="cq-actions">${btn('battle-skip', 'Skip to the chest', '', 'cq-battle-skip')}${btn('battle-learn', '🎓 Learn the controls')}${btn('battle-start', '⚔️ Defend the chest!', '', 'cq-primary')}</div>`),
 
     battle: () => `<h2 id="cq-lesson-heading" class="cq-sr" tabindex="-1">Defend the chest!</h2><div class="cq-battle-host"></div>`,
 
@@ -349,8 +349,8 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
       const results = resultsView(screen.result, screen.gems);
       const hearts = results.hearts === null ? '' : `<li><span>Hearts left</span><strong>${esc(results.hearts)}${results.maxHearts === null ? '' : ` / ${esc(results.maxHearts)}`}</strong></li>`;
       return `<p class="cq-key-art" aria-hidden="true">${screen.result.outcome === 'victory' ? '🏆' : '🛡️'}</p>${heading(esc(results.headline), 'BATTLE RESULTS')}
-      <ul class="cq-battle-stats"><li><span>Poofs</span><strong>💨 ${esc(results.poofs)}</strong></li><li><span>Time played</span><strong>${esc(results.played)}</strong></li>${hearts}<li class="cq-battle-gems"><span>Gems</span><strong>${esc(results.gemsText)}</strong></li></ul>
-      <div class="cq-actions">${btn('key-continue', 'Open your chest ▶', '', 'cq-primary')}</div>`;
+      <ul class="cq-battle-stats"><li><span>Poofs</span><strong>💨 ${esc(results.poofs)}</strong></li><li><span>Time played</span><strong>${esc(results.played)}</strong></li>${hearts}<li class="cq-battle-gems"><span>Gems</span><strong>${screen.alreadyEarned ? 'Already earned' : esc(results.gemsText)}</strong></li></ul>
+      <div class="cq-actions">${btn('key-continue', 'Open your chest ▶', '', 'cq-primary')}${btn('battle-retry', screen.result.outcome === 'victory' ? '🔁 Play again' : '🔁 Try again')}${btn('battle-learn', '🎓 Learn the controls')}</div>`;
     },
 
     chest: () => {
@@ -662,19 +662,28 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
     let profileId = null;
     try { const profile = getActiveProfile(); profileId = profile ? profile.id : null; } catch { profileId = null; }
     battleReducedMotion = reducedMotion;
-    battle = mountBattle(host, { cq: cqNow(), lesson, nickname, reducedMotion, profileId, onDone: finishBattle });
+    battle = mountBattle(host, { cq: cqNow(), lesson, nickname, reducedMotion, profileId,
+      mode: screen.mode === 'practice' ? 'practice' : 'battle', onDone: finishBattle });
   }
   // Records the battle (or a skip) exactly once, the moment it ends. Skips go straight on to the chest.
   // A finished battle stays mounted for its short end banner, then the results screen shows; leaving
-  // during the banner keeps the record (no replay for gems).
+  // during the banner keeps the record. A retry may follow, but cannot award gems again.
   function finishBattle(result) {
     if (!mounted || !screen || screen.kind !== 'battle' || screen.recorded) { stopBattle(); return; }
+    if (result.outcome === 'practice-done' || result.outcome === 'practice-skipped') {
+      const returnTo = screen.returnTo;
+      stopBattle();
+      go(result.outcome === 'practice-done' ? { kind: 'battle' } : returnTo || { kind: 'key' });
+      return;
+    }
     if (result.outcome === 'skipped') { stopBattle(); skipToChest(result); return; }
     let gems = 0;
-    const saved = commit((cq) => { const recorded = recordBattle(cq, lesson, result, nowIso()); gems = recorded.gems; return recorded.cq; });
+    const wasRetry = Boolean(stateNow().battle);
+    const saved = commit((cq) => { const recorded = wasRetry ? recordBattleRetry(cq, lesson, result, nowIso())
+      : recordBattle(cq, lesson, result, nowIso()); gems = recorded.gems; return recorded.cq; });
     if (!saved) { stopBattle(); go({ kind: 'key' }); announce('Could not save the battle. You can still open your chest.'); return; }
     play(result.outcome === 'victory' ? 'win' : 'collect');
-    const next = { kind: 'battle-results', result, gems };
+    const next = { kind: 'battle-results', result, gems, alreadyEarned: wasRetry && gems === 0 };
     screen.recorded = next;
     clearResultsTimer();
     resultsTimer = setTimeout(() => {
@@ -684,7 +693,10 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
   }
   function skipToChest(result) {
     const skipped = { outcome: 'skipped', ms: result ? result.ms : 0, poofs: result ? result.poofs : 0 };
-    if (commit((cq) => setPosition(recordBattle(cq, lesson, skipped, nowIso()).cq, lesson.id, 'chest', 0))) { play('tap'); go(chestScreen()); return; }
+    // Keep the key phase until the first chest answer after an initial skip. If the kid leaves
+    // before answering, the key screen can still offer the first real battle and its gem award.
+    if (commit((cq) => stateNow().battle ? setPosition(cq, lesson.id, 'chest', 0)
+      : recordBattle(cq, lesson, skipped, nowIso()).cq)) { play('tap'); go(chestScreen()); return; }
     go({ kind: 'key' });
     announce('Could not save that. Please try again.');
   }
@@ -826,6 +838,15 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
       play('tap');
       go({ kind: 'battle' });
     },
+    'battle-retry': () => {
+      if (!stateNow().passedAt || !stateNow().battle || stateNow().phase !== 'key') return;
+      play('tap'); go({ kind: 'battle' });
+    },
+    'battle-learn': () => {
+      if (!stateNow().passedAt || stateNow().phase !== 'key') return;
+      const returnTo = screen;
+      play('tap'); go({ kind: 'battle', mode: 'practice', returnTo });
+    },
     'battle-skip': () => {
       if (stateNow().battle) { render(); return; }
       skipToChest(null);
@@ -838,7 +859,8 @@ export function mountLesson({ app, route: startRoute, lessonId, nickname, getCq,
       const q = lesson.chest[screen.pos];
       const right = choice === q.answer;
       const first = screen.wrong.length === 0;
-      if (first && !commit((cq) => recordChestAnswer(cq, lesson, screen.pos, right))) return;
+      if (first && !commit((cq) => recordChestAnswer(stateNow().phase === 'key'
+        ? setPosition(cq, lesson.id, 'chest', 0) : cq, lesson, screen.pos, right))) return;
       if (right) {
         play('collect');
         if (screen.pos < lesson.chest.length - 1) {

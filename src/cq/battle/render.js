@@ -50,7 +50,7 @@ export const FIREFLY_COLORS = [FIREFLY, FIREFLY_GLOW];
 export const PUFF_LIFE = 0.5;
 export const PUFF_LIFE_REDUCED = 0.25;
 export const PARTICLE_LIFE = 0.9;
-export const FX_LIFE = { swing: 0.07, hit: 0.17, poof: 0.42, hurt: 0.25, block: 0.18, pickup: 0.32, drop: 0.36 };
+export const FX_LIFE = { swing: 0.07, hit: 0.17, poof: 0.42, hurt: 0.25, block: 0.18, pickup: 0.32, drop: 0.36, special: 0.5 };
 export const MAX_FX = 16;
 export const SHAKE_LIFE = 0.15;
 
@@ -411,14 +411,34 @@ function drawEnemy(e, state, view) {
   box(X - T * 0.35 * size, Y + T * 0.38 * size, T * 0.7 * size, T * 0.1 * size, '#00000030');
   FLASH = e.flashUntil > time ? '#ffffff' : null;
   setOrigin(X - (T * size) / 2, Y - (T * size) / 2, unit, chicken ? e.dirX > 0 : false);
-  const reduced = Boolean(view.reducedMotion);
-  if (chicken) drawChicken(e, time);
+  const frozen = e.frozenUntil > time;
+  const reduced = Boolean(view.reducedMotion || frozen);
+  if (chicken) drawChicken(e, frozen ? 0 : time);
   else if (e.type === 'slime') drawSlime(e, time, false, reduced);
   else if (e.type === 'mega-slime') drawSlime(e, time, true, reduced);
   else if (e.type === 'goblin') drawGoblin(e, time, reduced);
   else if (e.type === 'mimic') drawMimic(e, time, T, X, Y - (T * size) / 2);
-  else if (e.type === 'big-glitch') drawBigGlitch(e, time, view.reducedMotion);
+  else if (e.type === 'big-glitch') drawBigGlitch(e, frozen ? 0 : time, reduced);
   FLASH = null;
+  if (frozen || (e.frozenUntil > 0 && time - e.frozenUntil < 0.18 && !view.reducedMotion)) {
+    const px = Math.max(2, Math.round(T / 16) * 2);
+    const x = X - T * size * 0.48;
+    const y = Y - T * size * 0.48;
+    const side = T * size * 0.96;
+    if (frozen) {
+      // Frost sits on the edges. The original sprite remains fully visible.
+      for (const [ax, ay, w, h] of [[x, y, side, px], [x, y + side - px, side, px],
+        [x, y, px, side], [x + side - px, y, px, side]]) fxBox(view, ax, ay, w, h, '#b5f4ff');
+      for (let k = 0; k < 4; k += 1) {
+        const cx = x + (k % 2 ? side : 0);
+        const cy = y + (k < 2 ? side * 0.22 : side * 0.75);
+        fxBox(view, cx - px * 1.5, cy - px * 0.5, px * 3, px, '#e9ffff');
+        fxBox(view, cx - px * 0.5, cy - px * 1.5, px, px * 3, '#d2f9ff');
+      }
+    } else {
+      specialStar(view, X + T * 0.42, Y - T * size * 0.38, px * 0.55, '#96e6f1', '#ffffff');
+    }
+  }
   drawHitSmear(e, state, view);
   const topY = Y - (T * size) / 2 - T * 0.15;
   if (e.stunUntil && e.stunUntil > time) drawStunStars(X, topY, T, time, size);
@@ -471,8 +491,501 @@ function drawHitSmear(e, state, view) {
   box(X - sx * T * size * 0.12 - px, Y - sy * T * size * 0.12 + px, px * 4, px, '#ffffff');
 }
 
+// Each spell owns one small draw function. Later lessons extend only this dispatcher.
+function drawSpecialStartBurst(fx, state, view, age) {
+  const T = view.tile;
+  const unit = Math.max(2, Math.round(T / 16));
+  const p = view.reducedMotion ? 0.48 : Math.min(1, age / 0.45);
+  const X = view.offsetX + fx.x * T;
+  const Y = view.offsetY + fx.y * T + T * 0.18;
+  const limit = (fx.radius || 3.6) * T;
+  const rim = Math.min(limit - unit * 2.2, T * (0.78 + 2.82 * p));
+  const ring = (radius, count, outer, core, width) => {
+    for (let i = 0; i < count; i += 1) {
+      const a = i * Math.PI * 2 / count;
+      const x = X + Math.cos(a) * radius;
+      const y = Y + Math.sin(a) * radius * 0.76;
+      fxBox(view, x - width * 2, y - width * 2, width * 4, width * 4, outer);
+      fxBox(view, x - width, y - width, width * 2, width * 2, core);
+    }
+  };
+  ring(rim, 72, '#7865d8', '#fff2bd', unit);
+  if (!view.reducedMotion && age >= 0.08 && age < 0.39) {
+    ring(Math.max(T * 0.42, rim - T * 0.55), 56, '#8062c9bb', '#c5a8f2dd', unit * 0.75);
+  }
+  if (view.reducedMotion) return;
+  if (age < 0.2) {
+    // A small filled flash stays under the hero, while four solid panes read around his feet.
+    if (age < 0.065) {
+      fxBox(view, X - unit * 4, Y - unit * 3, unit * 8, unit * 6, '#fff8d2cc');
+      fxBox(view, X - unit * 3, Y - unit * 4, unit * 6, unit * 8, '#fff8d2cc');
+    }
+    const colors = ['#a994ef', '#f3cd73', '#8ed3ef', '#e8a3ce'];
+    const drift = age / 0.2 * unit * 1.5;
+    for (let i = 0; i < 4; i += 1) {
+      const dx = (i % 2 ? 1 : -1) * (unit * 12 + drift);
+      const dy = (i < 2 ? -1 : 1) * (unit * 5 + drift * 0.35);
+      fxBox(view, X + dx - unit * 3.5, Y + dy - unit * 3.5, unit * 7, unit * 7, colors[i]);
+      fxBox(view, X + dx - unit * 3.5, Y + dy - unit * 3.5, unit * 7, unit, '#fff9da');
+    }
+  }
+  for (let i = 0; i < 16; i += 1) {
+    const a = i * Math.PI * 2 / 16 + 0.13;
+    const d = Math.min(limit - unit * 1.5, rim * (0.74 + (i % 3) * 0.1));
+    const s = unit * (i % 4 ? 2.5 : 3.2);
+    fxBox(view, X + Math.cos(a) * d - s / 2, Y + Math.sin(a) * d * 0.76 - s / 2 - T * 0.12 * Math.sin(p * Math.PI), s, s,
+      i % 3 ? '#d5b5f1' : '#fff7cd');
+  }
+}
+
+function specialWindowFrame(view, x, y, w, h, unit, border, fill, title) {
+  fxBox(view, x + unit, y + unit, w - 2 * unit, h - 2 * unit, fill);
+  fxBox(view, x, y, w, unit, border);
+  fxBox(view, x, y + unit, unit, h - unit, border);
+  fxBox(view, x + w - unit, y + unit, unit, h - unit, border);
+  fxBox(view, x, y + h - unit, w, unit, border);
+  fxBox(view, x + unit, y + unit, w - 2 * unit, unit * 2, title);
+  fxBox(view, x + w - unit * 3, y + unit * 1.4, unit * 1.3, unit, '#fffdf0');
+}
+
+function specialStar(view, X, Y, unit, outer, core) {
+  fxBox(view, X - unit * 6, Y - unit * 1.3, unit * 12, unit * 2.6, outer);
+  fxBox(view, X - unit * 1.3, Y - unit * 6, unit * 2.6, unit * 12, outer);
+  fxBox(view, X - unit * 3.5, Y - unit, unit * 7, unit * 2, core);
+  fxBox(view, X - unit, Y - unit * 3.5, unit * 2, unit * 7, core);
+}
+
+function drawSpecialWindowDash(fx, state, view, age) {
+  const T = view.tile;
+  const unit = Math.max(2, Math.round(T / 16));
+  const sx = view.offsetX + fx.fromX * T;
+  const sy = view.offsetY + fx.fromY * T;
+  const ex = view.offsetX + fx.x * T;
+  const ey = view.offsetY + fx.y * T;
+  const p = view.reducedMotion ? 0 : Math.min(1, age / 0.45);
+  const count = view.reducedMotion ? 2 : 4;
+  for (let i = 0; i < count; i += 1) {
+    const f = (i + 1) / (count + 1) + (view.reducedMotion ? 0 : p * 0.07);
+    const x = sx + (ex - sx) * f;
+    const y = sy + (ey - sy) * f - T * 0.4;
+    const w = T * 1.22;
+    const h = T * 0.92;
+    const faded = !view.reducedMotion && age > 0.16 + i * 0.055;
+    specialWindowFrame(view, x - w / 2, y - h / 2, w, h, unit * 2,
+      faded ? '#a9d8ebb0' : '#d5f3ff', faded ? '#c8eff04d' : '#d9f6f08c',
+      faded ? '#4e7898a8' : '#3f6989dd');
+  }
+  if (view.reducedMotion) return;
+  const horizontal = Math.abs(ex - sx) >= Math.abs(ey - sy);
+  for (let i = 0; i < 9; i += 1) {
+    const f = (i + 0.5) / 10;
+    const x = sx + (ex - sx) * f;
+    const y = sy + (ey - sy) * f;
+    const offset = (i % 2 ? -1 : 1) * T * 0.32;
+    fxBox(view, x - (horizontal ? unit * 5 : unit * 1.25) + (horizontal ? 0 : offset),
+      y - (horizontal ? unit * 1.25 : unit * 5) + (horizontal ? offset : 0),
+      horizontal ? unit * 10 : unit * 2.5, horizontal ? unit * 2.5 : unit * 10,
+      i % 3 ? '#acd7e6dd' : '#fff3bd');
+  }
+  specialStar(view, sx, sy, unit, '#83b8d2', '#fff2c3');
+  specialStar(view, ex, ey, unit * 0.8, '#b0e5ee', '#fff9d7');
+  for (let i = 0; i < 8; i += 1) {
+    const a = i * Math.PI * 2 / 8;
+    const d = T * (0.35 + p * 0.38);
+    const s = unit * 2.4;
+    fxBox(view, ex + Math.cos(a) * d - s / 2, ey + Math.sin(a) * d * 0.78 - s / 2,
+      s, s, i % 2 ? '#fff3bd' : '#bceaf3');
+  }
+}
+
+function drawSpecialAltTabDash(fx, state, view, age) {
+  const T = view.tile;
+  const unit = Math.max(2, Math.round(T / 16));
+  const sx = view.offsetX + fx.fromX * T;
+  const sy = view.offsetY + fx.fromY * T;
+  const ex = view.offsetX + fx.x * T;
+  const ey = view.offsetY + fx.y * T;
+  const p = view.reducedMotion ? 0.5 : Math.min(1, age / 0.45);
+  const horizontal = Math.abs(ex - sx) >= Math.abs(ey - sy);
+  if (!view.reducedMotion) {
+    // A solid two-tone rail makes the whole six-tile crossing visible at first glance.
+    for (let i = 0; i < 19; i += 1) {
+      const f = i / 18;
+      const x = sx + (ex - sx) * f;
+      const y = sy + (ey - sy) * f;
+      fxBox(view, x - unit * 2.5, y - unit * 2.5, unit * 5, unit * 5, '#4c91b9dd');
+      fxBox(view, x - unit * 1.5, y - unit * 1.5, unit * 3, unit * 3, '#c9ffff');
+    }
+  }
+  for (let i = 0; i < (view.reducedMotion ? 1 : 3); i += 1) {
+    const f = (i + 1) / (view.reducedMotion ? 2 : 4);
+    const X = sx + (ex - sx) * f;
+    const Y = sy + (ey - sy) * f;
+    for (let card = 0; card < 2; card += 1) {
+      const side = card ? 1 : -1;
+      const shift = side * T * (view.reducedMotion ? 0.22 : 0.22 + 0.18 * Math.sin((p + f) * Math.PI));
+      const w = T * (view.reducedMotion ? 1.08 : 1.0 + 0.3 * Math.abs(Math.cos((p + f + card * 0.5) * Math.PI)));
+      const h = T * 0.94;
+      specialWindowFrame(view, X - w / 2 + (horizontal ? 0 : shift), Y - h / 2 + (horizontal ? shift : 0),
+        w, h, unit * 2, card ? '#6ed8e4' : '#eefaff', card ? '#5ca7c29c' : '#c9f7f4c4',
+        card ? '#315d83d9' : '#6bbacbdd');
+    }
+  }
+  if (view.reducedMotion) return;
+  for (const [X, Y] of [[sx, sy], [ex, ey]]) {
+    specialStar(view, X, Y, unit, '#5bc5dd', '#f5ffff');
+    for (let i = 0; i < 4; i += 1) {
+      const a = i * Math.PI / 2;
+      const s = unit * 2.5;
+      fxBox(view, X + Math.cos(a) * T * (0.4 + p * 0.35) - s / 2, Y + Math.sin(a) * T * (0.4 + p * 0.35) - s / 2,
+        s, s, '#d6f9ff');
+    }
+  }
+}
+
+function specialRing(view, X, Y, rx, ry, count, width, outer, inner) {
+  for (let i = 0; i < count; i += 1) {
+    const a = i * Math.PI * 2 / count;
+    const x = X + Math.cos(a) * rx;
+    const y = Y + Math.sin(a) * ry;
+    fxBox(view, x - width * 2, y - width * 2, width * 4, width * 4, outer);
+    fxBox(view, x - width, y - width, width * 2, width * 2, inner);
+  }
+}
+
+function drawFortRing(state, view) {
+  const hero = state.hero;
+  if (!(state.time < hero.fortUntil) || !hero.fortRadius) return;
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  const X = view.offsetX + hero.x * T;
+  const Y = view.offsetY + hero.y * T;
+  const remaining = hero.fortUntil - state.time;
+  const elapsed = 3 - remaining;
+  specialRing(view, X, Y + T * 0.18, T * hero.fortRadius * 0.83, T * hero.fortRadius * 0.56,
+    44, u * 0.6, '#a9e5ef52', '#d8f9ff42');
+  for (let i = 0; i < 10; i += 1) {
+    if (!view.reducedMotion && remaining <= 0.5 && i >= Math.ceil(remaining / 0.05)) continue;
+    const a = i * Math.PI * 2 / 10 - Math.PI / 2;
+    const settle = view.reducedMotion ? 1 : Math.max(0.65, Math.min(1, (elapsed - i * 0.015) / 0.15));
+    if (settle <= 0) continue;
+    const scale = view.reducedMotion ? 1 : 0.6 + settle * 0.4;
+    const bob = view.reducedMotion ? 0 : Math.sin(state.time * 3 + i) * u * 0.22;
+    const x = X + Math.cos(a) * hero.fortRadius * T - u * 4.5 * scale;
+    const y = Y + Math.sin(a) * hero.fortRadius * T * 0.72 - u * 3 * scale
+      - (1 - settle) * T * 0.38 + bob;
+    const w = u * 9 * scale;
+    const h = u * 6 * scale;
+    fxBox(view, x, y + u * scale, w, h, '#805220');
+    fxBox(view, x + u * scale, y, u * 3 * scale, u * 2 * scale, '#ffe39a');
+    fxBox(view, x + u * scale, y + u * 2 * scale, w - u * 2 * scale, h - u * scale, '#e9af4a');
+    fxBox(view, x + u * scale, y + u * 2 * scale, w - u * 3 * scale, u * scale, '#ffe7a4');
+    fxBox(view, x + w - u * 2 * scale, y + u * 3 * scale, u * scale, u * 3 * scale, '#af722d');
+  }
+}
+
+function drawSpecialFolderFort(fx, state, view, age) {
+  if (view.reducedMotion || age >= 0.32) return;
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  for (const target of fx.targets || []) {
+    const d = Math.hypot(target.x - fx.x, target.y - fx.y);
+    const radius = fx.radius || 2.4;
+    if (d >= radius + (target.boss ? 0.5 : 0)) continue;
+    const X = view.offsetX + (fx.x + (target.x - fx.x) / (d || 1) * radius) * T;
+    const Y = view.offsetY + (fx.y + (target.y - fx.y) / (d || 1) * radius) * T;
+    for (let k = 0; k < 3; k += 1) {
+      const a = k * Math.PI * 2 / 3 + target.id;
+      fxBox(view, X + Math.cos(a) * (u * 3 + age * T * 0.5),
+        Y + Math.sin(a) * u * 2 - age * T * 0.3, u * 3, u * 2,
+        k ? '#e7dbc0' : '#fff5d6');
+    }
+  }
+}
+
+function drawSpecialMassRename(fx, state, view, age) {
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  const X = view.offsetX + fx.x * T;
+  const Y = view.offsetY + fx.y * T;
+  const p = view.reducedMotion ? 0.56 : Math.min(1, age / 0.42);
+  specialRing(view, X, Y + T * 0.12, T * (0.7 + p * 7.8), T * (0.5 + p * 5.2),
+    64, u * 0.8, '#ad52c8cc', '#f4b6e9');
+  for (const target of age < 0.4 ? (fx.converted || []) : []) {
+    const x = view.offsetX + target.x * T;
+    const y = view.offsetY + target.y * T - T * 0.88;
+    // Empty name box and a block cursor. No canvas text glyphs.
+    const w = u * 11;
+    const h = u * 5;
+    fxBox(view, x - w / 2, y, w, h, '#4f3874');
+    fxBox(view, x - w / 2 + u, y + u, w - u * 2, h - u * 2, '#f7ebff');
+    if (view.reducedMotion || Math.floor(age / 0.2) % 2 === 0)
+      fxBox(view, x + u * 2, y + u * 1.5, u * 2, u * 2, '#8846b0');
+    if (!view.reducedMotion) for (let k = 0; k < 6; k += 1) {
+      const a = k * Math.PI / 3 + target.id * 0.7;
+      const d = T * (0.22 + p * 0.52);
+      fxBox(view, x + Math.cos(a) * d - u, y + T * 0.45 + Math.sin(a) * d * 0.55 - u,
+        u * (k % 2 ? 3 : 2), u * 2, k % 2 ? '#f0a1dc' : '#d4b4ff');
+    }
+  }
+  if (!view.reducedMotion) for (const target of fx.targets || []) {
+    if (!target.boss) continue;
+    const x = view.offsetX + target.x * T;
+    const y = view.offsetY + target.y * T - T * 1.2;
+    for (let k = 0; k < 3; k += 1) {
+      const a = k * Math.PI * 2 / 3 + age * 5;
+      fxBox(view, x + Math.cos(a) * T * 0.55 - u, y + Math.sin(a) * T * 0.18 - u,
+        u * 3, u * 3, '#ffe68b');
+    }
+  }
+}
+
+function drawSpecialStop(fx, state, view, age) {
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  const scale = view.reducedMotion ? 1 : age < 0.1 ? 1.3 - age * 3 : age > 0.38 ? Math.max(0.25, 1 - (age - 0.38) * 6) : 1;
+  const step = T * 0.28 * scale;
+  const X = view.offsetX + fx.x * T;
+  const Y = view.offsetY + fx.y * T - T * 1.05;
+  const left = X - step * 5;
+  const top = Y - step * 5;
+  for (let row = 0; row < 10; row += 1) {
+    const cut = row < 3 ? 3 - row : row > 6 ? row - 6 : 0;
+    const x = left + cut * step;
+    const w = (10 - cut * 2) * step;
+    fxBox(view, x, top + row * step, w, step, '#fff5ed');
+    if (row > 0 && row < 9) fxBox(view, x + step * 0.55, top + row * step,
+      w - step * 1.1, step + 1, '#d94e54');
+  }
+  fxBox(view, X - step * 2.6, Y - step * 2.8, step * 5.2, step * 1.4, '#fffaf0');
+}
+
+function drawSpecialQuickSave(fx, state, view, age) {
+  if (view.reducedMotion) return; // The persistent bubble is the single still cue.
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  const X = view.offsetX + fx.x * T;
+  const Y = view.offsetY + fx.y * T;
+  const p = Math.min(1, age / 0.46);
+  specialRing(view, X, Y + T * 0.18, T * (0.65 + p * 1.55), T * (0.4 + p * 1.02),
+    52, u * 0.8, '#b5c968c4', '#fff2a2');
+  const rise = p * T * 1.35;
+  const w = u * 18 * (1 - p * 0.3);
+  const h = u * 18 * (1 - p * 0.3);
+  const x = X - w / 2;
+  const y = Y - T * 2.3 - rise - h / 2;
+  if (age < 0.36) {
+    fxBox(view, x, y, w, h, '#345f63');
+    fxBox(view, x + u, y + u, w - u * 2, h - u * 2, '#d3f5db');
+    fxBox(view, x + u * 3, y + u, w - u * 6, u * 4, '#6c8990');
+    fxBox(view, x + u * 4, y + u * 2, w - u * 8, u, '#ecf8e8');
+    fxBox(view, x + u * 3, y + h - u * 5, w - u * 6, u * 4, '#fff8cf');
+  }
+}
+
+function drawSaveHearts(fx, view, age) {
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  const X = view.offsetX + fx.x * T;
+  const Y = view.offsetY + fx.y * T;
+  const p = Math.min(1, age / 0.46);
+  for (let i = 0; i < 5; i += 1) {
+    const sx = X + (i - 2) * T * 0.42 + Math.sin(i * 4) * u * 2;
+    const sy = Y - T * (0.46 + p * (0.8 + i * 0.08));
+    const color = i % 2 ? '#fff1a2' : '#c5f6c1';
+    fxBox(view, sx - u * 2, sy - u, u * 2, u * 2, color);
+    fxBox(view, sx + u, sy - u, u * 2, u * 2, color);
+    fxBox(view, sx - u * 2, sy + u, u * 5, u * 2, color);
+    fxBox(view, sx - u, sy + u * 3, u * 3, u, color);
+  }
+}
+
+function drawSaveBubble(state, view, upper) {
+  const until = state.hero.shieldUntil;
+  const time = state.time;
+  if (!(time < until) && !(until > 0 && time - until < 0.18 && !view.reducedMotion)) return;
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  const X = view.offsetX + state.hero.x * T;
+  const Y = view.offsetY + state.hero.y * T - T * 0.43;
+  if (time < until) {
+    if (!upper) fxBox(view, X - T * 0.63, Y - T * 0.7, T * 1.26, T * 1.4, '#e7ffff16');
+    else {
+      specialRing(view, X, Y, T * 0.68, T * 0.9, 48, u * 0.7, '#a7e5f1b8', '#f3ffff');
+      fxBox(view, X - T * 0.42, Y - T * 0.68, u * 4, u * 2, '#ffffffb8');
+    }
+  } else if (upper) for (let i = 0; i < 8; i += 1) {
+    const a = i * Math.PI / 4;
+    fxBox(view, X + Math.cos(a) * T * 0.78, Y + Math.sin(a) * T * 0.95,
+      u * 3, u * 3, '#d6faff');
+  }
+}
+
+function drawSpecialCopyPaste(fx, state, view, age) {
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  const X = view.offsetX + fx.x * T;
+  const Y = view.offsetY + fx.y * T;
+  if (view.reducedMotion) {
+    specialRing(view, X, Y + T * 0.12, T * 0.8, T * 0.57, 24, u * 0.65, '#9b78e8', '#fff0c9');
+    return;
+  }
+  if (age < 0.15) {
+    const p = age / 0.15;
+    specialStar(view, X, Y - T * 0.5, u * (1.1 - p * 0.25), '#9465db', '#fff7d7');
+    for (let i = 0; i < 8; i += 1) {
+      const a = i * Math.PI / 4;
+      const d = T * (0.75 - p * 0.45);
+      fxBox(view, X + Math.cos(a) * d - u * 1.5, Y - T * 0.45 + Math.sin(a) * d * 0.7 - u * 1.5,
+        u * 3, u * 3, i % 2 ? '#e7c4ff' : '#fff4c8');
+    }
+  }
+  if (age >= 0.3 && age < 0.47) {
+    const p = (age - 0.3) / 0.17;
+    specialRing(view, X, Y + T * 0.1, T * (0.65 + p * 1.28), T * (0.48 + p * 0.84),
+      36, u * 0.75, '#6c91e7', '#f3ddff');
+    if (age < 0.36) specialStar(view, X, Y - T * 0.46, u, '#7c78e1', '#fff9e6');
+  }
+}
+
+function selectionBox(view, target, age, reduced) {
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  const size = target.boss ? 2 : 1;
+  const collapse = reduced ? 0 : age > 0.2 ? Math.min(1, (age - 0.2) / 0.23) : 0;
+  const pop = reduced ? 1 : age < 0.08 ? 1.16 - age * 2 : 1;
+  const halfW = T * (size * 0.58 + 0.22) * pop * (1 - collapse * 0.65);
+  const halfH = T * (size * 0.58 + 0.2) * pop * (1 - collapse * 0.65);
+  const X = view.offsetX + target.x * T;
+  const Y = view.offsetY + target.y * T - T * 0.32;
+  const left = X - halfW;
+  const top = Y - halfH;
+  const w = halfW * 2;
+  const h = halfH * 2;
+  const phase = reduced ? 0 : Math.floor(age * 3) % 2;
+  // Filled tint and broad marching dashes; the slow phase advances at most three times a second.
+  fxBox(view, left + u, top + u, w - u * 2, h - u * 2, '#e8d5ff30');
+  for (let k = 0; k < 8; k += 1) {
+    const f = (k + phase * 0.5) / 8;
+    fxBox(view, left + f * w, top, Math.max(u * 2, w / 13), u * 2, '#d783fa');
+    fxBox(view, left + f * w, top + h - u * 2, Math.max(u * 2, w / 13), u * 2, '#fff2c8');
+    fxBox(view, left, top + f * h, u * 2, Math.max(u * 2, h / 13), '#d783fa');
+    fxBox(view, left + w - u * 2, top + f * h, u * 2, Math.max(u * 2, h / 13), '#fff2c8');
+  }
+  for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+    fxBox(view, left + dx * w - u * 2, top + dy * h - u * 2, u * 4, u * 4, '#8948bd');
+    fxBox(view, left + dx * w - u, top + dy * h - u, u * 2, u * 2, '#fff9e4');
+  }
+}
+
+function drawSpecialSelectAll(fx, state, view, age, upper) {
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  if (!upper) {
+    if (!view.reducedMotion) {
+      const p = Math.min(1, age / 0.39);
+      specialRing(view, view.offsetX + fx.x * T, view.offsetY + fx.y * T,
+        T * (0.5 + p * 10.2), T * (0.34 + p * 6.5), 72, u * 0.55, '#9b62d1a8', '#f3c6ff');
+    }
+    return;
+  }
+  for (const target of fx.targets || []) {
+    const alive = state.enemies.some((enemy) => enemy.id === target.id);
+    if (!alive && age >= 0.27 && !view.reducedMotion) continue;
+    selectionBox(view, target, age, view.reducedMotion);
+  }
+}
+
+function popupWindow(view, target) {
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  const X = view.offsetX + target.x * T;
+  const Y = view.offsetY + target.y * T - T * (target.boss ? 1.24 : 0.82);
+  const w = T * (target.boss ? 1.65 : 1.32);
+  const h = T * (target.boss ? 1.22 : 1.02);
+  const x = X - w / 2;
+  const y = Y - h / 2;
+  fxBox(view, x, y, w, h, '#384a70');
+  fxBox(view, x + u * 2, y + u * 6, w - u * 4, h - u * 8, '#f7f1df');
+  fxBox(view, x + u * 2, y + u * 2, w - u * 4, u * 4, '#aacde6');
+  fxBox(view, x + w - u * 6, y + u * 2, u * 4, u * 4, '#df5264');
+  fxBox(view, x + w - u * 5, y + u * 3, u * 2, u * 2, '#fff7e6');
+  return { X, Y, w, h };
+}
+
+function popupX(view, X, Y, u, scale) {
+  // Pixel-stepped diagonals, with a dark landing shadow behind the red stamp.
+  for (let i = -4; i <= 4; i += 1) {
+    const s = u * scale;
+    fxBox(view, X + i * s - s * 1.4, Y + i * s - s * 1.4, s * 2.8, s * 2.8, '#8b2e4a');
+    fxBox(view, X + i * s - s * 1.4, Y - i * s - s * 1.4, s * 2.8, s * 2.8, '#8b2e4a');
+    fxBox(view, X + i * s - s, Y + i * s - s, s * 2, s * 2, '#ed5263');
+    fxBox(view, X + i * s - s, Y - i * s - s, s * 2, s * 2, '#ed5263');
+  }
+}
+
+function drawSpecialPopupBlocker(fx, state, view, age, upper) {
+  const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
+  const X = view.offsetX + fx.x * T;
+  const Y = view.offsetY + fx.y * T;
+  if (!upper) {
+    if (view.reducedMotion) return;
+    const p = Math.min(1, age / 0.43);
+    specialRing(view, X, Y + T * 0.1, T * (0.62 + p * 10), T * (0.42 + p * 6.3),
+      72, u * 0.8, '#ba435ecc', '#ffe3be');
+    if (age < 0.4) {
+      specialRing(view, X, Y + T * 0.37, T * 0.54, T * 0.34, 28, u * 0.55, '#b43c59', '#fff0d1');
+      for (let i = -3; i <= 3; i += 1) fxBox(view, X + i * u * 2 - u, Y + T * 0.37 - i * u - u,
+        u * 2, u * 2, '#f8e6d1');
+    }
+    return;
+  }
+  for (const target of fx.targets || []) {
+    const center = age < 0.31 || view.reducedMotion ? popupWindow(view, target) : {
+      X: view.offsetX + target.x * T,
+      Y: view.offsetY + target.y * T - T * (target.boss ? 1.24 : 0.82),
+    };
+    if (view.reducedMotion) continue;
+    if (age >= 0.17) {
+      if (age < 0.33) popupX(view, center.X, center.Y, u, target.boss ? 2.45 : 2.05);
+      if (age >= 0.31) {
+        const p = (age - 0.31) / 0.19;
+        const n = target.boss ? 12 : 8;
+        for (let i = 0; i < n; i += 1) {
+          const a = i * Math.PI * 2 / n + target.id * 0.27;
+          const d = T * (0.4 + p * (target.boss ? 1.15 : 0.8));
+          const size = u * (i % 3 ? 2.5 : 3.5);
+          fxBox(view, center.X + Math.cos(a) * d - size / 2,
+            center.Y + Math.sin(a) * d * 0.7 - size / 2, size, size,
+            i % 2 ? '#f6dfb5' : '#afc5e3');
+        }
+        specialRing(view, center.X, center.Y, T * (0.42 + p * 0.55), T * (0.34 + p * 0.42),
+          20, u * 0.45, '#bb435d', '#fff0ca');
+      }
+    }
+  }
+}
+
+function drawSpecialEffect(fx, state, view, age) {
+  if (view.reducedMotion && age >= 0.4 - 1e-9) return;
+  switch (fx.id) {
+    case 'start-burst': drawSpecialStartBurst(fx, state, view, age); break;
+    case 'window-dash': drawSpecialWindowDash(fx, state, view, age); break;
+    case 'alt-tab-dash': drawSpecialAltTabDash(fx, state, view, age); break;
+    case 'folder-fort': drawSpecialFolderFort(fx, state, view, age); break;
+    case 'mass-rename': drawSpecialMassRename(fx, state, view, age); break;
+    case 'stop': drawSpecialStop(fx, state, view, age); break;
+    case 'quick-save': drawSpecialQuickSave(fx, state, view, age); break;
+    case 'copy-paste-volley': drawSpecialCopyPaste(fx, state, view, age); break;
+    case 'select-all': drawSpecialSelectAll(fx, state, view, age, false); break;
+    case 'popup-blocker': drawSpecialPopupBlocker(fx, state, view, age, false); break;
+    default: break;
+  }
+}
+
 function drawEventFx(state, view, upper) {
-  if (view.reducedMotion || !view.effects) return;
+  if (!view.effects) return;
   const T = view.tile;
   const px = Math.max(1, Math.round(T / 16));
   for (let i = 0; i < view.effects.length; i += 1) {
@@ -480,6 +993,15 @@ function drawEventFx(state, view, upper) {
     const life = FX_LIFE[fx.type];
     const age = state.time - fx.born;
     if (!(age >= 0 && age < life - 1e-9)) continue;
+    if (fx.type === 'special') {
+      if (view.reducedMotion && age >= 0.4 - 1e-9) continue;
+      if (!upper) drawSpecialEffect(fx, state, view, age);
+      else if (fx.id === 'quick-save' && !view.reducedMotion) drawSaveHearts(fx, view, age);
+      else if (fx.id === 'select-all') drawSpecialSelectAll(fx, state, view, age, true);
+      else if (fx.id === 'popup-blocker') drawSpecialPopupBlocker(fx, state, view, age, true);
+      continue;
+    }
+    if (view.reducedMotion) continue;
     const top = fx.type === 'hurt' || fx.type === 'block' || fx.type === 'pickup';
     if (top !== upper) continue;
     const p = age / life;
@@ -505,6 +1027,15 @@ function drawEventFx(state, view, upper) {
       }
     } else if (fx.type === 'hit') {
       const bolt = fx.source === 'bolt';
+      if (bolt && fx.volley && p < 0.65) {
+        const impact = T * (0.2 + p * 0.42);
+        specialRing(view, X, Y, impact, impact * 0.7, 12, px * 0.5, '#aa7be9', '#fff1d8');
+        for (let k = 0; k < 4; k += 1) {
+          const a = k * Math.PI / 2;
+          fxBox(view, X + Math.cos(a) * impact * 1.45 - px, Y + Math.sin(a) * impact - px,
+            px * 3, px * 3, '#e9c2ff');
+        }
+      }
       for (let k = 0; k < 2; k += 1) {
         const side = k ? 1 : -1;
         const d = T * (0.38 + p * 0.55);
@@ -617,10 +1148,43 @@ function drawPickups(state, view) {
 
 function drawBolts(state, view) {
   const T = view.tile;
+  const u = Math.max(2, Math.round(T / 16));
   for (let i = 0; i < state.bolts.length; i += 1) {
     const b = state.bolts[i];
     const X = view.offsetX + b.x * T;
     const Y = view.offsetY + b.y * T;
+    if (b.special) {
+      if (view.reducedMotion) continue;
+      const twin = Boolean(b.twin);
+      const color = twin ? '#7298ef' : '#9b67df';
+      const light = twin ? '#e4e1ff' : '#f1c9ff';
+      if (b.wait > 0) {
+        // The delayed copy is held in a ring around the cast point, never piled at its stored x/y.
+        const gx = X + b.dx * T * 0.7;
+        const gy = Y + b.dy * T * 0.52;
+        fxBox(view, gx - u * 2.5, gy - u * 2.5, u * 5, u * 5, '#8168d899');
+        fxBox(view, gx - u * 1.4, gy - u * 1.4, u * 2.8, u * 2.8, '#e9d8ff');
+        continue;
+      }
+      const lead = T * 0.62 * (1 - Math.min(1, (b.travelled || 0) / 1.4));
+      const bx = X + b.dx * lead;
+      const by = Y + b.dy * lead;
+      // Long stepped crystal with a bright core and three trailing chips.
+      for (let k = 0; k < 6; k += 1) {
+        const d = k * u * 1.9;
+        const width = k === 0 || k === 5 ? u * 3 : u * 4;
+        fxBox(view, bx - b.dx * d - width / 2, by - b.dy * d - width / 2,
+          width, width, k % 2 ? color : light);
+      }
+      fxBox(view, bx - u * 2, by - u * 2, u * 4, u * 4, '#fff9e4');
+      for (let k = 1; k <= 3 && (b.travelled || 0) > 0.35; k += 1) {
+        const d = u * (12 + k * 4);
+        const side = k % 2 ? 1 : -1;
+        fxBox(view, bx - b.dx * d - b.dy * side * u * 2, by - b.dy * d + b.dx * side * u * 2,
+          u * (k === 3 ? 2 : 3), u * (k === 3 ? 2 : 3), k % 2 ? light : color);
+      }
+      continue;
+    }
     const s = T * 0.24;
     box(X - b.dx * T * 0.42 - s * 0.25, Y - b.dy * T * 0.42 - s * 0.25, s * 0.5, s * 0.5, '#4a9df0');
     box(X - b.dx * T * 0.24 - s * 0.35, Y - b.dy * T * 0.24 - s * 0.35, s * 0.7, s * 0.7, '#66dbe0');
@@ -926,6 +1490,8 @@ export function renderBattle(ctx, state, view, now) {
   FX_SHIFT_Y = shifted ? shake.y : 0;
   drawArena(view, state.time);
   drawEventFx(state, view, false);
+  drawFortRing(state, view);
+  drawSaveBubble(state, view, false);
   drawChestProp(view, state.time);
   drawStone(state, view);
   drawPickups(state, view);
@@ -948,6 +1514,7 @@ export function renderBattle(ctx, state, view, now) {
   drawPuffs(state, view);
   drawKillSparks(state, view);
   drawEventFx(state, view, true);
+  drawSaveBubble(state, view, true);
   drawParticles(state, view);
   if (shifted) ctx.restore();
   FX_SHIFT_X = 0;

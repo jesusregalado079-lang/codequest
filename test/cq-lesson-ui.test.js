@@ -12,6 +12,8 @@ import {
 import { chooseLegendary, normalizeCq, packComplete } from '../src/cq/character.js';
 import { LEGENDARY_CHOICES } from '../src/cq/items.js';
 import { LESSONS, getLesson, trackLessons } from '../src/cq/lessons/pack1.js';
+import { mountLesson } from '../src/cq/lesson-ui.js';
+import { emptyLessonState } from '../src/cq/lesson-logic.js';
 
 // Small LCG, scrambled so neighbouring seeds do not start in step.
 const seeded = (seed) => {
@@ -282,3 +284,114 @@ const module = await import('../src/cq/lesson-ui.js');
 assert.equal(typeof module.mountLesson, 'function');
 
 console.log('ok — Computer Quest lesson view helpers, choice shuffles, labels, Windows hints, and full-pack UI call order pass');
+
+// Saved key → practice → key → retry → results → practice → results. The real mount and
+// battle loop run; only DOM painting and timers are faked.
+{
+  const noop = () => {};
+  let doc;
+  function el() {
+    const queries = new Map();
+    const handlers = {};
+    const attrs = {};
+    const node = { ownerDocument: doc, nodeType: 1, hidden: false, disabled: false, dataset: {}, children: [],
+      style: { setProperty: noop }, classList: { add: noop, remove: noop, toggle: noop, contains: () => false },
+      parentNode: { clientWidth: 850, removeChild: noop }, clientWidth: 850, innerHTML: '',
+      append(...items) { node.children.push(...items); }, removeChild: noop, focus() { doc.activeElement = node; },
+      addEventListener(type, fn) { handlers[type] = fn; }, removeEventListener: noop,
+      setAttribute(name, value) { attrs[name] = value; }, getAttribute(name) { return attrs[name]; },
+      querySelector(selector) { if (!queries.has(selector)) queries.set(selector, el()); return queries.get(selector); },
+      querySelectorAll: () => [], contains: () => true, getContext: () => null };
+    node.handlers = handlers;
+    return node;
+  }
+  const rafs = [];
+  const win = { devicePixelRatio: 1, performance: { now: () => 0 }, scrollTo: noop,
+    requestAnimationFrame(fn) { rafs.push(fn); return rafs.length; }, cancelAnimationFrame: noop,
+    addEventListener: noop, removeEventListener: noop, matchMedia: () => ({ matches: false }) };
+  doc = { defaultView: win, hidden: false, activeElement: null, createElement: () => el(),
+    addEventListener: noop, removeEventListener: noop };
+  const iso = '2026-09-16T12:00:00.000Z';
+  const saved = { ...emptyLessonState(), phase: 'key', startedAt: iso, quizPassedAt: iso, passedAt: iso,
+    battle: { playedAt: iso, outcome: 'fell', ms: 10000, poofs: 4, gems: 1, tries: 1 } };
+  let cq = normalizeCq({ track: 'guided', gems: 1, lessons: { g1: saved } });
+  let saves = 0;
+  const prior = { document: globalThis.document, window: globalThis.window, setTimeout: globalThis.setTimeout,
+    clearTimeout: globalThis.clearTimeout, localStorage: Object.getOwnPropertyDescriptor(globalThis, 'localStorage') };
+  const timers = new Map(); let nextTimer = 1;
+  globalThis.document = doc; globalThis.window = win;
+  globalThis.setTimeout = (fn, ms) => { const id = nextTimer++; timers.set(id, { fn, ms }); return id; };
+  globalThis.clearTimeout = (id) => { timers.delete(id); };
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
+    getItem(key) { return key.startsWith('codequest-cq-howto-') ? '1' : null; }, setItem: noop,
+  } });
+  let mounted;
+  try {
+    const app = el();
+    mounted = mountLesson({ app, route: 'lesson', lessonId: 'g1', nickname: 'Kid', getCq: () => cq,
+      save(change) { cq = change(cq); saves += 1; }, sound: noop, onExit: noop });
+    const root = app.children[0];
+    const view = root.children[0];
+    const click = (action) => {
+      const button = { dataset: { action }, disabled: false };
+      button.closest = () => button;
+      root.handlers.click({ target: button });
+    };
+    assert.match(view.innerHTML, /⚔️ Play the battle again/);
+    assert.match(view.innerHTML, /🎓 Learn the controls/);
+    const beforePractice = JSON.stringify(cq);
+    click('battle-learn');
+    let battleRoot = view.querySelector('.cq-battle-host').children.at(-1);
+    let panel = battleRoot.querySelector('.cq-training-panel');
+    assert.match(panel.innerHTML, /Step 1 of 4/);
+    const skip = { dataset: { training: 'skip' } }; skip.closest = () => skip;
+    panel.handlers.click({ target: skip });
+    assert.match(view.innerHTML, /⚔️ Play the battle again/);
+    assert.equal(JSON.stringify(cq), beforePractice, 'practice skip never saves');
+    click('battle-retry');
+    let frames = 0; let ts = 0;
+    while (cq.lessons.g1.battle.tries === 1 && frames < 20000) {
+      const pending = rafs.splice(0); ts += 250; pending.forEach((fn) => fn(ts)); frames += 1;
+    }
+    assert.ok(frames < 20000, 'retry reaches an engine result');
+    assert.equal(cq.lessons.g1.battle.tries, 2);
+    assert.equal(cq.gems, 1, 'paid retry does not add gems');
+    const results = Array.from(timers.values()).find((timer) => timer.ms === 1300);
+    assert.ok(results, 'results timer scheduled after saving');
+    results.fn();
+    assert.match(view.innerHTML, /Already earned/);
+    assert.match(view.innerHTML, /🔁 (Try again|Play again)/);
+    const afterRetry = JSON.stringify(cq);
+    click('battle-learn');
+    battleRoot = view.querySelector('.cq-battle-host').children.at(-1);
+    panel = battleRoot.querySelector('.cq-training-panel');
+    panel.handlers.click({ target: skip });
+    assert.match(view.innerHTML, /Already earned/);
+    assert.equal(JSON.stringify(cq), afterRetry, 'practice from results never saves');
+    assert.ok(saves > 0, 'retry went through the real save path');
+
+    mounted.destroy();
+    cq = normalizeCq({ track: 'guided', lessons: { g1: { ...emptyLessonState(), phase: 'key',
+      startedAt: iso, quizPassedAt: iso, passedAt: iso } } });
+    const skipApp = el();
+    mounted = mountLesson({ app: skipApp, route: 'lesson', lessonId: 'g1', nickname: 'Kid', getCq: () => cq,
+      save(change) { cq = change(cq); }, sound: noop, onExit: noop });
+    const skipRoot = skipApp.children[0];
+    const skipButton = { dataset: { action: 'battle-skip' }, disabled: false };
+    skipButton.closest = () => skipButton;
+    skipRoot.handlers.click({ target: skipButton });
+    assert.equal(cq.lessons.g1.battle.outcome, 'skipped');
+    assert.equal(cq.lessons.g1.phase, 'key', 'a skip remains replayable until the first chest answer');
+    mounted.destroy();
+    const reopenApp = el();
+    mounted = mountLesson({ app: reopenApp, route: 'lesson', lessonId: 'g1', nickname: 'Kid', getCq: () => cq,
+      save(change) { cq = change(cq); }, sound: noop, onExit: noop });
+    assert.match(reopenApp.children[0].children[0].innerHTML, /⚔️ Play the battle again/);
+  } finally {
+    if (mounted) mounted.destroy();
+    globalThis.document = prior.document; globalThis.window = prior.window;
+    globalThis.setTimeout = prior.setTimeout; globalThis.clearTimeout = prior.clearTimeout;
+    if (prior.localStorage) Object.defineProperty(globalThis, 'localStorage', prior.localStorage);
+    else delete globalThis.localStorage;
+  }
+}

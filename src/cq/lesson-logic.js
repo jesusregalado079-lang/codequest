@@ -216,7 +216,27 @@ export function recordBattle(cq, lesson, result, nowIso) {
   const ms = clampInt(result?.ms, 0, 600000);
   const gems = clampInt(outcome === 'skipped' ? 0 : battleGems(poofs), 0, 10);
   const playedAt = validIso(nowIso) ? nowIso : new Date().toISOString();
-  const battle = { playedAt, ms, poofs, outcome, gems };
+  const battle = { playedAt, ms, poofs, outcome, gems, tries: 1 };
+  return { cq: addGems(replace(cq, lesson.id, { ...state, battle }), gems), gems };
+}
+
+export function recordBattleRetry(cq, lesson, result, nowIso) {
+  requireUnlockedLesson(cq, lesson);
+  const state = stateFor(cq, lesson.id);
+  if (!state.passedAt) throw new Error('lesson is not passed');
+  if (state.phase !== 'key') throw new Error('not at the key screen yet');
+  if (!state.battle) throw new Error('no battle recorded');
+  const outcome = result && result.outcome;
+  if (!BATTLE_OUTCOMES.includes(outcome) || outcome === 'skipped') throw new Error('invalid battle outcome');
+  const previous = state.battle;
+  const poofs = clampInt(result?.poofs, 0, 500);
+  const ms = clampInt(result?.ms, 0, 600000);
+  const gems = previous.outcome === 'skipped' && previous.gems === 0 ? clampInt(battleGems(poofs), 0, 10) : 0;
+  const rank = { skipped: 0, fell: 1, time: 2, victory: 3 };
+  const better = rank[outcome] > rank[previous.outcome];
+  const battle = { ...previous, ...(better ? {
+    playedAt: validIso(nowIso) ? nowIso : new Date().toISOString(), outcome, poofs, ms,
+  } : {}), gems: clampInt(previous.gems + gems, 0, 10), tries: clampInt((previous.tries || 1) + 1, 1, 99) };
   return { cq: addGems(replace(cq, lesson.id, { ...state, battle }), gems), gems };
 }
 
@@ -286,7 +306,7 @@ export function lessonReport(profile, lesson, nextLesson, todayYmd) {
     `Quiz: ${quiz.length ? quiz.join(' · ') : '—'}`,
     state.parent.at ? `Real task (parent-checked): ${checks}/${lesson.parentChecks.length}${allChecks ? '' : ` — not yet: "${clean(unmarked[0])}"`}` : 'Real task (parent-checked): —',
     state.chest.openedAt ? `Chest questions first try: ${chestCorrect}/${lesson.chest.length}${missedChest.length ? ` (missed: ${missedChest.map((text) => `"${text}"`).join(', ')})` : ''}` : 'Chest questions first try: —',
-    `Time: lesson ${Math.round(state.activeMs / 60000)} min · battle ${battleTime}`,
+    `Time: lesson ${Math.round(state.activeMs / 60000)} min · battle ${battleTime}${battle && battle.tries > 1 ? `, ${battle.tries} tries` : ''}`,
     `Practice Missions done: ${state.practiceDays.length} day(s)`,
     `Windows: ${normalizeWindows(cq.windows) || '—'}`,
     `Parent note: ${cleanNote(state.parent.note) || '—'}`,

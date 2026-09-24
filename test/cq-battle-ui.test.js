@@ -79,7 +79,7 @@ assert.equal(keyAction({ code: '', key: 'Tab' }), null);
 assert.equal(keyAction(null), null);
 assert.equal(keyId(key('KeyW')), 'KeyW');
 assert.equal(keyId({ code: '', key: 'w' }), 'key:w');
-assert.deepEqual(Object.keys(blankInput()), ['up', 'down', 'left', 'right', 'attack', 'block', 'ability', 'stance', 'undo', 'apple', 'stone', 'pause']);
+assert.deepEqual(Object.keys(blankInput()), ['up', 'down', 'left', 'right', 'attack', 'block', 'ability', 'stance', 'undo', 'apple', 'stone', 'special', 'pause']);
 
 // ---------- how-to keys ----------
 const keysOf = (gear) => howToKeys(gear).map((line) => line.keys);
@@ -633,7 +633,8 @@ assert.doesNotThrow(() => renderBattle(null, null, null, 0));
 const renderSource = readFileSync(new URL('../src/cq/battle/render.js', import.meta.url), 'utf8');
 assert.equal(/Math\.random|document\.|window\./.test(renderSource), false, 'render.js: no Math.random and no DOM');
 const uiSource = readFileSync(new URL('../src/cq/battle/battle-ui.js', import.meta.url), 'utf8');
-assert.ok(!/['"](Tab|F\d{1,2})['"]/.test(uiSource), 'battle-ui never binds Tab or F-keys');
+assert.ok(!/['"]F\d{1,2}['"]/.test(uiSource), 'battle-ui never binds F-keys');
+assert.ok(uiSource.includes("overlayMode && event.key === 'Tab'"), 'Tab is confined to the open dialog');
 assert.ok(uiSource.includes('webkitAudioContext'));
 {
   const finishSrc = uiSource.slice(uiSource.indexOf('function finish('), uiSource.indexOf('function skip('));
@@ -698,7 +699,7 @@ assert.equal(typeof battleUi.mountBattle, 'function');
   const storageDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   globalThis.setTimeout = (fn, ms) => { const id = nextTimer; nextTimer += 1; timers.set(id, { fn, at: clock + (ms || 0) }); return id; };
   globalThis.clearTimeout = (id) => { timers.delete(id); };
-  Object.defineProperty(globalThis, 'localStorage', { value: { getItem: () => null, setItem: noop }, configurable: true, writable: true });
+  Object.defineProperty(globalThis, 'localStorage', { value: { getItem: () => '1', setItem: noop }, configurable: true, writable: true });
   const advance = (ms) => {
     clock += ms;
     Array.from(timers.entries()).sort((a, b) => a[1].at - b[1].at).forEach(([id, t]) => {
@@ -771,3 +772,120 @@ assert.equal(typeof battleUi.mountBattle, 'function');
 }
 
 console.log('ok — Computer Quest battle view fitting, key mapping, how-to keys, HUD slots, cooldowns, results text, and renderer smoke runs pass');
+
+// Control flow against a small persistent fake DOM: clicks reach the real battle mount.
+{
+  const noop = () => {};
+  const listeners = {};
+  let nextFrame;
+  const win = { devicePixelRatio: 1, performance: { now: () => 0 }, requestAnimationFrame(fn) { nextFrame = fn; return 1; },
+    cancelAnimationFrame: noop, addEventListener(type, fn) { listeners[type] = fn; }, removeEventListener: noop,
+    matchMedia: () => ({ matches: false }) };
+  let doc;
+  function element() {
+    const cache = new Map();
+    const handlers = {};
+    const attrs = {};
+    const el = { ownerDocument: doc, nodeType: 1, hidden: false, dataset: {}, style: { setProperty: noop },
+      classList: { add: noop, remove: noop, toggle: noop }, clientWidth: 850, parentNode: { clientWidth: 850, removeChild: noop },
+      innerHTML: '', append: noop, removeChild: noop, focus() { doc.activeElement = el; },
+      setAttribute(key, value) { attrs[key] = value; }, getAttribute(key) { return attrs[key]; },
+      addEventListener(type, fn) { handlers[type] = fn; }, removeEventListener: noop,
+      querySelector(selector) { if (!cache.has(selector)) cache.set(selector, element()); return cache.get(selector); },
+      querySelectorAll: () => [], getContext: () => null, contains: () => false };
+    el.handlers = handlers;
+    return el;
+  }
+  doc = { defaultView: win, hidden: false, activeElement: null, createElement: () => element(),
+    addEventListener: noop, removeEventListener: noop };
+  const container = element();
+  const savedStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const seen = new Set();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
+    getItem(key) { return seen.has(key) ? '1' : null; }, setItem(key) { seen.add(key); },
+  } });
+  const press = (el, value, kind = 'battle') => {
+    const button = { dataset: { [kind]: value }, closest: () => button };
+    el.handlers.click({ target: button });
+  };
+  const gearCqForUi = gearCq('standard', ['switch-sword', 'stop-sign-shield', 'copy-crystal-staff']);
+  let randomCalls = 0;
+  const freshRng = () => { randomCalls += 1; return (randomCalls % 13) / 13; };
+  let mounted;
+  try {
+    let actualRoot;
+    container.append = (node) => { actualRoot = node; };
+    seen.add('codequest-cq-howto-pause-test');
+    mounted = battleUi.mountBattle(container, { cq: gearCqForUi, lesson: getLesson('s3'), profileId: 'pause-test', rng: freshRng, onDone: noop });
+    const overlay = actualRoot.querySelector('.cq-battle-overlay');
+    const pause = actualRoot.querySelector('.cq-battle-pause');
+    assert.match(actualRoot.innerHTML, /data-battle="pause"/);
+    assert.match(actualRoot.innerHTML, /tabindex="-1" data-battle="pause"/);
+    press(pause, 'pause');
+    assert.match(overlay.innerHTML, /Paused/);
+    assert.match(overlay.innerHTML, /Resume ▶/);
+    assert.ok(overlay.innerHTML.indexOf('cq-battle-pause-controls') < overlay.innerHTML.indexOf('class="cq-actions"'), 'pause controls scroll separately from the button row');
+    assert.match(overlay.innerHTML, /<\/div>\s*<div class="cq-actions">/, 'pause buttons sit outside the scrolling controls');
+    assert.match(overlay.innerHTML, /<kbd>Q<\/kbd>/);
+    assert.match(overlay.innerHTML, /<kbd>E<\/kbd>/);
+    assert.match(overlay.innerHTML, /<kbd>F<\/kbd>/);
+    press(overlay, 'restart');
+    assert.match(overlay.innerHTML, /Start over\? The monsters come back/);
+    assert.match(overlay.innerHTML, /No, keep playing/);
+    press(overlay, 'restart-no');
+    assert.match(overlay.innerHTML, /Paused/);
+    press(overlay, 'restart');
+    const beforeRestart = randomCalls;
+    press(overlay, 'restart-yes');
+    assert.ok(randomCalls > beforeRestart, 'confirmed restart creates a newly seeded battle');
+    assert.equal(overlay.hidden, true);
+    assert.equal(actualRoot.querySelector('.cq-battle-power').getAttribute('aria-valuenow'), '0');
+    assert.match(actualRoot.querySelector('.cq-battle-hearts').getAttribute('aria-label'), /Hearts: \d+ of \d+/);
+    press(pause, 'pause');
+    press(overlay, 'resume');
+    assert.equal(overlay.hidden, true);
+    mounted.destroy();
+
+    seen.add('codequest-cq-howto-guided-pause');
+    mounted = battleUi.mountBattle(container, { cq: gearCq('guided', ['stop-sign-shield', 'rename-rune', 'folder-backpack']),
+      lesson: getLesson('g3'), profileId: 'guided-pause', onDone: noop });
+    press(actualRoot.querySelector('.cq-battle-pause'), 'pause');
+    const guidedPause = actualRoot.querySelector('.cq-battle-overlay').innerHTML;
+    ['Shift', 'E', '1', 'F'].forEach((key) => assert.ok(guidedPause.includes(`<kbd>${key}</kbd>`), `${key} appears in the pause controls`));
+    mounted.destroy();
+
+    let practiceResult = null;
+    mounted = battleUi.mountBattle(container, { cq: gearCqForUi, lesson: getLesson('s3'), profileId: 'fresh-kid',
+      mode: 'practice', onDone: (value) => { practiceResult = value; } });
+    let panel = actualRoot.querySelector('.cq-training-panel');
+    assert.match(panel.innerHTML, /Step 1 of 5/);
+    assert.match(panel.innerHTML, /Skip training/);
+    assert.match(actualRoot.innerHTML, /<span class="cq-battle-wave">Training<\/span>/);
+    assert.equal(actualRoot.querySelector('.cq-battle-wave').textContent, 'Training');
+    assert.equal(actualRoot.querySelector('.cq-battle-clock').hidden, true);
+    nextFrame(0); nextFrame(17);
+    assert.equal(actualRoot.querySelector('.cq-battle-banner').innerHTML, '', 'training suppresses the engine wave announcement');
+    press(panel, 'skip', 'training');
+    assert.deepEqual(practiceResult, { outcome: 'practice-skipped' });
+    assert.ok(seen.has('codequest-cq-howto-fresh-kid'));
+    mounted.destroy();
+
+    mounted = battleUi.mountBattle(container, { cq: gearCq('guided'), lesson: getLesson('g1'), profileId: 'first-kid', onDone: noop });
+    panel = actualRoot.querySelector('.cq-training-panel');
+    assert.match(panel.innerHTML, /Step 1 of 4/);
+    assert.equal(actualRoot.querySelector('.cq-battle-wave').textContent, 'Training');
+    press(panel, 'skip', 'training');
+    assert.ok(seen.has('codequest-cq-howto-first-kid'));
+    assert.match(actualRoot.querySelector('.cq-battle-overlay').innerHTML, /How to play/);
+    press(actualRoot.querySelector('.cq-battle-overlay'), 'start');
+    assert.match(actualRoot.querySelector('.cq-battle-wave').textContent, /^Wave 1 \/ \d+$/);
+    assert.equal(actualRoot.querySelector('.cq-battle-clock').hidden, false);
+    nextFrame(1000); nextFrame(1017);
+    assert.match(actualRoot.querySelector('.cq-battle-banner').innerHTML, /Wave 1 \/ \d+/, 'the real battle keeps its wave banner');
+    mounted.destroy();
+  } finally {
+    if (mounted) mounted.destroy();
+    if (savedStorage) Object.defineProperty(globalThis, 'localStorage', savedStorage);
+    else delete globalThis.localStorage;
+  }
+}

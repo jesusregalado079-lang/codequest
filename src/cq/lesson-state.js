@@ -34,10 +34,12 @@ function battleRecord(value) {
   const source = object(value);
   if (!iso(source.playedAt)) return null;
   if (!BATTLE_OUTCOMES.includes(source.outcome)) return null;
-  if (!finiteNumber(source.ms) || !finiteNumber(source.poofs) || !finiteNumber(source.gems)) return null;
+  if (!finiteNumber(source.ms) || !finiteNumber(source.poofs) || !finiteNumber(source.gems)
+    || (source.tries !== undefined && !finiteNumber(source.tries))) return null;
   return {
     playedAt: source.playedAt, outcome: source.outcome,
     ms: clampInt(source.ms, 0, 600000), poofs: clampInt(source.poofs, 0, 500), gems: clampInt(source.gems, 0, 10),
+    tries: source.tries === undefined ? 1 : clampInt(source.tries, 1, 99),
   };
 }
 

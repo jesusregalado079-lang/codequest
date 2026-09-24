@@ -7,9 +7,9 @@ Gear effects come from `character-and-loot.md` §2, with the numbers in `items.j
 ## 1. Where it lives in the lesson
 - **Key screen:** "🗝️ You earned a key!" → primary button **"⚔️ Defend the chest!"** → battle → results → chest.
 - **Skipping:** there is also a small secondary link **"Skip to the chest"** for low-time days.
-- **One battle per lesson:** only the FIRST time the key screen is reached. After `battle.playedAt` is set, the key screen's primary button goes straight to the chest ("Open your chest ▶").
+- **First battle:** the key screen offers "Defend the chest!". Once a battle has been recorded, its primary button opens the chest; a secondary button lets the kid play the battle again.
 - **Leaving or reloading mid-battle:** it counts as not played. The key screen offers the battle again.
-- **Replays:** no battle replays, and no battle outside lessons. That's anti-grind.
+- **Retries (2026-09-23):** the earlier "no replays" rule is superseded. A kid can try again from results or the key screen, or start over from the pause card. Each attempt starts at wave 1 with full hearts, empty POWER, and a fresh seed. `tries` counts completed retries, capped at 99. The stored result upgrades only when a retry ranks higher: `skipped < fell < time < victory`; a weaker or equal result leaves the stored outcome, time, poofs, and playedAt unchanged. Gems are paid once: the first real attempt earns `battleGems(poofs)`, including when it follows an initial skip; every later attempt pays zero. Leaving or reloading during a retry saves nothing. Skipping from a retry pause menu saves nothing new. Battles remain tied to passed lessons.
 
 ## 2. Round structure (cap: ~5 minutes)
 
@@ -39,7 +39,7 @@ Gear effects come from `character-and-loot.md` §2, with the numbers in `items.j
 - **Timer:** starts at 4:00 and counts down, shown in the HUD. At 0:00 the round ends as **"Time! The chest is safe."** with no loss.
 - **Win:** all 3 waves cleared → **"Victory!"**.
 - **Hero falls** (0 hearts, no revive left) → **"The monsters ran off! Your chest is still safe."** Results are still recorded, and gems still count.
-- **Pause:** Esc or the tab being hidden → pause overlay: **Resume** / **Skip to the chest** (ends the round as played).
+- **Pause:** Esc, the visible Pause button, or the tab being hidden → controls and **Resume**, **Start over**, **Skip to the chest**. Start over requires a second in-card choice.
 
 **Difficulty by lesson number n (1–5) and track** (the 9yo guided track gets 1 fewer enemy per wave; it's his reward, not a test):
 
@@ -128,25 +128,26 @@ Gear effects come from `character-and-loot.md` §2, with the numbers in `items.j
   - [R] amulet (used or ready)
   - [1] apple
   - [2] stone
-- **First battle of all time only:** a 5 s dismissable "How to play" card: arrows/WASD move · Space attack · plus only the keys for his equipped gear. The first battle happens after his first lesson, before he owns any gear.
+- **First battle of all time only:** interactive training replaces the timed how-to card. The card remains as a fallback after "Skip training" so the kid sees the keys once. The first battle happens after his first lesson, before he owns any gear.
 - **Sounds:** WebAudio tones only, defined in the battle module (don't edit `src/ui/sounds.js`): swing, hit, poof, hero hurt, pickup/heal, wave start, victory.
 - **Motion:** respects `prefers-reduced-motion`. No screen shake; puffs are shorter.
-- **Keyboard:** `preventDefault` only for the game's keys while the battle has focus (arrows, WASD, Space, Shift, E, Q, R, 1, 2, Esc). **Never** bind or block Ctrl, Alt, Meta, Tab or F-keys.
+- **Keyboard:** `preventDefault` for the game's keys while the battle has focus (arrows, WASD, Space, Shift, E, Q, R, 1, 2, F, Esc). Ctrl, Alt, Meta, and F-keys are not bound. Tab moves focus normally during play; within the pause dialog it cycles among the dialog buttons.
 - **No keyboard** (touch-only device detected via `matchMedia('(pointer: coarse)')` and no key pressed within 3 s): show "This battle needs a keyboard" with a **Skip to the chest** button.
 
 ## 7. Results and storage
-- **Results screen:** Victory / Time / "ran off" headline, poofs, time played, hearts left, **+N 💎** where N = `battleGems(poofs)` (max 10), and a primary button "Open your chest ▶".
-- **`LessonState.battle`:** `{ playedAt: ISO, ms: number, poofs: number, outcome: 'victory' | 'time' | 'fell' | 'skipped', gems: number }`, or null. `normalizeLessons` validates it:
+- **Results screen:** Victory / Time / "ran off" headline, poofs, time played, hearts left, gems for this attempt ("Already earned" on an unpaid retry), a primary "Open your chest ▶", a retry button, and "Learn the controls".
+- **`LessonState.battle`:** `{ playedAt: ISO, ms: number, poofs: number, outcome: 'victory' | 'time' | 'fell' | 'skipped', gems: number, tries: number }`, or null. `normalizeLessons` validates it:
   - outcome in the set
-  - numbers clamped: ms 0..600000, poofs 0..500, gems 0..10
+  - numbers clamped: ms 0..600000, poofs 0..500, gems 0..10, tries 1..99 (old saves default to 1)
   - battle is only kept if `passedAt` is set
   - **Decision 2026-09-16:** wrong TYPES (a non-ISO playedAt, an unknown outcome, non-finite or non-number counts) drop the whole record. Out-of-range or non-integer finite numbers are CLAMPED/floored and the record is kept, so a tampered record can't be dropped to replay a battle for gems.
 - **`recordBattle(cq, lesson, result, nowIso)`** (lesson-logic):
   - requires phase 'key' and `passedAt`, and throws if `battle` is already set
   - stores the record and adds `battleGems(poofs)` gems (or 0 for 'skipped')
   - returns `{ cq, gems }`
-- **"Skip to the chest" before playing** → `recordBattle` with outcome 'skipped', poofs 0, ms 0. So "one battle per lesson" also covers skips.
-- **Report:** `Time: lesson X min · battle Y min`, where Y = round(ms/60000), with a minimum of "<1" when 0 < ms < 60000. It shows "skipped" for skipped and "—" for null.
+- **`recordBattleRetry(cq, lesson, result, nowIso)`** requires a passed lesson at the key phase with an existing battle record. It increments `tries`, upgrades the stored result only by the ranking in §1, and returns `{ cq, gems }` where `gems` is zero except for the first real play after a stored skip.
+- **"Skip to the chest" before playing** → `recordBattle` with outcome 'skipped', poofs 0, ms 0. The chest screen opens immediately, while saved phase stays at `key` until the first chest answer; leaving before that answer returns to the key screen with a replay button. A later first real retry is still eligible for its one gem award.
+- **Report:** `Time: lesson X min · battle Y min`, where Y = round(ms/60000), with a minimum of "<1" when 0 < ms < 60000. It shows "skipped" for skipped and "—" for null, followed by `, N tries` when N > 1.
 
 ## 8. Engine architecture (testable)
 - `src/cq/battle/content.js`: enemy defs, the wave plan builder `wavePlan(lessonNumber, track, rng)`, the arena layout.
@@ -158,4 +159,29 @@ Gear effects come from `character-and-loot.md` §2, with the numbers in `items.j
   - `resultOf(state)` → `{ outcome, ms, poofs }`.
   - No `Math.random` inside; all randomness goes through the injected rng.
 - `src/cq/battle/render.js`: canvas drawing of the arena, enemies, bolts, puffs, trail, HUD. It uses `drawCharacter` / `drawIcon`.
-- `src/cq/battle/battle-ui.js`: mounts inside the lesson screen. It handles keyboard mapping, the rAF loop with a fixed-step accumulator, pause/visibility, the how-to card, results, and calling `recordBattle`. It cleans up all listeners and rAF on exit.
+- `src/cq/battle/battle-ui.js`: mounts inside the lesson screen. It handles keyboard mapping, the rAF loop with a fixed-step accumulator, pause/visibility, training, the how-to card, and handing the result to the lesson UI. The lesson UI records completed attempts. The mount cleans up listeners and rAF on exit.
+
+
+## 8a. Specials: the power meter and a spell per lesson (added 2026-09-23)
+Jesse asked for "magic moves or a special move" in the waves. Decisions: a shared **power meter** plus **one spell per lesson**, **big and dramatic**, for **both boys** with names that echo real Windows skills.
+- **Meter:** `hero.power`, 0..`SPECIAL_MAX` (12). A poof adds `POWER_GAIN` (slime 2, goblin 2, mimic 3, Mega Slime 3, Big Glitch 4; the two slimes a Mega Slime splits into add their own). Being hurt never drains it. Poofs caused by a special (including its own bolts) add nothing, so a screen-clearing spell can't refill itself. A `power` event with `ready: true` fires once when it fills. Measured with the acceptance bot: about 3 casts per battle in lessons 1-2 and 5-6 in lesson 5.
+- **Cast:** the **F** key (edge-triggered; holding casts once) spends the whole meter and casts `state.special`. A not-full press only emits a soft `special-wait` event. The game never listens for Ctrl/Alt/Windows-key combos: the shortcut names (Alt-Tab, Save, Copy-Paste, Select All) only echo the skill.
+- **Which spell:** the spell of the lesson just passed (`specialFor(track, lessonNumber)`), NOT of a gear item. The chest opens after the battle, so gear-based spells would arrive one battle too late. Equal tier by lesson across the tracks.
+- **The ten** (data in `specials.js`, effects in `engine.js castSpecial`; every one also emits a `special` event with `{id, name, skill, kind, x, y, fromX, fromY, facing, radius|width|duration}`):
+
+| Lesson | Guided | Standard |
+|---|---|---|
+| 1 | Start Burst: ring blast (radius 3.6, 2 dmg, knockback, stun) | Alt-Tab Dash: blink 6 tiles along facing, 2 dmg to everything crossed, invulnerable 0.7 s |
+| 2 | Window Dash: dash 5 tiles, 2 dmg, invulnerable 0.6 s | Quick Save: +2 hearts, 2 s shield, light shove and stun around him |
+| 3 | Folder Fort: 3 s invulnerable ring (radius 2.4) that shoves monsters out, 1 dmg on cast | Copy-Paste Volley: 8 bolts in a ring (2 dmg, range 7) then a pasted copy 0.3 s later |
+| 4 | Mass Rename: every regular monster becomes a chicken for 4 s, bosses stunned 1 s | Select All: every monster takes 3 dmg and is stunned 0.6 s |
+| 5 | STOP!: every monster frozen 3 s (bosses 1.5 s; a Big Glitch's teleport is postponed) | Pop-up Blocker: every regular monster (mimics included) poofs, bosses take 4 |
+- **Bosses** get about half of any shove or stun. Spells are wall-safe (dash stops at walls, pushes respect solids).
+- **UI:** the HUD shows a POWER bar with the F key and, once full, the spell name; casting shows the name as the banner and plays a cast tone. The first-battle how-to card gains an F line. Dev only: `?power=full` starts with a full meter and `?power=always` refills it after each cast (removed from the production build).
+- **Tests:** `test/cq-battle-specials.test.js` (meter, F key, each spell, determinism, key mapping, how-to line) and a second balance loop in `test/cq-battle.test.js` where the bot casts when full.
+
+## 9. Pause, retry and training (2026-09-23)
+
+- **Pause card:** the top HUD has a visible, touch-sized "⏸ Pause" button; Esc and hidden-tab auto-pause still work. The dialog repeats the movement, attack, equipped gear, and F spell controls plus the facing tip. Resume gets focus. The HUD and arena behind the dialog are inert. "Start over" first shows "Start over? The monsters come back." with "Yes, start over" and "No, keep playing". Confirming creates a fresh battle. "Skip to the chest" on a retry records nothing.
+- **Training entry:** the first battle for a profile starts with training. "🎓 Learn the controls" on the key and results screens opens it on demand. Training never changes lesson state, poofs, or gems. Skipping any step marks the how-to as seen; on the first-ever automatic training, the passive controls card appears once before the real battle. On-demand training returns to its source screen when skipped and starts a real battle when "Start the battle ▶" is pressed.
+- **Training steps:** walk to a glowing star using arrows or WASD; face and poof a still, harmless slime with Space; try any equipped Q, Shift, E, R, 1, or 2 key (or tap "Got it"), omitted when no such gear is equipped; cast the lesson spell with F using a filled POWER meter and three harmless slimes; then choose "Start the battle ▶" or "Practice more". Every step has "Skip training". Completion uses the real engine state and events. The pure transition function lives in `battle/tutorial.js`; the battle UI creates quiet engine states and positions the DOM card and star over the rendered arena.

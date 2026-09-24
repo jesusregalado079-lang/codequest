@@ -29,6 +29,7 @@ export const KEY_CODES = {
   Space: 'attack', ShiftLeft: 'block', ShiftRight: 'block',
   KeyE: 'ability', KeyQ: 'stance', KeyR: 'undo',
   Digit1: 'apple', Numpad1: 'apple', Digit2: 'stone', Numpad2: 'stone',
+  KeyF: 'special',
   Escape: 'pause',
 };
 // Fallback for browsers that leave `code` empty.
@@ -36,7 +37,7 @@ const KEY_NAMES = {
   ArrowUp: 'up', w: 'up', W: 'up', ArrowDown: 'down', s: 'down', S: 'down',
   ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right',
   ' ': 'attack', Spacebar: 'attack', Shift: 'block', e: 'ability', E: 'ability', q: 'stance', Q: 'stance',
-  r: 'undo', R: 'undo', 1: 'apple', 2: 'stone', Escape: 'pause', Esc: 'pause',
+  r: 'undo', R: 'undo', 1: 'apple', 2: 'stone', f: 'special', F: 'special', Escape: 'pause', Esc: 'pause',
 };
 const own = (object, key) => typeof key === 'string' && Object.prototype.hasOwnProperty.call(object, key);
 
@@ -66,7 +67,7 @@ export const shouldPreventDefault = (event) => keyAction(event) !== null;
 // Stable id for the held-keys map (code, or the key name when code is missing).
 export const keyId = (event) => (event.code ? event.code : `key:${event.key}`);
 
-export const INPUT_NAMES = ['up', 'down', 'left', 'right', 'attack', 'block', 'ability', 'stance', 'undo', 'apple', 'stone', 'pause'];
+export const INPUT_NAMES = ['up', 'down', 'left', 'right', 'attack', 'block', 'ability', 'stance', 'undo', 'apple', 'stone', 'special', 'pause'];
 export function blankInput() {
   const input = {};
   INPUT_NAMES.forEach((name) => { input[name] = false; });
@@ -77,7 +78,7 @@ export function blankInput() {
 export const HOWTO_TIP = 'Tip: face a monster, then press Space.';
 
 // How-to card lines: move + attack always, then only keys for equipped gear.
-export function howToKeys(gear) {
+export function howToKeys(gear, special) {
   const g = gear || {};
   const lines = [
     { keys: 'Arrows / WASD', text: 'Move' },
@@ -90,6 +91,7 @@ export function howToKeys(gear) {
   if (g.amulet) lines.push({ keys: 'R', text: 'Rewind 3 seconds (once)' });
   if (g.backpack) lines.push({ keys: '1', text: 'Eat your apple: +2 hearts (once)' });
   if (g.stone) lines.push({ keys: '2', text: 'Move your Save Stone here' });
+  if (special) lines.push({ keys: 'F', text: `When the POWER bar is full: ${special.name}!` });
   return lines;
 }
 

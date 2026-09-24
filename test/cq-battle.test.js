@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { getItem, normalizeCq } from '../src/cq/character.js';
 import { getLesson } from '../src/cq/lessons/pack1.js';
 import { boxHitsSolid } from '../src/cq/battle/engine.js';
+import { SPECIAL_MAX } from '../src/cq/battle/specials.js';
 import {
   ARENA, bossForWave, EARLY_MEGA_SLIME_HP, enemyHp, ENEMIES, isSolid, miniBossFor, MIMIC_MIN_SPAWN_DISTANCE, spawnPoint, WAVE_COUNT, wavePlan, waveSize,
 } from '../src/cq/battle/content.js';
@@ -1095,7 +1096,7 @@ function botMoveToward(st, mem, tx, ty, inp) {
 }
 
 // Deterministic acceptance bot: face the nearest enemy and swing. Shield never used.
-function balanceBot(st, useAbilities, mem) {
+function balanceBot(st, useAbilities, mem, useSpecials = false) {
   const h = st.hero;
   const inp = {};
   if (h.apple && h.hearts <= 2 && !st.lastInput.apple) inp.apple = true;
@@ -1124,6 +1125,8 @@ function balanceBot(st, useAbilities, mem) {
     }
   }
   if (!moved) { mem.lastMove = false; mem.slideDir = 0; }
+  // The lesson's special (F): cast as soon as the meter is full and a monster is close (or hearts are low).
+  if (useSpecials && h.power >= SPECIAL_MAX && !st.lastInput.special && (h.hearts <= 2 || (best && bd <= 3.5))) inp.special = true;
   if (useAbilities && best) {
     const ready = st.gear.staff ? st.time >= st.cooldowns.staff : st.time >= st.cooldowns.rune;
     if ((st.gear.staff || st.gear.rune) && ready && bd <= 4 && !st.lastInput.ability) inp.ability = true;
@@ -1172,5 +1175,38 @@ console.log(`battle balance (bot, ${BALANCE_SEEDS} seeds each, ${((Date.now() - 
 balance.forEach((b) => console.log(`  ${b.lessonId} ${b.gear}: win ${(b.winRate * 100).toFixed(0)}% (target ${Math.round(b.target * 100)}%), median clear ${b.medianClear}s, ${JSON.stringify(b.outcomes)}`));
 // §2 targets (round 2 + length round 2), enforced in every run.
 balance.forEach((b) => assert(b.winRate >= b.target, `${b.lessonId} win rate ${b.winRate} < ${b.target}`));
+
+// With the lesson's special move (F), same seeds and gear: the fights must stay winnable, the meter
+// must actually get used (about one cast per wave), and the special must not turn a fight into a walkover.
+{
+  const withSpecials = [];
+  const specStart = Date.now();
+  for (const [lessonId, ids, target] of [['g1', [], 0.7], ['s1', [], 0.6], ['g5', GUIDED_ALL, 0.8], ['s5', STANDARD_ALL, 0.8]]) {
+    const lesson = getLesson(lessonId);
+    let wins = 0;
+    let casts = 0;
+    const times = [];
+    for (let seed = 1; seed <= BALANCE_SEEDS; seed += 1) {
+      const st = createBattle({ cq: gearCq(lesson.track, ids), lesson, rng: seeded(seed) });
+      const mem = {};
+      for (let i = 0; i < 20000 && st.phase !== 'ended'; i += 1) {
+        const out = step(st, balanceBot(st, ids.length > 0, mem, true), DT);
+        casts += out.events.filter((e) => e.type === 'special').length;
+      }
+      const r = resultOf(st);
+      if (r.outcome === 'victory') { wins += 1; times.push(r.ms / 1000); }
+    }
+    times.sort((a, b) => a - b);
+    withSpecials.push({ lessonId, winRate: wins / BALANCE_SEEDS, target, castsPerBattle: casts / BALANCE_SEEDS, medianClear: times.length ? times[Math.floor(times.length / 2)] : null });
+  }
+  console.log(`battle balance with specials (bot casts F when full, ${BALANCE_SEEDS} seeds each, ${((Date.now() - specStart) / 1000).toFixed(1)}s):`);
+  withSpecials.forEach((b) => console.log(`  ${b.lessonId}: win ${(b.winRate * 100).toFixed(0)}% (floor ${Math.round(b.target * 100)}%), ${b.castsPerBattle.toFixed(1)} casts per battle, median clear ${b.medianClear}s`));
+  withSpecials.forEach((b) => {
+    assert(b.winRate >= b.target, `${b.lessonId} with specials: win rate ${b.winRate} < ${b.target}`);
+    assert(b.castsPerBattle >= 2, `${b.lessonId}: the meter is used (${b.castsPerBattle.toFixed(1)} casts per battle)`);
+  });
+  const plain = new Map(balance.map((b) => [b.lessonId, b]));
+  withSpecials.forEach((b) => assert(b.winRate >= plain.get(b.lessonId).winRate - 0.05, `${b.lessonId}: a special never makes the fight meaningfully harder`));
+}
 
 console.log('ok — Computer Quest battle content + deterministic engine pass');

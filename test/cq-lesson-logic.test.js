@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import {
   addActiveMs, completePractice, emptyLessonState, familyReport, isUnlocked, lessonReport, lessonStatus,
-  missionStepDone, normalizeLessons, openChest, profileReport, quizQuestionsToAsk, recordBattle, recordChestAnswer,
+  missionStepDone, normalizeLessons, openChest, profileReport, quizQuestionsToAsk, recordBattle, recordBattleRetry, recordChestAnswer,
   recordParentCheck, recordQuizAttempt, recordSpotIt, recordWarmup, setPosition, setWindows, startLesson, tickMission,
 } from '../src/cq/lesson-logic.js';
 import { battleGems, normalizeCq } from '../src/cq/character.js';
@@ -74,22 +74,25 @@ assert.deepStrictEqual(normalizeLessons({ g1: { chestProgress: 'nope' } }).g1.ch
 // TYPES (non-ISO playedAt, unknown outcome, non-finite/non-number counts) drop the whole record;
 // out-of-range or non-integer FINITE counts are clamped/floored and the record is kept.
 const validBattle = { playedAt: iso, ms: 90000, poofs: 12, outcome: 'victory', gems: 3 };
-assert.deepStrictEqual(normalizeLessons({ g1: { ...passedState(), battle: validBattle } }).g1.battle, validBattle);
+assert.deepStrictEqual(normalizeLessons({ g1: { ...passedState(), battle: validBattle } }).g1.battle, { ...validBattle, tries: 1 });
 assert.strictEqual(normalizeLessons({ g1: { battle: validBattle } }).g1.battle, null, 'battle without passedAt is dropped');
 [
   { ...validBattle, playedAt: 'nope' }, { ...validBattle, playedAt: 5 }, { ...validBattle, playedAt: '2026-02-30T00:00:00.000Z' }, { ...validBattle, outcome: 'lose' },
   { ...validBattle, outcome: undefined }, { ...validBattle, ms: NaN }, { ...validBattle, ms: '5' }, { ...validBattle, ms: Infinity },
   { ...validBattle, poofs: NaN }, { ...validBattle, poofs: null }, { ...validBattle, poofs: '3' },
   { ...validBattle, gems: NaN }, { ...validBattle, gems: undefined }, { ...validBattle, gems: [3] },
+  { ...validBattle, tries: NaN }, { ...validBattle, tries: '3' },
 ].forEach((bad) => assert.strictEqual(normalizeLessons({ g1: { ...passedState(), battle: bad } }).g1.battle, null, `wrong-type battle field dropped: ${JSON.stringify(bad)}`));
 [
   [{ ...validBattle, ms: -1 }, { ms: 0 }], [{ ...validBattle, ms: 600001 }, { ms: 600000 }], [{ ...validBattle, ms: 1.5 }, { ms: 1 }],
   [{ ...validBattle, poofs: 501 }, { poofs: 500 }], [{ ...validBattle, poofs: -1 }, { poofs: 0 }], [{ ...validBattle, poofs: 1.9 }, { poofs: 1 }],
   [{ ...validBattle, gems: 11 }, { gems: 10 }], [{ ...validBattle, gems: -1 }, { gems: 0 }], [{ ...validBattle, gems: 1.5 }, { gems: 1 }],
 ].forEach(([bad, expect]) => assert.deepStrictEqual(normalizeLessons({ g1: { ...passedState(), battle: bad } }).g1.battle,
-  { ...validBattle, ...expect }, `out-of-range/non-integer finite battle field clamped and kept: ${JSON.stringify(bad)}`));
+  { ...validBattle, ...expect, tries: 1 }, `out-of-range/non-integer finite battle field clamped and kept: ${JSON.stringify(bad)}`));
 assert.deepStrictEqual(normalizeLessons({ g1: { ...passedState(), battle: { ...validBattle, ms: 0, poofs: 0, gems: 0, outcome: 'skipped' } } }).g1.battle,
-  { playedAt: iso, ms: 0, poofs: 0, outcome: 'skipped', gems: 0 });
+  { playedAt: iso, ms: 0, poofs: 0, outcome: 'skipped', gems: 0, tries: 1 });
+assert.equal(normalizeLessons({ g1: { ...passedState(), battle: { ...validBattle, tries: 300 } } }).g1.battle.tries, 99);
+assert.equal(normalizeLessons({ g1: { ...passedState(), battle: { ...validBattle, tries: -5 } } }).g1.battle.tries, 1);
 
 let cq = startLesson(base(), g1, iso);
 assert.strictEqual(lessonStatus(cq, g1), 'in-progress');
@@ -198,7 +201,7 @@ assert.throws(() => recordBattle(battleReady, g1, { outcome: 'nope', poofs: 0, m
 assert.throws(() => recordBattle(battleReady, g1, {}, iso), /invalid battle outcome/);
 const firstBattle = recordBattle(battleReady, g1, { outcome: 'victory', poofs: 27, ms: 125000 }, iso);
 assert.strictEqual(firstBattle.gems, battleGems(27));
-assert.deepStrictEqual(firstBattle.cq.lessons.g1.battle, { playedAt: iso, ms: 125000, poofs: 27, outcome: 'victory', gems: battleGems(27) });
+assert.deepStrictEqual(firstBattle.cq.lessons.g1.battle, { playedAt: iso, ms: 125000, poofs: 27, outcome: 'victory', gems: battleGems(27), tries: 1 });
 assert.strictEqual(firstBattle.cq.gems, battleGems(27));
 assert.strictEqual(firstBattle.cq.lessons.g1.phase, 'key', 'recordBattle does not change phase');
 assert.throws(() => recordBattle(firstBattle.cq, g1, { outcome: 'victory', poofs: 5, ms: 1000 }, iso), /battle already recorded/);
@@ -212,6 +215,36 @@ assert.strictEqual(clampedBattle.cq.lessons.g1.battle.poofs, 0);
 assert.strictEqual(clampedBattle.cq.lessons.g1.battle.ms, 600000);
 assert.strictEqual(clampedBattle.gems, battleGems(0));
 assertImmutable(battleReady, (value) => recordBattle(value, g1, { outcome: 'fell', poofs: 8, ms: 30000 }, iso));
+assert.throws(() => recordBattleRetry(battleNotPassed, g1, { outcome: 'victory' }, iso), /not passed/);
+assert.throws(() => recordBattleRetry(battleWrongPhase, g1, { outcome: 'victory' }, iso), /key screen/);
+assert.throws(() => recordBattleRetry(battleReady, g1, { outcome: 'victory' }, iso), /no battle recorded/);
+const fellFirst = recordBattle(battleReady, g1, { outcome: 'fell', poofs: 6, ms: 60000 }, iso);
+const timeRetry = recordBattleRetry(fellFirst.cq, g1, { outcome: 'time', poofs: 9, ms: 90000 }, '2026-09-17T12:00:00.000Z');
+assert.equal(timeRetry.gems, 0);
+assert.equal(timeRetry.cq.gems, fellFirst.cq.gems);
+assert.deepEqual(timeRetry.cq.lessons.g1.battle, { playedAt: '2026-09-17T12:00:00.000Z', ms: 90000,
+  poofs: 9, outcome: 'time', gems: fellFirst.gems, tries: 2 });
+const worse = recordBattleRetry(timeRetry.cq, g1, { outcome: 'fell', poofs: 99, ms: 1000 }, iso);
+assert.equal(worse.cq.lessons.g1.battle.outcome, 'time');
+assert.equal(worse.cq.lessons.g1.battle.poofs, 9);
+assert.equal(worse.cq.lessons.g1.battle.tries, 3);
+const victoryRetry = recordBattleRetry(worse.cq, g1, { outcome: 'victory', poofs: 20, ms: 120000 }, iso);
+assert.equal(victoryRetry.cq.lessons.g1.battle.outcome, 'victory');
+assert.equal(victoryRetry.cq.lessons.g1.battle.tries, 4);
+assert.equal(victoryRetry.cq.gems, fellFirst.cq.gems);
+const skippedFirstRetry = recordBattleRetry(skippedBattle.cq, g1, { outcome: 'fell', poofs: 12, ms: 45000 }, iso);
+assert.equal(skippedFirstRetry.gems, battleGems(12));
+assert.equal(skippedFirstRetry.cq.lessons.g1.battle.gems, battleGems(12));
+assert.equal(recordBattleRetry(skippedFirstRetry.cq, g1, { outcome: 'victory', poofs: 30, ms: 90000 }, iso).gems, 0);
+const suspiciousSkip = { ...skippedBattle.cq, lessons: { ...skippedBattle.cq.lessons, g1: { ...skippedBattle.cq.lessons.g1,
+  battle: { ...skippedBattle.cq.lessons.g1.battle, gems: 5 } } } };
+assert.equal(recordBattleRetry(suspiciousSkip, g1, { outcome: 'fell', poofs: 40, ms: 45000 }, iso).gems, 0);
+assert.equal(recordBattleRetry(victoryRetry.cq, g1, { outcome: 'time', poofs: 0, ms: 0 }, iso).cq.lessons.g1.battle.outcome, 'victory');
+let capped = { ...fellFirst.cq, lessons: { ...fellFirst.cq.lessons, g1: { ...fellFirst.cq.lessons.g1,
+  battle: { ...fellFirst.cq.lessons.g1.battle, tries: 99 } } } };
+capped = recordBattleRetry(capped, g1, { outcome: 'victory', poofs: 0, ms: 0 }, iso).cq;
+assert.equal(capped.lessons.g1.battle.tries, 99);
+assert.throws(() => recordBattleRetry(fellFirst.cq, g1, { outcome: 'skipped' }, iso), /invalid battle outcome/);
 
 const spotLesson = { ...g1, mission: [{ kind: 'spotIt', cards: [{ answer: 'ok' }], pass: 1 }] };
 assert.throws(() => tickMission(base(), spotLesson, 0, true), /another way/);
@@ -249,6 +282,7 @@ assert.strictEqual(battleLine(reportBattle({ playedAt: iso, ms: 45000, poofs: 12
 assert.strictEqual(battleLine(reportBattle({ playedAt: iso, ms: 59999, poofs: 12, outcome: 'time', gems: 4 })), 'Time: lesson 2 min · battle <1 min');
 assert.strictEqual(battleLine(reportBattle({ playedAt: iso, ms: 60000, poofs: 12, outcome: 'fell', gems: 4 })), 'Time: lesson 2 min · battle 1 min');
 assert.strictEqual(battleLine(reportBattle({ playedAt: iso, ms: 150000, poofs: 22, outcome: 'victory', gems: 8 })), 'Time: lesson 2 min · battle 3 min');
+assert.strictEqual(battleLine(reportBattle({ playedAt: iso, ms: 150000, poofs: 22, outcome: 'victory', gems: 8, tries: 2 })), 'Time: lesson 2 min · battle 3 min, 2 tries');
 assert.strictEqual(lessonReport({ name: 'Max', cq: reportCq }, g2, g3, '2026-09-16'), `Computer Quest — Max — 2026-09-16\nLesson G2 "Open, Switch, Close" — IN PROGRESS: mission\nWarm-up review: —\nQuiz: —\nReal task (parent-checked): —\nChest questions first try: —\nTime: lesson 1 min · battle —\nPractice Missions done: 0 day(s)\nWindows: 11\nParent note: —\nNext up: G3 "Folders Are Containers"`);
 const notYetCq = normalizeCq({ ...reportCq, lessons: { ...reportCq.lessons, g2: passedState() } });
 assert.strictEqual(lessonReport({ name: 'Max', cq: notYetCq }, g3, null, '2026-09-16'), `Computer Quest — Max — 2026-09-16\nLesson G3 "Folders Are Containers" — NOT YET (parent check)\nWarm-up review: —\nQuiz: passed\nReal task (parent-checked): 1/3 — not yet: "Makes a folder named Rocks, spelled right, inside his own folder"\nChest questions first try: —\nTime: lesson 0 min · battle —\nPractice Missions done: 0 day(s)\nWindows: 11\nParent note: —\nNext up: —`);
