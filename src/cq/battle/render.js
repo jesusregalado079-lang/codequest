@@ -14,6 +14,39 @@ const STONE_LO = '#4f5a61';
 const MORTAR = '#606c73';
 const BLOCK = '#83919a';
 const BLOCK_SHADOW = '#3c7438';
+// P9 ambient palette. Deliberately distinct from the sprite colors tooling keys on (hero shirt
+// #e8833a, hero skin #eebc98, slime body #2fc6b6/#34c9a0) so decoration never reads as a character.
+const GRASS_C = '#4a9341';
+const GRASS_D = '#5cab55';
+const TUFT_B = '#46903f';
+const TUFT_C = '#65b257';
+const STEM = '#44913d';
+const PETALS = ['#f6d867', '#e796c6', '#f2efe2'];
+const PETAL_EYE = '#fff6d2';
+const PEBBLE = '#9aa79c';
+const PEBBLE_HI = '#b6c0b6';
+const MOSS = '#55823f';
+const MOSS_HI = '#6d9e4b';
+const CRACK = '#414c53';
+const TORCH_GLOW = '#8d8076';
+const TORCH_POST = '#4a3320';
+const TORCH_IRON = '#39424a';
+const FLAME = '#ff9d2e';
+const FLAME_CORE = '#ffe07a';
+const FIREFLY_GLOW = '#9bd64a';
+const FIREFLY = '#dcff7d';
+const GLINT = '#fff3c4';
+const DUST = '#c6b79a';
+const DUST_LO = '#a7987e';
+const SPARK_A = '#fffbe0';
+const SPARK_B = '#ffd2e2';
+// Every rect painted by the walkable-tile / wall-tile decoration passes uses one of these, so a test can
+// prove decoration never strays onto the wrong kind of tile.
+export const WALK_DECOR_COLORS = [GRASS_C, GRASS_D, TUFT, TUFT_B, TUFT_C, STEM, PETALS[0], PETALS[1], PETALS[2], PETAL_EYE, PEBBLE, PEBBLE_HI];
+export const WALL_DECOR_COLORS = [MOSS, MOSS_HI, CRACK, TORCH_GLOW, TORCH_POST, TORCH_IRON, FLAME, FLAME_CORE];
+// Fireflies drift rather than belonging to one tile, so they get their own list: they may straddle two
+// grass tiles, but never touch a solid one.
+export const FIREFLY_COLORS = [FIREFLY, FIREFLY_GLOW];
 export const PUFF_LIFE = 0.5;
 export const PUFF_LIFE_REDUCED = 0.25;
 export const PARTICLE_LIFE = 0.9;
@@ -51,18 +84,82 @@ export function hash01(a, b) {
 }
 
 // ---------- arena ----------
-function drawArena(view) {
+// A torch bracket with a small blocky flame, drawn entirely inside its own wall tile so the tile still
+// reads as solid. The flame only changes height by a couple of pixels, a few times a second: a tiny area,
+// never a large patch of the screen changing brightness.
+function drawTorch(x, y, T, t, ph) {
+  const f = Math.floor(t * 4 + ph * 7) % 3;
+  const h = T * (0.15 + f * 0.03);
+  box(x + T * 0.28, y + T * 0.3, T * 0.44, T * 0.36, TORCH_GLOW); // warm light on the stone behind it
+  box(x + T * 0.44, y + T * 0.58, T * 0.12, T * 0.12, TORCH_POST);
+  box(x + T * 0.38, y + T * 0.5, T * 0.24, T * 0.1, TORCH_IRON);
+  box(x + T * 0.4, y + T * 0.42, T * 0.2, T * 0.1, FLAME);
+  box(x + T * 0.42, y + T * 0.46 - h, T * 0.16, h, FLAME);
+  box(x + T * 0.45, y + T * 0.48 - h * 0.8, T * 0.1, h * 0.7, FLAME_CORE);
+  box(x + T * 0.47, y + T * 0.42 - h, T * 0.06, T * 0.06, f === 2 ? FLAME_CORE : FLAME);
+}
+
+// Fireflies drift over the grass only: any that would cross a wall or a block simply sit this frame out,
+// so the drifting light never sits on a solid tile. Drawn with the background, always behind every sprite.
+const FIREFLY_N = 8;
+function drawFireflies(view, t) {
   const T = view.tile;
+  for (let k = 0; k < FIREFLY_N; k += 1) {
+    const sp = 0.22 + hash01(k + 1, 17) * 0.26;
+    const fx = 2.5 + hash01(k + 1, 3) * 15 + Math.sin(t * sp + k) * 1.1;
+    const fy = 2 + hash01(k + 1, 9) * 8 + Math.sin(t * sp * 0.73 + k * 2.1) * 0.6;
+    if (Math.sin(t * 0.9 + k * 1.7) < -0.3) continue; // slow fade in and out, not a blink
+    const s = Math.max(1, T * 0.07);
+    const half = s * 0.9;
+    const halfTiles = half / T;
+    let blocked = false;
+    for (let c = 0; c < 4; c += 1) {
+      const cx = Math.floor(fx + (c % 2 ? halfTiles : -halfTiles));
+      const cy = Math.floor(fy + (c < 2 ? -halfTiles : halfTiles));
+      const row = ARENA.grid[cy];
+      if (!row || row[cx] !== 0) { blocked = true; break; }
+    }
+    if (blocked) continue;
+    const X = view.offsetX + fx * T;
+    const Y = view.offsetY + fy * T;
+    box(X - half, Y - half, half * 2, half * 2, FIREFLY_GLOW);
+    box(X - s / 2, Y - s / 2, s, s, FIREFLY);
+  }
+}
+
+function drawArena(view, time) {
+  const T = view.tile;
+  const t = view.reducedMotion ? 0 : time;
   for (let ty = 0; ty < ARENA.height; ty += 1) {
     for (let tx = 0; tx < ARENA.width; tx += 1) {
       const x = view.offsetX + tx * T;
       const y = view.offsetY + ty * T;
-      if (ARENA.grid[ty][tx] !== 1) {
-        box(x, y, T, T, (tx + ty) % 2 === 0 ? GRASS_A : GRASS_B);
-        if ((tx * 7 + ty * 13) % 5 === 0) {
-          box(x + T * 0.25, y + T * 0.55, T * 0.08, T * 0.18, TUFT);
-          box(x + T * 0.36, y + T * 0.48, T * 0.08, T * 0.25, TUFT);
-        }
+      if (ARENA.grid[ty][tx] === 1) continue;
+      box(x, y, T, T, (tx + ty) % 2 === 0 ? GRASS_A : GRASS_B);
+      const h5 = (tx * 7 + ty * 13) % 5;
+      const h7 = (tx * 5 + ty * 11) % 7;
+      const ph = hash01(tx + 1, ty + 1);
+      // Patches of a third and fourth green, offset inside the tile, break the checkerboard rhythm so the
+      // field reads as a meadow instead of a game board.
+      const patch = (tx * 11 + ty * 7) % 6;
+      if (patch === 0) box(x, y + T * 0.42, T, T * 0.58, GRASS_C);
+      else if (patch === 3) box(x + T * 0.3, y, T * 0.7, T * 0.62, GRASS_D);
+      else if (patch === 5) box(x, y, T * 0.55, T * 0.45, GRASS_C);
+      // Per-tile phase keeps the whole field from swaying in lockstep; the throw stays inside the tile.
+      const sway = view.reducedMotion ? 0 : Math.sin(t * 1.1 + ph * 6.283) * T * 0.03;
+      if (h5 === 0) {
+        box(x + T * 0.25 + sway, y + T * 0.55, T * 0.08, T * 0.18, TUFT);
+        box(x + T * 0.36 + sway * 1.4, y + T * 0.48, T * 0.08, T * 0.25, h7 % 3 === 0 ? TUFT_B : TUFT);
+        box(x + T * 0.46 + sway * 0.7, y + T * 0.58, T * 0.07, T * 0.15, h7 % 2 === 0 ? TUFT_C : TUFT_B);
+      } else if (h7 === 3 && ph > 0.35) {
+        const fx = x + T * 0.55 + sway;
+        const petal = PETALS[(tx + ty) % PETALS.length];
+        box(fx + T * 0.03, y + T * 0.4, Math.max(1, T * 0.05), T * 0.28, STEM);
+        box(fx - T * 0.02, y + T * 0.34, T * 0.15, T * 0.1, petal);
+        box(fx + T * 0.03, y + T * 0.29, T * 0.05, T * 0.06, PETAL_EYE);
+      } else if (h5 === 3 && ph > 0.6) {
+        box(x + T * 0.66, y + T * 0.7, T * 0.14, T * 0.1, PEBBLE);
+        box(x + T * 0.69, y + T * 0.68, T * 0.08, T * 0.05, PEBBLE_HI);
       }
     }
   }
@@ -86,19 +183,40 @@ function drawArena(view) {
         box(x, y + T * 0.82, T, T * 0.18, STONE_LO);
         box(x + T * 0.2, y + T * 0.38, T * 0.3, T * 0.1, MORTAR);
       }
+      // Age: moss creeping up from the grass line, a hairline crack or two.
+      if ((tx * 3 + ty * 5) % 3 === 0) {
+        box(x + T * 0.04, y + T * 0.7, T * 0.22, T * 0.1, MOSS);
+        box(x + T * 0.3, y + T * 0.74, T * 0.18, T * 0.06, MOSS);
+        box(x + T * 0.08, y + T * 0.65, T * 0.1, T * 0.06, MOSS_HI);
+        box(x + T * 0.33, y + T * 0.7, T * 0.08, T * 0.05, MOSS_HI);
+      }
+      if ((tx * 5 + ty * 3) % 6 === 1) {
+        box(x + T * 0.62, y + T * 0.22, Math.max(1, T * 0.05), T * 0.2, CRACK);
+        box(x + T * 0.68, y + T * 0.4, Math.max(1, T * 0.05), T * 0.14, CRACK);
+      }
+      const topTorch = ty === 0 && tx % 5 === 2;
+      const sideTorch = (tx === 0 || tx === ARENA.width - 1) && ty === 5;
+      if (topTorch || sideTorch) drawTorch(x, y, T, t, hash01(tx + 2, ty + 3));
     }
   }
+  drawFireflies(view, t);
 }
 
-function drawChestProp(view) {
+const CHEST_GLINTS = [[3, 4], [11, 9], [4, 9]];
+function drawChestProp(view, time) {
   const T = view.tile;
+  const t = view.reducedMotion ? 0 : time;
   setOrigin(view.offsetX + ARENA.chest.x * T - T / 2, view.offsetY + ARENA.chest.y * T - T / 2, T / 16, false);
   r(1, 14, 14, 2, '#2f6e2c');
   r(2, 3, 12, 1, '#c28a45'); r(1, 4, 14, 4, '#a0692f'); r(1, 7, 14, 1, '#5e3a1a');
   r(3, 3, 2, 5, '#f2b631'); r(11, 3, 2, 5, '#f2b631');
   r(1, 8, 14, 6, '#8a5a2b'); r(14, 8, 1, 6, '#6b4422'); r(1, 13, 14, 1, '#5e3a1a');
   r(3, 8, 2, 6, '#f2b631'); r(11, 8, 2, 6, '#f2b631');
-  r(6, 7, 4, 3, '#ffd76a'); r(7, 8, 2, 1, '#3a2410');
+  // Goal object: the lock breathes between two golds and one small glint walks the brass, slowly.
+  r(6, 7, 4, 3, view.reducedMotion || Math.sin(t * 1.8) < 0.4 ? '#ffd76a' : '#ffeaa8');
+  r(7, 8, 2, 1, '#3a2410');
+  const spot = CHEST_GLINTS[Math.floor(t * 1.2) % (CHEST_GLINTS.length + 2)];
+  if (spot) { r(spot[0], spot[1], 1, 1, GLINT); r(spot[0], spot[1] + 1, 1, 1, GLINT); }
 }
 
 // ---------- pixel font for the mimic tag ----------
@@ -130,10 +248,23 @@ function drawTag(cx, bottomY, T) {
 }
 
 // ---------- enemies ----------
-function drawSlime(e, time, crown) {
+// How hard a hit reads, 1 at the moment of impact down to 0 at the end of the flash. Reduced motion holds
+// one fixed value so the reaction is a still pose, not a movement.
+function hitAmount(e, time, reduced) {
+  if (!(e.flashUntil > time)) return 0;
+  if (reduced) return 0.6;
+  return Math.max(0, Math.min(1, (e.flashUntil - time) / ENEMY_FLASH));
+}
+
+function drawSlime(e, time, crown, reduced) {
   const hop = e.state === 'move';
-  const w = hop ? 12 : 14;
-  const h = hop ? 12 : 10;
+  const t = reduced ? 0 : time;
+  const hit = hitAmount(e, time, reduced);
+  // One continuous squash-and-stretch cycle around a single resting shape: hopping only makes the cycle
+  // faster and deeper, so moving <-> idle never snaps between two fixed silhouettes.
+  const wob = Math.sin(t * (hop ? 7.2 : 2.3) + e.id * 2.1) * (hop ? 1.35 : 0.55);
+  const w = 13 + wob + hit * 2.4;
+  const h = 11 - wob * 0.85 - hit * 2.2;
   const left = 8 - w / 2;
   const top = 15 - h;
   const body = crown ? '#34c9a0' : '#2fc6b6';
@@ -144,9 +275,15 @@ function drawSlime(e, time, crown) {
   r(left, top + h - 2, w, 2, dark);
   r(left + 2, top + 2, 2, 1, '#aaf7ec');
   r(left + 2, top + 3, 1, 1, '#aaf7ec');
-  r(left + 3, top + 4, 2, 2, '#ffffff'); r(left + w - 5, top + 4, 2, 2, '#ffffff');
-  r(left + 4, top + 5, 1, 1, INK); r(left + w - 4, top + 5, 1, 1, INK);
-  const flick = Math.floor(time * 9 + e.id * 3) % 4;
+  // Slow blink: about every three seconds the eyes flatten to a line for a fraction of a second.
+  const blink = !reduced && (t * 0.33 + hash01(e.id + 1, 5)) % 1 < 0.05;
+  if (blink) {
+    r(left + 3, top + 5, 2, 1, INK); r(left + w - 5, top + 5, 2, 1, INK);
+  } else {
+    r(left + 3, top + 4, 2, 2, '#ffffff'); r(left + w - 5, top + 4, 2, 2, '#ffffff');
+    r(left + 4, top + 5, 1, 1, INK); r(left + w - 4, top + 5, 1, 1, INK);
+  }
+  const flick = Math.floor(t * 9 + e.id * 3) % 4;
   if (flick !== 3) r(left + flick - 1, top + h - 5, w, 1, flick === 0 ? '#ff4fd8' : '#7ffcff');
   if (crown) {
     r(4, top - 3, 8, 3, '#f2b631');
@@ -155,18 +292,30 @@ function drawSlime(e, time, crown) {
   }
 }
 
-function drawGoblin(e, time) {
-  const stepA = Math.floor(time * 8 + e.id) % 2;
-  r(6, -2, 7, 2, '#ffffff'); r(3, 0, 9, 2, '#f4f1e6'); r(5, 2, 8, 1, '#dcd6c3');
-  r(7, -1, 4, 1, '#9aa4ad'); r(4, 1, 5, 1, '#9aa4ad');
-  r(4, 3, 8, 6, '#5dbb4a'); r(11, 3, 1, 6, '#3f8f35');
-  r(2, 4, 2, 2, '#5dbb4a'); r(12, 4, 2, 2, '#5dbb4a');
-  r(5, 5, 2, 1, '#fff1a6'); r(9, 5, 2, 1, '#fff1a6');
-  r(6, 5, 1, 1, INK); r(10, 5, 1, 1, INK);
-  r(6, 7, 4, 1, '#2f6b2a');
-  r(5, 9, 6, 4, '#8a5a2b'); r(5, 11, 6, 1, '#5e3a1a');
-  r(3, 9, 2, 3, '#5dbb4a'); r(11, 9, 2, 3, '#5dbb4a');
-  r(5, 13, 2, stepA ? 3 : 2, '#3f8f35'); r(9, 13, 2, stepA ? 2 : 3, '#3f8f35');
+function drawGoblin(e, time, reduced) {
+  const t = reduced ? 0 : time;
+  const hit = hitAmount(e, time, reduced);
+  // The engine keeps goblins in 'chase', so the legs step whenever they are not stunned; a stunned goblin
+  // stops stepping and just sways on the spot.
+  const stepping = e.state === 'chase' && !(e.stunUntil > time);
+  const stepA = stepping ? Math.floor(t * 8 + e.id) % 2 : 0;
+  // Body bounce on the step, a slow sway when it is not stepping, and a recoil away from its heading on a hit.
+  const bob = stepping ? (reduced ? 0 : -Math.abs(Math.sin(t * 8 + e.id)) * 0.5) : -Math.abs(Math.sin(t * 2.5 + e.id * 1.9)) * 0.45;
+  const lean = (stepping ? 0 : Math.sin(t * 1.25 + e.id) * 0.3) - hit * 1.7 * (e.dirX > 0 ? 1 : -1);
+  const dy = bob + hit * 0.9;
+  const g = (ax, ay, aw, ah, c) => r(ax + lean, ay + dy, aw, ah, c);
+  g(6, -2, 7, 2, '#ffffff'); g(3, 0, 9, 2, '#f4f1e6'); g(5, 2, 8, 1, '#dcd6c3');
+  g(7, -1, 4, 1, '#9aa4ad'); g(4, 1, 5, 1, '#9aa4ad');
+  g(4, 3, 8, 6, '#5dbb4a'); g(11, 3, 1, 6, '#3f8f35');
+  g(2, 4, 2, 2, '#5dbb4a'); g(12, 4, 2, 2, '#5dbb4a');
+  g(5, 5, 2, 1, '#fff1a6'); g(9, 5, 2, 1, '#fff1a6');
+  g(6, 5, 1, 1, INK); g(10, 5, 1, 1, INK);
+  g(6, 7, 4, 1 + hit, '#2f6b2a');
+  g(5, 9, 6, 4, '#8a5a2b'); g(5, 11, 6, 1, '#5e3a1a');
+  g(3, 9, 2, 3, '#5dbb4a'); g(11, 9, 2, 3, '#5dbb4a');
+  // Feet stay planted: they take only a fraction of the lean so the recoil reads as the body rocking back.
+  r(5 + lean * 0.35, 13, 2, stepA ? 3 : 2, '#3f8f35');
+  r(9 + lean * 0.35, 13, 2, stepA ? 2 : 3, '#3f8f35');
 }
 
 function drawMimic(e, time, T, X, Y) {
@@ -247,10 +396,11 @@ function drawEnemy(e, state, view) {
   box(X - T * 0.35 * size, Y + T * 0.38 * size, T * 0.7 * size, T * 0.1 * size, '#00000030');
   FLASH = e.flashUntil > time ? '#ffffff' : null;
   setOrigin(X - (T * size) / 2, Y - (T * size) / 2, unit, chicken ? e.dirX > 0 : false);
+  const reduced = Boolean(view.reducedMotion);
   if (chicken) drawChicken(e, time);
-  else if (e.type === 'slime') drawSlime(e, time, false);
-  else if (e.type === 'mega-slime') drawSlime(e, time, true);
-  else if (e.type === 'goblin') drawGoblin(e, time);
+  else if (e.type === 'slime') drawSlime(e, time, false, reduced);
+  else if (e.type === 'mega-slime') drawSlime(e, time, true, reduced);
+  else if (e.type === 'goblin') drawGoblin(e, time, reduced);
   else if (e.type === 'mimic') drawMimic(e, time, T, X, Y - (T * size) / 2);
   else if (e.type === 'big-glitch') drawBigGlitch(e, time, view.reducedMotion);
   FLASH = null;
@@ -312,6 +462,21 @@ function drawPickups(state, view) {
     const Y = view.offsetY + p.y * T;
     box(X - T * 0.22, Y + T * 0.25, T * 0.44, T * 0.08, '#00000030');
     drawHeart(X, Y + bob, T / 16);
+    // Two little cross-shaped glints that twinkle in and out beside the heart, each in its own fixed spot,
+    // so a dropped heart catches the eye without anything flashing.
+    const gt = view.reducedMotion ? 0 : state.time;
+    const s = Math.max(1, T * 0.055);
+    for (let k = 0; k < 2; k += 1) {
+      const ph = (gt * 0.9 + k * 0.5 + hash01(p.id + 1, 4)) % 1;
+      if (ph > 0.45) continue;
+      const grow = ph < 0.22 ? ph / 0.22 : (0.45 - ph) / 0.23;
+      const a = hash01(p.id + 1, 6 + k) * 6.283 + k * Math.PI;
+      const gx = X + Math.cos(a) * T * 0.3;
+      const gy = Y + bob + Math.sin(a) * T * 0.22;
+      const len = s * (0.8 + grow * 1.8);
+      box(gx - len / 2, gy - s / 2, len, s, k ? SPARK_B : SPARK_A);
+      box(gx - s / 2, gy - len / 2, s, len, k ? SPARK_B : SPARK_A);
+    }
   }
 }
 
@@ -395,6 +560,40 @@ function heroBlinkedOut(state) {
   return state.time < hero.invulnUntil && Math.floor((hero.invulnUntil - state.time) / 0.1) % 2 === 1;
 }
 
+// Light run dust kicked up behind the hero, independent of the worn 'trail' cosmetic (which stays a
+// fancier effect layered on top for players who own it). Reduced motion gets one still puff instead.
+const DUST_BACK = { right: [-1, 0], left: [1, 0], up: [0, 1], down: [0, -1] };
+function drawHeroDust(state, view) {
+  const hero = state.hero;
+  if (!hero.moving) return;
+  const T = view.tile;
+  if (view.reducedMotion) {
+    const back = DUST_BACK[hero.facing] || DUST_BACK.down;
+    const X = view.offsetX + hero.x * T;
+    const Y = view.offsetY + (hero.y + HERO_RADIUS * 0.85) * T;
+    for (let k = 1; k <= 2; k += 1) {
+      const s = T * 0.11 * (1 - k * 0.22);
+      box(X + back[0] * T * 0.26 * k - s / 2, Y + back[1] * T * 0.14 * k - s / 2, s, s, k % 2 ? DUST : DUST_LO);
+    }
+    return;
+  }
+  const hist = hero.history;
+  if (!hist || hist.length < 2) return;
+  const n = hist.length;
+  for (let k = 1; k <= 3; k += 1) {
+    const idx = n - 1 - k * 4;
+    if (idx < 0) break;
+    const sample = hist[idx];
+    if (Math.abs(sample.x - hero.x) + Math.abs(sample.y - hero.y) < 0.1) continue;
+    const jitter = (hash01(k, Math.floor(sample.t * 8)) - 0.5) * 0.2;
+    const X = view.offsetX + (sample.x + jitter) * T;
+    const Y = view.offsetY + (sample.y + HERO_RADIUS * 0.8) * T;
+    const s = Math.max(1, T * 0.15 * (1 - k * 0.2));
+    box(X - s / 2, Y - s / 2, s, s, k % 2 ? DUST : DUST_LO);
+    if (k === 1) box(X - s * 0.2, Y - s * 0.7, s * 0.4, s * 0.35, DUST);
+  }
+}
+
 function drawHero(state, view, now) {
   const hero = state.hero;
   const time = state.time;
@@ -403,6 +602,7 @@ function drawHero(state, view, now) {
   const feet = view.offsetY + (hero.y + HERO_RADIUS) * T;
   box(X - T * 0.35, feet - T * 0.08, T * 0.7, T * 0.14, '#00000038');
   if (heroBlinkedOut(state)) return;
+  drawHeroDust(state, view);
   const attacking = time < hero.attackUntil && hero.attackStartedAt >= 0;
   const attack = attacking ? Math.max(0.01, Math.min(1, (time - hero.attackStartedAt) / SWING_TIME)) : 0;
   if (view.glow) {
@@ -422,7 +622,9 @@ function drawHero(state, view, now) {
     attack,
     blocking: Boolean(hero.blocking),
     glow: Boolean(view.glow),
-    bob: 0,
+    // Standing still: a slow breath. drawCharacter snaps bob to whole grid units, so this reads as one
+    // pixel-art unit rising and settling roughly every three and a half seconds.
+    bob: !hero.moving && !attacking && !hero.blocking && !view.reducedMotion ? (time * 0.28) % 1 : 0,
   });
 }
 
@@ -538,8 +740,8 @@ export function renderBattle(ctx, state, view, now) {
   ctx.imageSmoothingEnabled = false;
   ctx.fillStyle = '#0c2034';
   ctx.fillRect(0, 0, view.widthPx, view.heightPx);
-  drawArena(view);
-  drawChestProp(view);
+  drawArena(view, state.time);
+  drawChestProp(view, state.time);
   drawStone(state, view);
   drawPickups(state, view);
   drawTrail(state, view);
