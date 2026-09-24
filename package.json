@@ -10,7 +10,7 @@
     "test": "node test/engine.test.js && node test/pro.test.js && node test/computer.test.js && node test/cq.test.js && node test/cq-sprite.test.js && node test/cq-lessons.test.js && node test/cq-lesson-logic.test.js && node test/cq-lesson-ui.test.js && node test/cq-battle.test.js && node test/cq-battle-ui.test.js && node test/cq-typing.test.js && node test/cq-typing-ui.test.js && node test/syntax-compat.test.js && node test/cq-battle-record.test.js && node test/cq-key-moments.test.js && node test/cq-key-practice-ui.test.js && node test/cq-key-diagram.test.js && node test/cq-key-moment-integration.test.js && node test/cq-battle-art.test.js && node test/cq-battle-fx.test.js && node test/cq-battle-specials.test.js && node test/cq-battle-specials-art-a.test.js && node test/cq-battle-specials-art-b.test.js && node test/cq-battle-specials-art-c.test.js && node test/cq-battle-tutorial.test.js && node test/cq-typing-art.test.js && node test/cq-hero-stage-art.test.js && node test/cq-daily-work.test.js && node test/cq-daily-work-ui.test.js && node test/daily-page.test.js"
   },
   "dependencies": {
-    "blockly": "^13.1.1",
+    "blockly": "^13.3.0",
     "js-interpreter": "^6.0.2"
   },
   "devDependencies": {
