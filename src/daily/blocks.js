@@ -11,10 +11,13 @@
 // level, 'all', deliberately shows the arithmetic as a worked example; it is authored for the first
 // day of a skill and fades away — that is teaching, not a correctness signal about his answer.)
 
-export const HELP_LEVELS = ['all', 'unit', 'clues', 'none'];
+// 'demand' = the bar stays hidden until he taps "Show me the blocks"; once open it shows the one-block value
+// like 'unit'. Authored for the day that should be tried without the demo first.
+export const HELP_LEVELS = ['all', 'unit', 'clues', 'none', 'demand'];
 
 const GROUPINGS = [4, 5, 10, 20]; // benchmark-friendly block counts: 25%, 20%, 10%, 5% per block
 const MAX_BLOCKS = 25;
+const MAX_PER_ITEM = 50; // `perItem` problems draw one block per item up to this many (50 blocks = 2% each)
 
 // A unit is "clean" when it has at most one decimal place (12.5% is fine, 8.333...% is not).
 const cleanUnit = (count) => Number.isInteger((1000 / count));
@@ -25,8 +28,11 @@ export function formatPct(value) {
 
 // Returns { count, size } (count blocks, each standing for `size` of the whole's items) or null when
 // the numbers can't be split cleanly — the caller then falls back to a plain answer box.
-export function blockPlan(part, whole) {
+// `perItem` (authored on the problem) forces ONE BLOCK PER ITEM whenever that gives a clean percent per
+// block: the teaching model "there are B blocks, each worth 100 ÷ B" with no grouping, up to 50 blocks.
+export function blockPlan(part, whole, perItem = false) {
   if (!Number.isInteger(part) || !Number.isInteger(whole) || part < 0 || whole < 1 || part > whole) return null;
+  if (perItem && whole <= MAX_PER_ITEM && cleanUnit(whole)) return { count: whole, size: 1 };
   if (whole <= 10 && cleanUnit(whole)) return { count: whole, size: 1 };
   for (const count of GROUPINGS) {
     const size = whole / count;
@@ -65,11 +71,14 @@ export function clueBlocks(itemId, count, targetBlocks) {
   return picked.sort((a, b) => a - b);
 }
 
-// Everything the renderer needs. `filled` is how many blocks the kid has tapped (0..count).
-export function blockView(item, filled) {
-  const plan = blockPlan(item.part, item.whole);
+// Everything the renderer needs. `filled` is how many blocks the kid has tapped (0..count); `revealed` is
+// whether he has opened a 'demand' demo.
+export function blockView(item, filled, revealed = false) {
+  const plan = blockPlan(item.part, item.whole, item.perItem === true);
   if (!plan) return null;
-  const help = HELP_LEVELS.includes(item.help) ? item.help : 'none';
+  const asked = HELP_LEVELS.includes(item.help) ? item.help : 'none';
+  const hidden = asked === 'demand' && !revealed;
+  const help = asked === 'demand' ? 'unit' : asked;
   const { count, size } = plan;
   const unit = 100 / count;
   const target = item.part / size;
@@ -86,7 +95,7 @@ export function blockView(item, filled) {
   else caption = `The whole is ${count} block${count === 1 ? '' : 's'} = 100%`;
   let readout = null;
   if (help === 'all') readout = fill > 0 ? `${fill} block${fill === 1 ? '' : 's'} = ${formatPct(fill * unit)}` : 'Tap the blocks to fill them in.';
-  return { count, size, unit, help, labels, caption, readout, filled: fill, cols: Math.min(count, 10) };
+  return { count, size, unit, help, hidden, demand: asked === 'demand', labels, caption, readout, filled: fill, cols: Math.min(count, 10) };
 }
 
 // Tapping block k fills up to k; tapping the last filled block again takes it back off. Keeps the fill

@@ -6,7 +6,7 @@
 // calendar.js's dayStatus — this page never touches progress.js at all, even unused.
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek, weekdayKey } from '../cq/daily-work/schedule.js';
-import { coinCounts, coinSummary, coinTotal, displayValue, storedDay, storedItem } from '../cq/daily-work/daily-work-ui.js';
+import { canPayExactly, coinCounts, coinSummary, coinTotal, displayValue, money, storedDay, storedItem } from '../cq/daily-work/daily-work-ui.js';
 import { checkParentPin, hasParentPin, parentUnlocked, setParentPin } from './pin.js';
 import { dayStatus } from './calendar.js';
 import { sheetsForDay } from './sheet-view.js';
@@ -18,14 +18,20 @@ export function createParentState() {
   return { open: false, selectedDay: null, pinMessage: '' };
 }
 
-function gradeSuggestion(item, value) {
+export function gradeSuggestion(item, value) {
   if (item.kind === 'numeric') return Number(value) === Number(item.answer);
   if (item.kind === 'fill-blank') {
     return Array.isArray(value) && Array.isArray(item.answer) && value.length === item.answer.length
       && value.every((entry, index) => entry === item.answer[index]);
   }
   if (item.kind === 'coin-total' && item.targetCents !== null && item.targetCents !== undefined) {
-    return coinTotal(coinCounts(value)) === item.targetCents;
+    const counts = coinCounts(value);
+    if (coinTotal(counts) !== item.targetCents) return false;
+    // "Trade a $1 bill so you can pay this tithe": the coins must ALSO be able to make the tithe exactly.
+    if (Number.isInteger(item.payCents) && !canPayExactly(counts, item.payCents)) return false;
+    // "...and include at least one dime": a required coin.
+    if (item.mustHave && (counts[item.mustHave.denom] || 0) < (item.mustHave.min || 1)) return false;
+    return true;
   }
   if (item.kind === 'coin-total' && item.pile) return Number(value) === Number(item.answer);
   return null;
@@ -118,6 +124,13 @@ function trackerHtml(store, week, selectedDay) {
   }).join('')}</div>`;
 }
 
+// Parent-only line for a tithe build: can these exact coins pay the tithe? (Never shown to the kid.)
+function titheLine(item, value) {
+  if (item.kind !== 'coin-total' || !Number.isInteger(item.payCents) || value === null || value === undefined) return '';
+  const ok = canPayExactly(coinCounts(value), item.payCents);
+  return `<p class="cqd-check-tithe">Tithe ${esc(money(item.payCents))}: these coins <strong>${ok ? 'can' : 'cannot'}</strong> pay it exactly.</p>`;
+}
+
 function checkedItemHtml(sheet, item, state) {
   const suggestion = gradeSuggestion(item, state.value);
   const key = choiceKey(sheet.id, item.id);
@@ -126,6 +139,7 @@ function checkedItemHtml(sheet, item, state) {
   const neutral = suggestion === null;
   return `<li class="cqd-check-item"><p class="cqd-check-prompt">${esc(item.prompt)}</p>
     <p class="cqd-check-answer"><strong>Answer:</strong> ${esc(answerText(item, state.value))}</p>
+    ${titheLine(item, state.value)}${item.parentNote ? `<p class="cqd-check-note"><strong>For you:</strong> ${esc(item.parentNote)}</p>` : ''}
     ${neutral ? '<p class="cqd-muted">No automatic suggestion — you decide.</p>' : `<p class="cqd-suggestion">Suggested: ${suggestion ? 'Correct' : 'Incorrect'}</p>`}
     <div class="cqd-grade" role="group" aria-label="Grade this item">
       <button type="button" data-action="daily-parent-grade" data-choice="correct" data-grade-key="${esc(key)}" aria-pressed="${correctChecked}">Correct</button>

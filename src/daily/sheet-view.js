@@ -151,6 +151,15 @@ function percentGridItem(data, item, state) {
 // anything is right. Each block is a real button (a max of 10 per row, so every one is a big target).
 function blockBarItem(data, item, state, view) {
   const value = state.value === null || state.value === undefined ? '' : String(state.value);
+  const answer = `<label class="cqd-field cqd-block-answer"><span>What percent?</span><span class="cqd-block-input"><input class="cqd-input" type="text" inputmode="decimal" value="${esc(value)}" data-action="daily-input" data-kind="numeric" ${data}><b aria-hidden="true">%</b></span></label>`;
+  // 'demand' problems start with NO picture: try it first, open the blocks only if stuck.
+  if (view.hidden) {
+    return `<li class="cqd-item cqd-item-blocks" data-help="${esc(view.help)}" data-hidden="true">
+    <p class="cqd-item-prompt">${esc(item.prompt)}</p>
+    <button type="button" class="cqd-button cqd-block-reveal" data-action="daily-block-reveal" ${data}>🧩 Show me the blocks</button>
+    ${answer}
+  </li>`;
+  }
   const blocks = Array.from({ length: view.count }, (_, i) => {
     const block = i + 1;
     const label = view.labels[i];
@@ -162,11 +171,11 @@ function blockBarItem(data, item, state, view) {
     <div class="cqd-block-bar" role="group" aria-label="${view.count} equal blocks make the whole" style="--cqd-block-count:${view.count};--cqd-block-cols:${view.cols}">${blocks}</div>
     <p class="cqd-block-caption">${esc(view.caption)}</p>
     ${view.readout ? `<p class="cqd-block-readout" aria-live="polite">${esc(view.readout)}</p>` : ''}
-    <label class="cqd-field cqd-block-answer"><span>What percent?</span><span class="cqd-block-input"><input class="cqd-input" type="text" inputmode="decimal" value="${esc(value)}" data-action="daily-input" data-kind="numeric" ${data}><b aria-hidden="true">%</b></span></label>
+    ${answer}
   </li>`;
 }
 
-function renderItem(week, dayKey, sheet, item, state, locked, fillOf) {
+function renderItem(week, dayKey, sheet, item, state, locked, fillOf, revealOf) {
   const data = dataAttrs(week, dayKey, sheet, item);
   if (locked) return `<li class="cqd-item cqd-item-locked">${lockedRow(item, state)}</li>`;
   if (item.kind === 'coin-total') return coinItem(week, dayKey, sheet, item, state);
@@ -185,7 +194,7 @@ function renderItem(week, dayKey, sheet, item, state, locked, fillOf) {
     </li>`;
   }
   if (item.kind === 'numeric' && item.help) {
-    const view = blockView(item, fillOf ? fillOf(item) : 0);
+    const view = blockView(item, fillOf ? fillOf(item) : 0, revealOf ? revealOf(item) : false);
     if (view) return blockBarItem(data, item, state, view);
   }
   if (item.kind === 'numeric' && item.unit === 'percent' && Number.isInteger(item.answer)) {
@@ -201,7 +210,7 @@ function renderItem(week, dayKey, sheet, item, state, locked, fillOf) {
 
 // One sheet's worked-example header plus its items — the page chrome (subject bar, prev/next,
 // submit) is added by app.js, which also knows the sheet's position among the day's other sheets.
-export function renderSheetArticle(week, dayKey, sheet, dayState, reopened, fillOf) {
+export function renderSheetArticle(week, dayKey, sheet, dayState, reopened, fillOf, revealOf) {
   return `<article class="cqd-sheet" data-subject="${esc(sheet.subject)}">
     <header class="cqd-sheet-head">
       <span class="cqd-subject-icon" aria-hidden="true"></span>
@@ -213,7 +222,7 @@ export function renderSheetArticle(week, dayKey, sheet, dayState, reopened, fill
     ${sheet.citation ? `<p class="cqd-citation">${esc(sheet.citation)}</p>` : ''}
     <ol class="cqd-items">${(sheet.items || []).map((item) => {
       const state = storedItem(dayState, sheet.id, item.id);
-      return renderItem(week, dayKey, sheet, item, state, state.status === OK_STATUS && reopened, fillOf);
+      return renderItem(week, dayKey, sheet, item, state, state.status === OK_STATUS && reopened, fillOf, revealOf);
     }).join('')}</ol>
     <footer class="cqd-sheet-foot" aria-hidden="true"><span class="cqd-sheet-foot-dot"></span><span class="cqd-sheet-foot-rule"></span></footer>
   </article>`;

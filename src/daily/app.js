@@ -20,6 +20,9 @@ let parentState = createParentState();
 let drawingController = null;
 let pinPending = false;
 let parentSession = 0;
+// 'Show me the blocks' taps (Thursday-style demo-on-demand problems). Kept for this visit only: reload and the demo is closed again.
+const revealedBlocks = new Set();
+const revealKey = (week, day, sheet, item) => `${week}|${day}|${sheet}|${item}`;
 
 function todayIso() {
   const date = new Date();
@@ -129,7 +132,7 @@ function sheetScreenHtml() {
     </div>
     <div class="cqd-sheet-wrap">
       <div class="cqd-sheet-stage" data-mode="type">
-        ${renderSheetArticle(week, route.dayKey, sheet, dayState, reopened, (item) => blockFillFor(store, week.id, route.dayKey, sheet.id, item.id))}
+        ${renderSheetArticle(week, route.dayKey, sheet, dayState, reopened, (item) => blockFillFor(store, week.id, route.dayKey, sheet.id, item.id), (item) => revealedBlocks.has(revealKey(week.id, route.dayKey, sheet.id, item.id)))}
         <canvas class="cqd-ink" aria-label="Draw here to show your work"></canvas>
       </div>
     </div>
@@ -295,12 +298,23 @@ function onClick(event) {
     return;
   }
 
+  if (action === 'daily-block-reveal') {
+    const data = { week: button.dataset.week, day: button.dataset.day, sheet: button.dataset.sheet, item: button.dataset.item };
+    const item = itemMeta(DAILY_WORK, store.track, data);
+    if (!item || item.help !== 'demand') return;
+    revealedBlocks.add(revealKey(data.week, data.day, data.sheet, data.item));
+    render();
+    const first = app.querySelector(`.cqd-block-bar [data-item="${CSS.escape(data.item)}"]`);
+    if (first) first.focus({ preventScroll: true });
+    return;
+  }
+
   if (action === 'daily-block-fill') {
     // The block count comes from the authored problem, never from the DOM, so a tampered attribute
     // can't store a nonsense fill.
     const data = { week: button.dataset.week, day: button.dataset.day, sheet: button.dataset.sheet, item: button.dataset.item };
     const item = itemMeta(DAILY_WORK, store.track, data);
-    const plan = item && blockPlan(item.part, item.whole);
+    const plan = item && blockPlan(item.part, item.whole, item.perItem === true);
     if (!plan) return;
     const next = nextFill(blockFillFor(store, data.week, data.day, data.sheet, data.item), Number(button.dataset.block), plan.count);
     persist((s) => setBlockFill(s, data.week, data.day, data.sheet, data.item, next));

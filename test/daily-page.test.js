@@ -346,6 +346,25 @@ assert.equal(realWeekDates('2026-09-20').find((d) => d.dayKey === 'monday').iso,
   assert.equal(historicalCell.clickable, false, `${track} a day from a since-rotated-out week is read-only`);
   assert.equal(historicalCell.hasWork, true, `${track} but its history snapshot still shows it had work`);
   assert.equal(historicalCell.status, 'not-started', `${track} snapshotted status is preserved exactly (nothing was answered in this test)`);
+
+  // A week that straddles two months (Mon 9/28 - Fri 10/2) keeps ALL its days tappable in either month's grid:
+  // the current week's weekdays that fall in the grid's padding are drawn as real cells, everything else stays blank.
+  const straddle = store.emptyStore();
+  straddle.track = track;
+  const sept = buildMonth(straddle, 2026, 8, '2026-09-28');
+  assert.equal(sept.cells.length % 7, 0);
+  const octInSept = ['2026-10-01', '2026-10-02'].map((iso) => sept.cells.find((c) => c && c.iso === iso));
+  octInSept.forEach((cell) => { assert.ok(cell, `${track} ${cell && cell.iso} appears in the September grid`); assert.equal(cell.clickable, true); assert.equal(cell.outside, true); assert.equal(cell.dayKey, cell.iso === '2026-10-01' ? 'thursday' : 'friday'); });
+  assert.equal(sept.cells.find((c) => c && c.iso === '2026-10-03'), undefined, `${track} the Saturday in the padding stays blank`);
+  assert.equal(sept.cells.filter((c) => c && !c.outside).length, 30, `${track} still exactly 30 real September cells`);
+  const oct = buildMonth(straddle, 2026, 9, '2026-10-01');
+  ['2026-09-28', '2026-09-29', '2026-09-30'].forEach((iso) => {
+    const cell = oct.cells.find((c) => c && c.iso === iso);
+    assert.ok(cell && cell.clickable && cell.outside, `${track} ${iso} is tappable from the October grid`);
+  });
+  assert.equal(oct.cells.find((c) => c && c.iso === '2026-09-27'), undefined, `${track} Sunday padding stays blank`);
+  const lastWeekGrid = buildMonth(straddle, 2026, 8, '2026-10-05');
+  assert.equal(lastWeekGrid.cells.filter((c) => c && c.outside).length, 0, `${track} a week that has ended leaves no spill cells`);
 });
 
 console.log('ok — daily calendar.js: dayStatus state table, buildCalendar sees all 5 weekdays for both live tracks');
@@ -462,7 +481,7 @@ assert.equal(blockView({ id: 'x', part: 6, whole: 8, help: 'bogus' }, 0).help, '
 assert.equal(blockView({ id: 'x', part: 4, whole: 9, help: 'all' }, 0), null, 'unplannable numbers give no view');
 assert.equal(blockView(sample('all'), 99).filled, 8, 'the fill is clamped to the block count');
 assert.equal(blockView(sample('all'), -3).filled, 0);
-assert.deepEqual([...HELP_LEVELS], ['all', 'unit', 'clues', 'none']);
+assert.deepEqual([...HELP_LEVELS], ['all', 'unit', 'clues', 'none', 'demand']);
 
 // Clues: 1-2 blocks, stable, never the answer's block, never the last block, deterministic per item id.
 Object.entries(rampByDay).filter(([, help]) => help === 'clues').forEach(([dayKey]) => {

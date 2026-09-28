@@ -44,7 +44,7 @@ const codeQuest = () => sheet('codequest', 'codequest', 'CodeQuest',
   ]);
 
 const expectedGuided = {
-  id: 'week-11', label: 'Week 11', assignedWeekOf: null,
+  id: 'week-11', label: 'Week 11', assignedWeekOf: '2026-09-21',
   weekItems: [sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
     item('verse', 'fill-blank', "If you are ___ in ___ things, you will be faithful in large ones. But if you are dishonest in little things, you won't be honest with greater responsibilities.", ['faithful', 'little'], ['faithful', 'little']),
   ], 'Luke 16:10 (NLT)')],
@@ -88,7 +88,7 @@ const expectedGuided = {
 };
 
 const expectedStandard = {
-  id: 'week-11', label: 'Week 11', assignedWeekOf: null,
+  id: 'week-11', label: 'Week 11', assignedWeekOf: '2026-09-21',
   weekItems: [sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [item('verse', 'fill-blank', 'I ___ on to reach the end of the race and receive the heavenly ___ for which God, through Christ Jesus, is calling us.', ['press', 'prize'], ['press', 'prize'])], 'Philippians 3:14 (NLT)')],
   days: {
     monday: { sheets: [

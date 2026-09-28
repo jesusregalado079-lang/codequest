@@ -85,11 +85,7 @@ export function buildMonth(store, year, month, todayIso) {
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const leadingBlanks = new Date(Date.UTC(year, month, 1)).getUTCDay();
 
-  const cells = [];
-  for (let i = 0; i < leadingBlanks; i += 1) cells.push(null);
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const iso = isoOf(year, month, day);
-    const dayKey = ALL_DAY_KEYS[new Date(Date.UTC(year, month, day)).getUTCDay()];
+  const cell = (iso, day, dayKey, outside) => {
     const isWeekend = dayKey === 'saturday' || dayKey === 'sunday';
     const isCurrentWeek = thisWeek.has(iso);
     let status = null;
@@ -105,9 +101,25 @@ export function buildMonth(store, year, month, todayIso) {
         if (snapshot) { status = snapshot.status; hasWork = true; }
       }
     }
-    cells.push({ iso, day, dayKey, isWeekend, isToday: iso === todayIso, isCurrentWeek, hasWork, status, clickable });
+    return { iso, day, dayKey, isWeekend, isToday: iso === todayIso, isCurrentWeek, hasWork, status, clickable, outside };
+  };
+  // A week that straddles two months (Mon 28 Sep - Fri 2 Oct) would otherwise lose its other days: they sit
+  // in the padding of this month's grid. Padding cells that are weekdays of the CURRENT real week are drawn
+  // as real, tappable days; every other padding cell stays blank.
+  const spill = (offsetFromFirst) => {
+    const date = new Date(Date.UTC(year, month, 1 + offsetFromFirst));
+    const iso = isoOf(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+    if (!thisWeek.has(iso)) return null;
+    const dayKey = ALL_DAY_KEYS[date.getUTCDay()];
+    return dayKey === 'saturday' || dayKey === 'sunday' ? null : cell(iso, date.getUTCDate(), dayKey, true);
+  };
+
+  const cells = [];
+  for (let i = 0; i < leadingBlanks; i += 1) cells.push(spill(i - leadingBlanks));
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    cells.push(cell(isoOf(year, month, day), day, ALL_DAY_KEYS[new Date(Date.UTC(year, month, day)).getUTCDay()], false));
   }
-  while (cells.length % 7 !== 0) cells.push(null);
+  while (cells.length % 7 !== 0) cells.push(spill(cells.length - leadingBlanks));
 
   const monthDate = new Date(Date.UTC(year, month, 1));
   return {
@@ -127,6 +139,7 @@ function monthCellHtml(cell, track) {
   if (cell.isWeekend) classes.push('cqd-month-weekend');
   if (cell.isToday) classes.push('is-today');
   if (cell.isCurrentWeek) classes.push('is-current-week');
+  if (cell.outside) classes.push('cqd-month-outside');
   if (cell.status) classes.push(`cqd-status-${cell.status}`);
   const label = cell.hasWork ? (STATUS_LABELS[cell.status] || '') : '';
   const accessibleLabel = `${cell.dayKey} ${cell.day}${cell.isToday ? ', today' : ''}${label ? `, ${label}` : ''}${cell.hasWork && !cell.clickable ? ', saved history' : ''}`;

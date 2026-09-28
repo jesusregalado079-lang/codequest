@@ -299,6 +299,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   background: var(--cqd-gold-soft);
   color: #503d20;
   line-height: 1.55;
+  white-space: pre-line;
 }
 .cqd-example strong { display: block; margin-bottom: 4px; color: #7e5211; font-family: 'Baloo 2', sans-serif; font-size: 1.1rem; line-height: 1.1; }
 .cqd-citation { margin-top: 22px; color: var(--cqd-muted); font-size: .88rem; font-style: italic; }
@@ -1227,3 +1228,8 @@ button.cqd-month-cell.is-today:active { box-shadow: 0 2px 0 var(--season-ink); }
 .cqd-save-alert-copy strong { font-weight: 900; }
 .cqd-save-alert[hidden] { display: none; }
 body:has(.cqd-save-alert:not([hidden])) #app { padding-bottom: calc(220px + env(safe-area-inset-bottom, 0px)); }
+
+/* "Show me the blocks": the demo stays closed until he asks (help 'demand'). Big, calm, obviously a button. */
+.cqd-block-reveal { min-height: 48px; margin: 10px 0 12px; padding: 10px 18px; font-size: 1rem; }
+.cqd-check-tithe, .cqd-check-note { margin: 0 0 7px; padding: 8px 12px; border-radius: 8px; background: #e8f3f6; color: #2b4557; font-size: .95rem; }
+.cqd-check-note { background: #fff4d6; color: #5c4310; }

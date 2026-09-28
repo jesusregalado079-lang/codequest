@@ -40,6 +40,24 @@ export function coinCounts(value) {
   return counts;
 }
 
+// True when SOME of the coins held (`counts`, per denomination) add up to exactly `cents`: a bounded
+// subset-sum over the actual coins, so 4 quarters can pay 25/50/75/100 but never 10. Used by the
+// parent view to check a "trade a $1 bill so you can pay this tithe" build.
+export function canPayExactly(counts, cents) {
+  if (!Number.isInteger(cents) || cents < 0) return false;
+  if (cents === 0) return true;
+  const reachable = new Array(cents + 1).fill(false);
+  reachable[0] = true;
+  COIN_ORDER.forEach((denom) => {
+    const value = COIN_CENTS[denom];
+    const held = Math.min(MAX_PER_DENOM, (counts && counts[denom]) || 0);
+    for (let k = 0; k < held; k += 1) {
+      for (let amount = cents; amount >= value; amount -= 1) if (reachable[amount - value]) reachable[amount] = true;
+    }
+  });
+  return reachable[cents];
+}
+
 export function coinTotal(counts) {
   return COIN_ORDER.reduce((sum, denom) => sum + (counts[denom] || 0) * COIN_CENTS[denom], 0);
 }

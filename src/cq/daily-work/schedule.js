@@ -18,6 +18,14 @@ export function currentWeek(content, track, todayIso) {
   const assigned = weeks.find((week) => week && validDay(week.assignedWeekOf)
     && today >= dayNumber(week.assignedWeekOf) && today <= dayNumber(week.assignedWeekOf) + 4);
   if (assigned) return assigned;
+  // Saturday and Sunday keep the week that just ended open, so a day a kid didn't get to can still be
+  // caught up on over the weekend (otherwise the app would show "no work" between Friday and Monday).
+  const weekday = new Date(`${todayIso}T12:00:00`).getDay();
+  if (weekday === 6 || weekday === 0) {
+    const monday = today - (weekday === 6 ? 5 : 6);
+    const ended = weeks.find((week) => week && validDay(week.assignedWeekOf) && dayNumber(week.assignedWeekOf) === monday);
+    if (ended) return ended;
+  }
   const unscheduled = weeks.filter((week) => week && week.assignedWeekOf === null);
   return unscheduled.length === 1 ? unscheduled[0] : null;
 }
