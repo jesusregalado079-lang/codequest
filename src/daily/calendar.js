@@ -165,6 +165,14 @@ export function renderCalendar(store, todayIso, viewedYear, viewedMonth) {
         <span class="cqd-verse-open-arrow" aria-hidden="true">↗</span>
       </button>`
     : '';
+  // The Payday Helper is the younger son's tool: a separate button, not part of any week's sheets.
+  const paydayButton = store.track === 'guided'
+    ? `<button type="button" class="cqd-button cqd-payday-open" data-action="open-payday">
+        <span class="cqd-payday-open-icon" aria-hidden="true"><span class="pd-bill" data-bill="5"><b>$5</b></span></span>
+        <span class="cqd-payday-open-copy">Payday Helper<small>Split your pay into Give, Save and Spend.</small></span>
+        <span class="cqd-verse-open-arrow" aria-hidden="true">↗</span>
+      </button>`
+    : '';
   const [ty, tm] = partsOf(todayIso);
   const monthsFromToday = (viewedYear - ty) * 12 + (viewedMonth - (tm - 1));
   const prevDisabled = monthsFromToday <= -MONTH_NAV_BACK ? 'disabled' : '';
@@ -196,6 +204,7 @@ export function renderCalendar(store, todayIso, viewedYear, viewedMonth) {
     </div>
     <ul class="cqd-month-key" aria-label="Day status key">${Object.entries(STATUS_LABELS).map(([status, label]) => `<li class="cqd-month-key-item cqd-status-${status}"><span class="cqd-month-dot" aria-hidden="true">${statusMark(status)}</span>${esc(label)}</li>`).join('')}</ul>
     ${verseButton}
+    ${paydayButton}
   </section>`;
 }
 

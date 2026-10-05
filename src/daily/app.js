@@ -7,6 +7,9 @@ import { currentWeekSnapshots, renderCalendar, renderVerseScreen } from './calen
 import { applyDailyAction, dayComplete, dayReady, dayReopened, renderSheetArticle, sheetsForDay } from './sheet-view.js';
 import { attachDrawing, loadDrawing, sizeCanvas } from './drawing.js';
 import { createDailyMotion } from './motion.js';
+import { act as paydayReduce, newSession as newPayday } from '../payday/session.js';
+import { abandonOpen, actOnOpen, addSession, openSession } from '../payday/state.js';
+import { renderPayday } from '../payday/view.js';
 import { lockParent, parentUnlocked } from './pin.js';
 import {
   checkDailyParentPin, createParentState, gradeDailyWork, renderParent, setDailyParentPin,
@@ -23,6 +26,10 @@ let parentSession = 0;
 // 'Show me the blocks' taps (Thursday-style demo-on-demand problems). Kept for this visit only: reload and the demo is closed again.
 const revealedBlocks = new Set();
 const revealKey = (week, day, sheet, item) => `${week}|${day}|${sheet}|${item}`;
+// The Payday Helper: a payday he has not typed an amount for yet lives only here; once he has, it is saved with the rest.
+let paydayDraft = null;
+let paydayAsk = false; // the "Start a new payday?" question is showing
+let paydayDoneId = null; // the payday he just finished stays on screen until he starts a new one
 
 function todayIso() {
   const date = new Date();
@@ -156,6 +163,68 @@ function setupDrawing() {
   });
 }
 
+function paydayCurrent() {
+  const done = paydayDoneId && store.payday.sessions.find((session) => session.id === paydayDoneId);
+  return done || openSession(store.payday) || paydayDraft || (paydayDraft = newPayday(new Date().toISOString()));
+}
+
+// One tap in the Payday Helper. The rules live in src/payday/session.js; this only saves the result.
+function paydayAct(action) {
+  const now = new Date().toISOString();
+  try {
+    if (openSession(store.payday)) {
+      persist((s) => ({ ...s, payday: actOnOpen(s.payday, action, now) }));
+    } else {
+      const next = paydayReduce(paydayDraft || newPayday(now), action, now);
+      if (next.earned !== null && next.screen !== 'earn') { persist((s) => ({ ...s, payday: addSession(s.payday, next) })); paydayDraft = null; } else paydayDraft = next;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+  const top = store.payday.sessions[0];
+  if (top && top.screen === 'done') paydayDoneId = top.id;
+  render();
+}
+
+const paydayText = (key) => { const input = app.querySelector(`[data-payday-input="${key}"]`); return input ? input.value : ''; };
+
+function handlePayday(button, action) {
+  const piece = button.dataset.piece;
+  const simple = {
+    'payday-handed-done': 'handed-done', 'payday-change-amount': 'change-amount', 'payday-pieces-clear': 'pieces-clear', 'payday-change-pieces': 'change-pieces',
+    'payday-recap-yes': 'recap-yes', 'payday-jars-next': 'jars-next', 'payday-replace-done': 'replace-done', 'payday-replace-cancel': 'replace-cancel',
+    'payday-jar-done': 'jar-done', 'payday-jar-next': 'jar-next', 'payday-dismiss': 'dismiss', 'payday-grownup-ok': 'grownup-ok',
+  };
+  if (simple[action]) return paydayAct({ type: simple[action] });
+  switch (action) {
+    case 'payday-earn-submit': return paydayAct({ type: 'earn-submit', text: paydayText('earn') });
+    case 'payday-add-answer': return paydayAct({ type: 'add-answer', text: paydayText('add') });
+    case 'payday-spend-answer': return paydayAct({ type: 'spend-answer', text: paydayText('spend') });
+    case 'payday-piece-plus': return paydayAct({ type: 'piece-adjust', id: piece, delta: 1 });
+    case 'payday-piece-minus': return paydayAct({ type: 'piece-adjust', id: piece, delta: -1 });
+    case 'payday-replace-plus': return paydayAct({ type: 'replace-adjust', id: piece, delta: 1 });
+    case 'payday-replace-minus': return paydayAct({ type: 'replace-adjust', id: piece, delta: -1 });
+    case 'payday-tray-add': return paydayAct({ type: 'tray-add', jar: button.dataset.jar });
+    case 'payday-tray-remove': return paydayAct({ type: 'tray-remove', jar: button.dataset.jar });
+    case 'payday-can': return paydayAct({ type: 'can-answer', value: button.dataset.value });
+    case 'payday-pick': return paydayAct({ type: 'pick-piece', id: piece });
+    case 'payday-jar-add': return paydayAct({ type: 'jar-add', id: piece });
+    case 'payday-jar-remove': return paydayAct({ type: 'jar-remove', id: piece });
+    case 'payday-spend-add': return paydayAct({ type: 'spend-add', id: piece });
+    case 'payday-spend-remove': return paydayAct({ type: 'spend-remove', id: piece });
+    case 'payday-new': paydayDraft = newPayday(new Date().toISOString()); paydayDoneId = null; paydayAsk = false; render(); return undefined;
+    case 'payday-restart': paydayAsk = true; render(); return undefined;
+    case 'payday-restart-no': paydayAsk = false; render(); return undefined;
+    case 'payday-restart-yes':
+      paydayAsk = false;
+      persist((s) => ({ ...s, payday: abandonOpen(s.payday) }));
+      paydayDraft = newPayday(new Date().toISOString());
+      render();
+      return undefined;
+    default: return undefined;
+  }
+}
+
 function render(motionIntent) {
   syncStore();
   const previousVisuals = motion.capture(motionIntent);
@@ -165,6 +234,7 @@ function render(motionIntent) {
     app.innerHTML = `<div class="cqd-parent-exit"><button type="button" class="cqd-link-button" data-action="daily-parent-exit">← Exit Parent Mode</button>${parentUnlocked(store, now) ? '<button type="button" class="cqd-parent-lock" data-action="daily-parent-lock">🔒 Lock now</button>' : ''}</div>${renderParent(store, parentState, todayIso(), now)}`;
   }
   else if (route.screen === 'sheet') { app.innerHTML = sheetScreenHtml(); setupDrawing(); }
+  else if (route.screen === 'payday') { app.innerHTML = renderPayday(paydayCurrent(), { confirmRestart: paydayAsk }); }
   else if (route.screen === 'verse') {
     app.innerHTML = `<div class="cqd-sheet-nav"><button type="button" class="cqd-link-button" data-action="back-to-calendar">← This week</button></div>${renderVerseScreen(store, todayIso())}`;
   }
@@ -233,6 +303,15 @@ function onClick(event) {
     if (drawingController) drawingController.clear();
     return;
   }
+  if (action === 'open-payday') {
+    detachDrawing();
+    paydayAsk = false;
+    paydayDoneId = null;
+    route = { screen: 'payday', dayKey: null, sheetIndex: 0 };
+    render();
+    return;
+  }
+  if (action.indexOf('payday-') === 0) { handlePayday(button, action); return; }
   if (action === 'open-verse') {
     route = { screen: 'verse', dayKey: null, sheetIndex: 0 };
     render('open-verse');
@@ -392,6 +471,13 @@ document.addEventListener('visibilitychange', () => {
 // Ask Safari not to clear this site's saved answers when the iPad is short on space (best effort).
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch { /* optional */ }
 
+// Enter in a Payday Helper answer box presses that screen's main button.
+app.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter' || !event.target.matches || !event.target.matches('[data-payday-input]')) return;
+  event.preventDefault();
+  const main = app.querySelector('.pd-actions .cqd-primary[data-action]');
+  if (main) handlePayday(main, main.dataset.action);
+});
 app.addEventListener('click', onClick);
 app.addEventListener('click', onGridClick);
 app.addEventListener('input', onInput);

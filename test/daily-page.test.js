@@ -24,7 +24,7 @@ const { DAILY_WORK } = await import('../src/cq/daily-work/content.js');
 
 assert.deepEqual(store.emptyStore(), {
   track: null, parent: { pinHash: null, pinSalt: null, failCount: 0, lockUntil: 0, unlockedUntil: 0, resets: [] },
-  dailyWork: { weeks: {} }, drawings: {}, history: {}, blockFills: {},
+  dailyWork: { weeks: {} }, drawings: {}, history: {}, blockFills: {}, payday: { sessions: [] },
 });
 
 localStorage.setItem('codequest-daily-v1', 'not json at all {{{');

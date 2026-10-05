@@ -6,6 +6,7 @@
 // dailyWork answer state (reusing state.js unchanged), and each sheet's saved drawing.
 import { emptyDailyWorkState, normalizeDailyWork } from '../cq/daily-work/state.js';
 import { isValidDay, isValidIso } from '../cq/iso.js';
+import { emptyPayday, normalizePayday } from '../payday/state.js';
 
 const KEY = 'codequest-daily-v1';
 // Drawings live under their own key. Answers (KEY) are small and must ALWAYS save; ink is big scratch
@@ -144,7 +145,7 @@ export function setBlockFill(store, weekId, dayKey, sheetId, itemId, count) {
 }
 
 export function emptyStore() {
-  return { track: null, parent: defaultParent(), dailyWork: emptyDailyWorkState(), drawings: {}, history: {}, blockFills: {} };
+  return { track: null, parent: defaultParent(), dailyWork: emptyDailyWorkState(), drawings: {}, history: {}, blockFills: {}, payday: emptyPayday() };
 }
 
 function normalize(value, { ink = true } = {}) {
@@ -156,6 +157,7 @@ function normalize(value, { ink = true } = {}) {
     drawings: ink ? normalizeDrawings(s.drawings) : {},
     history: normalizeHistory(s.history),
     blockFills: normalizeBlockFills(s.blockFills),
+    payday: normalizePayday(s.payday),
   };
 }
 

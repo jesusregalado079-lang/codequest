@@ -6,6 +6,7 @@
 // calendar.js's dayStatus — this page never touches progress.js at all, even unused.
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek, weekdayKey } from '../cq/daily-work/schedule.js';
+import { paydaySummaryHtml } from '../payday/summary.js';
 import { canPayExactly, coinCounts, coinSummary, coinTotal, displayValue, money, storedDay, storedItem } from '../cq/daily-work/daily-work-ui.js';
 import { checkParentPin, hasParentPin, parentUnlocked, setParentPin } from './pin.js';
 import { dayStatus } from './calendar.js';
@@ -127,7 +128,7 @@ function trackerHtml(store, week, selectedDay) {
     const state = storedDay(store, week.id, dayKey);
     const status = dayStatus(state, sheetsForDay(week, dayKey));
     return `<button type="button" class="cqd-tracker-day cqd-status-${status} ${selectedDay === dayKey ? 'is-selected' : ''}" data-action="daily-parent-day" data-day="${dayKey}" aria-pressed="${selectedDay === dayKey}"><strong>${dayKey.slice(0, 3)}</strong></button>`;
-  }).join('')}</div>`;
+  }).join('')}${store.track === 'guided' ? `<button type="button" class="cqd-tracker-day cqd-tracker-payday ${selectedDay === 'payday' ? 'is-selected' : ''}" data-action="daily-parent-day" data-day="payday" aria-pressed="${selectedDay === 'payday'}"><strong>Payday</strong></button>` : ''}</div>`;
 }
 
 // Parent-only line for a tithe build: can these exact coins pay the tithe? (Never shown to the kid.)
@@ -177,9 +178,16 @@ export function suggestedDay(store, week, todayIso) {
 
 function checkWorkHtml(store, state, todayIso) {
   const week = currentWeek(DAILY_WORK, store.track, todayIso);
-  if (!week) return '<section class="cqd-empty"><h1>No Daily Work yet</h1></section>';
-  const selectedDay = DAY_KEYS.includes(state.selectedDay) ? state.selectedDay : suggestedDay(store, week, todayIso);
+  if (!week) return `<section class="cqd-empty"><h1>No Daily Work yet</h1></section>${store.track === 'guided' ? `<section class="cqd-parent">${paydaySummaryHtml(store.payday)}</section>` : ''}`;
+  const showPayday = store.track === 'guided' && state.selectedDay === 'payday';
+  const selectedDay = showPayday ? 'payday' : DAY_KEYS.includes(state.selectedDay) ? state.selectedDay : suggestedDay(store, week, todayIso);
   state.selectedDay = selectedDay;
+  // The Payday Helper checks itself, so its tab is a read-only summary: no sheets, no Save button.
+  if (showPayday) {
+    return `<section class="cqd-parent"><header class="cqd-calendar-head"><span class="cqd-eyebrow">PARENT MODE · ${esc(week.label.toUpperCase())}</span><h1>Check work</h1></header>
+    ${trackerHtml(store, week, selectedDay)}
+    ${paydaySummaryHtml(store.payday)}</section>`;
+  }
   const sheets = sheetsForDay(week, selectedDay);
   const saved = storedDay(store, week.id, selectedDay);
   const others = dayStatuses(store, week).filter((row) => row.dayKey !== selectedDay && row.status !== 'not-started');
