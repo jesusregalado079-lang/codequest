@@ -96,6 +96,18 @@ Jesse planned Week 12 in another session and pasted the plan verbatim (`.foreman
 - **Open flags for Jesse:** 8-problem younger math sheets may be heavy; Thu/Fri word-problem difficulty kept as planned; confirm how Week 11 landed per boy (the older son had only done Monday) before Week 13.
 - Tests: `test/cq-daily-week12.test.js`; the coin/tithe answers are re-derived with model coins inside the test, not read from the note text.
 
+## 2c. Week 13 — from the Drive handoff, 2026-10-04
+Planned in the Claude desktop app and handed over as the Google Doc `Week 13 plan` in the Drive folder `CodeQuest Plans` (see `docs/computer-quest/planning/`), not pasted. `guided13` / `standard13`, both `assignedWeekOf '2026-10-05'`; Week 12 is untouched and the weekend catch-up shows it Sat/Sun 10/3-10/4. The doc says "build every sheet exactly as written", so wording, answers and parent notes are the doc's (each item's `parentNote` is the plan's "Parent note" column; coin items put the plan's "Answer" column, the model coin set, in front of it).
+
+- **Bible Reading (new subject, both boys, third sheet Mon-Fri):** `subject: 'bible-reading'`, title `Bible Reading: <passage>`, a how-to, no worked example, one `long-text` item (a real writing box; the plan calls it a "short answer", the app's grown-up-judged written answer). No passage text on screen; the boys read from their own Bibles. Own colour and icon in `daily.css` (`[data-subject="bible-reading"]`), otherwise an unknown subject falls back to the Math cross.
+- **CodeQuest sheet:** `codeQuest13()` uses the plan's wording (title `CodeQuest Day`); the level is typed as short text and not recorded.
+- **Older son:** every Math percent has a think-first line before it (`half-A-of-B`, fill-blank, word bank `more, less`; no problem is exactly half). Help by day: Mon `unit` ("1 block = X%"), Tue `clues` (1-2 labelled blocks, never the answer's block or the last), Wed `none` (bar only), Thu `demand`, Fri plain typing. Block sets of 10, 16, 20, 25, 40, 50.
+  - `blocks.js`: `perItem` now also accepts a two-decimal block (`cleanPerItemUnit`), so 16 blocks of 6.25% draw; without `perItem` the old rule (one decimal) is unchanged. 16 blocks sit 8 across (`cols`), so "half" is exactly the first row.
+- **Younger son:** tithe builds, restricted trays (two coin types at once), "must include a coin", yes/no, multiplication, money word problems. Count-the-pile items (first use): `pile` coins, answer stored in CENTS, typed in DOLLARS ("1.25"); the parent suggestion accepts the dollars and, tolerantly, the same amount in cents (`gradeSuggestion` in `parent-view.js`).
+- **Verses:** Romans 12:2 has three blanks (`weekVerse` is generic over any number); Matthew 5:16 two.
+- **Checked against live Weeks 11/12 (the planner could not see them):** no older-son pair repeats Week 12, two repeat Week 11 (`3 out of 10`, `5 out of 20`); no tithe amount, multiplication fact or story name repeats; no worked example is reused as a practice problem. Left as the plan wrote them.
+- Tests: `test/cq-daily-week13.test.js` (every answer re-derived: model coins parsed from the notes and checked with `canPayExactly`, yes/no from the coins in the prompt, percents `100*part/whole`, Wednesday leak-proof at every fill, kid pages leak nothing); browser: `daily-regression.cjs week13 week13-complete`.
+
 ## 3. Content data shape (per profile)
 ```
 DailyWorkContent = {

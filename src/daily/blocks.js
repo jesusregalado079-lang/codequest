@@ -21,6 +21,9 @@ const MAX_PER_ITEM = 50; // `perItem` problems draw one block per item up to thi
 
 // A unit is "clean" when it has at most one decimal place (12.5% is fine, 8.333...% is not).
 const cleanUnit = (count) => Number.isInteger((1000 / count));
+// `perItem` problems may also use a two-decimal block (16 blocks of 6.25%): the author asked for exactly that
+// one-block-per-item picture, and every percent it can label (6.25, 12.5, 18.75, ...) is exact in binary.
+const cleanPerItemUnit = (count) => Number.isInteger(10000 / count);
 
 export function formatPct(value) {
   return `${Math.round(value * 100) / 100}%`;
@@ -32,7 +35,7 @@ export function formatPct(value) {
 // block: the teaching model "there are B blocks, each worth 100 ÷ B" with no grouping, up to 50 blocks.
 export function blockPlan(part, whole, perItem = false) {
   if (!Number.isInteger(part) || !Number.isInteger(whole) || part < 0 || whole < 1 || part > whole) return null;
-  if (perItem && whole <= MAX_PER_ITEM && cleanUnit(whole)) return { count: whole, size: 1 };
+  if (perItem && whole <= MAX_PER_ITEM && cleanPerItemUnit(whole)) return { count: whole, size: 1 };
   if (whole <= 10 && cleanUnit(whole)) return { count: whole, size: 1 };
   for (const count of GROUPINGS) {
     const size = whole / count;
@@ -95,7 +98,9 @@ export function blockView(item, filled, revealed = false) {
   else caption = `The whole is ${count} block${count === 1 ? '' : 's'} = 100%`;
   let readout = null;
   if (help === 'all') readout = fill > 0 ? `${fill} block${fill === 1 ? '' : 's'} = ${formatPct(fill * unit)}` : 'Tap the blocks to fill them in.';
-  return { count, size, unit, help, hidden, demand: asked === 'demand', labels, caption, readout, filled: fill, cols: Math.min(count, 10) };
+  // 16 blocks sit 8 across, so "half" is exactly the first row; everything else is at most 10 across.
+  const cols = count === 16 ? 8 : Math.min(count, 10);
+  return { count, size, unit, help, hidden, demand: asked === 'demand', labels, caption, readout, filled: fill, cols };
 }
 
 // Tapping block k fills up to k; tapping the last filled block again takes it back off. Keeps the fill

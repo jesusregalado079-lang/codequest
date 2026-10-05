@@ -409,9 +409,244 @@ const standard12 = Week('week-12', 'Week 12', [
   ]),
 }, '2026-09-28');
 
+// ---------------------------------------------------------------------------------------------------------
+// Week 13 (Monday 2026-10-05). Planned by Jesse in a separate session and handed over as the Drive doc
+// "Week 13 plan"; wording, answers and parent notes are copied from it. New this week: a Bible Reading sheet
+// every weekday for both boys, a think-first "more or less than half?" line before each older-son percent
+// problem, 16- and 40-block sets, and count-the-pile coin items typed in dollars. Docs: daily-work.md §2c.
+// ---------------------------------------------------------------------------------------------------------
+const BIBLE_HOWTO = (ref) => `Open your own Bible to ${ref} and read it out loud to a grown-up. Reading out loud makes you slow down and notice what is really happening. Then answer the question below in your own words. Using your own words shows that you understood it, so you do not need to copy the verses.`;
+// A written answer the grown-up reads (never marked by the app). long-text = a real writing box.
+const bibleReading = (ref, prompt, parentNote) => Sheet('bible-reading', 'bible-reading', `Bible Reading: ${ref}`, BIBLE_HOWTO(ref), null, [
+  Item('reflect', 'long-text', prompt, { parentNote }),
+]);
+const codeQuest13 = () => Sheet('codequest', 'codequest', 'CodeQuest Day',
+  'Play CodeQuest for 15 to 20 minutes and try to reach a new level. Then answer the three questions below. This is your chance to tell what you noticed, so there is no right or wrong answer.', null, [
+    Item('level', 'short-text', 'Which level did you reach today? Type it, like Level 3.', { parentNote: 'The app does not record the level, so any text is fine.' }),
+    Item('learned', 'long-text', 'Write 1 or 2 sentences about something you built, solved or learned.', { parentNote: 'Any honest answer is fine.' }),
+    Item('tricky', 'scale', "How tricky was today's level? (1 = not tricky, 5 = very tricky)", { scaleMax: 5, parentNote: 'Any number from 1 to 5 is fine.' }),
+  ]);
+
+// Younger son. Every parentNote is the plan's "Parent note" column; coin items put the plan's "Answer" column
+// (the model coin set) in front so the grown-up sees both on the check-work page.
+const withNote = (item, parentNote) => ({ ...item, parentNote });
+const build13 = (id, earned, pay, model, note) => coin(id,
+  `You earned ${usd(earned)}. Your tithe is ${usd(pay)}. Trade ONE $1 bill for coins. Build $1.00 in coins that can pay exactly ${usd(pay)}.`,
+  100, coins, { payCents: pay, parentNote: `Model coins: ${model} (total 1.00). ${note}` });
+const storyBuild = (id, prompt, pay, model, note) => coin(id, prompt, 100, coins, { payCents: pay, parentNote: `Model coins: ${model} (total 1.00). ${note}` });
+const restricted = (id, prompt, cents, set, model, note) => coin(id, prompt, cents, set, { parentNote: `Model coins: ${model} (total ${(cents / 100).toFixed(2)}). ${note}` });
+const mustInclude = (id, prompt, cents, denom, model, note) => coin(id, prompt, cents, coins, { mustHave: { denom, min: 1 }, parentNote: `Model coins: ${model} (total ${(cents / 100).toFixed(2)}). ${note}` });
+// Count the pile: the coins are fixed, he types the total in DOLLARS ("1.25"); the stored answer is in cents.
+const pile = (id, prompt, counts, cents, note) => CoinItem(id, prompt, null, coins, { pile: counts, answer: cents, parentNote: note });
+const yn = (id, prompt, answer, note) => withNote(yesNo(id, prompt, answer), note);
+const mult13 = (id, a, b, note) => withNote(times(id, a, b), note);
+const num13 = (id, prompt, answer, note) => money(id, prompt, answer, note);
+
+const guided13 = Week('week-13', 'Week 13', [
+  Sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
+    Item('verse', 'fill-blank', 'In the same way, let your good deeds ___ out for all to see, so that everyone will ___ your heavenly Father.', {
+      wordBank: ['shine', 'praise'], answer: ['shine', 'praise'],
+    }),
+  ], { citation: 'Matthew 5:16 (NLT)' }),
+], {
+  monday: Day([
+    Sheet('tithe-coins-quarters-dimes', 'math', 'Tithe Coins With Quarters and Dimes',
+      'A tithe is 10 percent of what you earn. When you trade a dollar bill for coins, you need coins that can make your tithe exactly, and coins that make the rest of the dollar. That is why you build the tithe first. Find the coins for the tithe, take the tithe away from $1.00 to see what is left, then make what is left with other coins. Add all your coins to check that they make exactly $1.00. Quarters and dimes do most of the work today.',
+      'You earned $8.50. Your tithe is $0.85. You trade ONE $1 bill for coins.\nStep 1: the tithe $0.85 = 3 quarters + 1 dime (75 + 10).\nStep 2: $1.00 − $0.85 = $0.15 left.\nStep 3: $0.15 = 1 dime + 1 nickel (10 + 5).\nStep 4: check. 3 quarters + 2 dimes + 1 nickel = 75 + 20 + 5 = $1.00.\n\n2 × 5 means 2 groups of 5. 5 + 5 = 10.', [
+        build13('build-55', 550, 55, '3 quarters, 2 dimes and 1 nickel', 'Tithe 0.55 = 2 quarters and 1 nickel. The rest is 0.45 = 1 quarter and 2 dimes. Any set that totals 1.00 and can pay 0.55 is correct.'),
+        build13('build-65', 650, 65, '2 quarters, 4 dimes and 2 nickels', 'Tithe 0.65 = 2 quarters, 1 dime and 1 nickel. The rest is 0.35 = 3 dimes and 1 nickel. Any set that totals 1.00 and can pay 0.65 is correct.'),
+        pile('pile-3q-4d-2n', 'Count this pile of coins. Type the total in dollars, like 0.84: 3 quarters, 4 dimes and 2 nickels.', { quarter: 3, dime: 4, nickel: 2 }, 125, '75 + 40 + 10 = 125 cents = 1.25.'),
+        restricted('only-quarters-dimes-70', 'Using ONLY quarters and dimes, build $0.70.', 70, ['dime', 'quarter'], '2 quarters and 2 dimes', 'Check: 2 quarters and 2 dimes = 0.70.'),
+        yn('four-quarters-one-dime', 'I have 4 quarters and 1 dime. Can I make exactly $0.40 with only these coins?', 'no', 'No group of these coins makes exactly 0.40.'),
+        mult13('x-2-6', 2, 6, '6 + 6 = 12.'), mult13('x-4-4', 4, 4, '4 + 4 + 4 + 4 = 16.'), mult13('x-3-10', 3, 10, '3 × 10 = 30.'),
+      ]),
+    Sheet('tithe-stories', 'word-problems', 'Tithe Stories',
+      'Read the story twice and find the numbers that matter: how much was earned, how much the tithe is, and what the question asks you to find. Some questions ask for the money someone keeps, some ask about coins, and some ask you to explain. That is why reading slowly helps, because one missed number changes the answer. Write each answer where it belongs.',
+      'Zoe earned $9.50 this week. Her tithe is $0.95. How much money does Zoe keep?\nStep 1: line up the decimal points.\nStep 2: 9.50 − 0.95 = 8.55.\nAnswer: $8.55.', [
+        num13('theo', 'Theo set the table ($0.50), unloaded groceries ($0.75) and helped make dinner ($1.00). How much did Theo earn?', 2.25, '0.50 + 0.75 + 1.00 = 2.25.'),
+        num13('owen', 'Owen earned $3.10 this week. His tithe is $0.31. How much money does Owen keep?', 2.79, '3.10 − 0.31 = 2.79.'),
+        note('lily', 'Lily says her tithe on $2.90 is $0.29. Is Lily right? Explain in one sentence.', 'A good answer says yes, because a tithe is 10 percent and 10 percent of 2.90 is 0.29.'),
+        yn('max', 'Max has 3 quarters and 3 dimes. His tithe is $0.55. Can Max pay exactly $0.55 with these coins?', 'yes', '1 quarter and 3 dimes = 0.55.'),
+      ]),
+    bibleReading('Genesis 37:1-11', 'Why were the brothers so upset? Write 1 or 2 sentences.', "A good answer says their father loved Joseph more than the rest of them, or that Joseph's dreams said they would bow down to him. Either counts, and so does both."),
+  ]),
+  tuesday: Day([
+    Sheet('building-with-nickels', 'math', 'Building With Nickels',
+      'Nickels are worth 5 cents each, so they are great for making amounts that end in 0 or 5. Some problems tell you to use only certain coins, or to include a certain coin. Read that rule first, then build the amount one coin at a time and add as you go. The total has to be exact, so check it at the end.',
+      'Using ONLY nickels, build $0.25. Count by 5s: 5, 10, 15, 20, 25. That is 5 nickels, and 5 × 5 = 25.\n\n4 × 4 means 4 groups of 4. 4 + 4 + 4 + 4 = 16.', [
+        restricted('only-nickels-30', 'Using ONLY nickels, build $0.30.', 30, ['nickel'], '6 nickels', 'Check: 6 nickels = 0.30.'),
+        mustInclude('dime-87', 'Build $0.87 in coins. You must include at least one dime.', 87, 'dime', '3 quarters, 1 dime and 2 pennies', 'Any set worth 0.87 with a dime is correct.'),
+        restricted('only-dimes-nickels-55', 'Using ONLY dimes and nickels, build $0.55.', 55, ['nickel', 'dime'], '5 dimes and 1 nickel', 'Check: 5 dimes and 1 nickel = 0.55.'),
+        pile('pile-2q-5d-4n', 'Count this pile of coins. Type the total in dollars, like 0.84: 2 quarters, 5 dimes and 4 nickels.', { quarter: 2, dime: 5, nickel: 4 }, 120, '50 + 50 + 20 = 120 cents = 1.20.'),
+        yn('two-quarters-three-nickels', 'I have 2 quarters and 3 nickels. Can I make exactly $0.45 with only these coins?', 'no', 'No group of these coins makes exactly 0.45.'),
+        mult13('x-3-3', 3, 3, '3 + 3 + 3 = 9.'), mult13('x-4-7', 4, 7, '7 + 7 + 7 + 7 = 28.'), mult13('x-5-10', 5, 10, '5 × 10 = 50.'),
+      ]),
+    codeQuest13(),
+    bibleReading('Genesis 37:12-36', 'What did the brothers do, and how did they act right afterward? Write 1 or 2 sentences.', 'A good answer says they sold Joseph to traders, then showed their father his bloody robe and let him believe an animal had killed him.'),
+  ]),
+  wednesday: Day([
+    Sheet('trading-coins-to-pay-my-tithe', 'math', 'Trading Coins to Pay My Tithe',
+      'Sometimes your coins can not make your exact tithe. First list the amounts your coins can make. If your tithe is not on the list, trade one coin for smaller coins that add up to the same amount. Trading does not change how much money you have. It only changes which coins you are holding.',
+      'You have 2 quarters and 4 pennies. Your tithe is $0.13. Can you pay it exactly?\nStep 1: these coins can make 1, 2, 3, 4, 25, 26, 27, 28, 29, 50, 51, 52, 53 and 54 cents.\nStep 2: 13 is not on that list, so no.\nStep 3: trade ONE quarter for 2 dimes and 1 nickel (20 + 5 = 25).\nStep 4: now you have 1 quarter, 2 dimes, 1 nickel and 4 pennies = 25 + 20 + 5 + 4 = 54 cents, the same money as before.\nStep 5: pay 1 dime and 3 pennies = 13 cents. You keep 1 quarter, 1 dime, 1 nickel and 1 penny = 41 cents.\n\n4 × 7 means 4 groups of 7. 7 + 7 + 7 + 7 = 28.', [
+        yn('quarters-dimes-17', 'I have 3 quarters and 2 dimes. My tithe is $0.17. Can I pay $0.17 exactly with these coins?', 'no', 'No group of these coins makes exactly 0.17.'),
+        yn('quarter-dimes-pennies-23', 'I have 1 quarter, 2 dimes and 3 pennies. My tithe is $0.23. Can I pay $0.23 exactly with these coins?', 'yes', '2 dimes and 3 pennies = 0.23.'),
+        restricted('dime-for-nickels-pennies', 'Trade ONE dime for smaller coins. Using ONLY nickels and pennies, build $0.10.', 10, ['penny', 'nickel'], '2 nickels', 'Check: 2 nickels = 0.10.'),
+        pile('pile-2q-3d-1n-4p', 'Count this pile of coins. Type the total in dollars, like 0.84: 2 quarters, 3 dimes, 1 nickel and 4 pennies.', { quarter: 2, dime: 3, nickel: 1, penny: 4 }, 89, '50 + 30 + 5 + 4 = 89 cents = 0.89.'),
+        mustInclude('nickel-57', 'Build $0.57 in coins. You must include at least one nickel.', 57, 'nickel', '2 quarters, 1 nickel and 2 pennies', 'Any set worth 0.57 with a nickel is correct.'),
+        mult13('x-5-7', 5, 7, '7 + 7 + 7 + 7 + 7 = 35.'), mult13('x-6-6', 6, 6, '6 + 6 + 6 + 6 + 6 + 6 = 36.'), mult13('x-2-10', 2, 10, '2 × 10 = 20.'),
+      ]),
+    codeQuest13(),
+    bibleReading('Genesis 39:1-6', 'What does it say about God and Joseph? Write 1 or 2 sentences.', "A good answer says the Lord was with Joseph, which is why he did well and why Potiphar's house was blessed."),
+  ]),
+  thursday: Day([
+    Sheet('tithes-with-pennies', 'math', 'Tithes With Pennies',
+      'Some tithes need pennies. Do the same steps as before: build the tithe coins first, take the tithe away from $1.00, build the rest, and check that everything adds up to exactly $1.00. Start with the biggest coin that fits, then move to smaller coins. That order keeps you from running out of the right small coins at the end.',
+      'You earned $4.10. Your tithe is $0.41. You trade ONE $1 bill for coins.\nStep 1: the tithe $0.41 = 1 quarter + 1 dime + 1 nickel + 1 penny (25 + 10 + 5 + 1).\nStep 2: $1.00 − $0.41 = $0.59 left.\nStep 3: $0.59 = 2 quarters + 1 nickel + 4 pennies (50 + 5 + 4).\nStep 4: check. 3 quarters + 1 dime + 2 nickels + 5 pennies = 75 + 10 + 10 + 5 = $1.00.\n\n6 × 6 means 6 groups of 6. 6 + 6 + 6 + 6 + 6 + 6 = 36.', [
+        build13('tithe-23', 230, 23, '3 quarters, 2 dimes and 5 pennies', 'Tithe 0.23 = 2 dimes and 3 pennies. The rest is 0.77 = 3 quarters and 2 pennies. Any set that totals 1.00 and can pay 0.23 is correct.'),
+        build13('tithe-37', 370, 37, '3 quarters, 1 dime, 2 nickels and 5 pennies', 'Tithe 0.37 = 1 quarter, 1 dime and 2 pennies. The rest is 0.63 = 2 quarters, 2 nickels and 3 pennies. Any set that totals 1.00 and can pay 0.37 is correct.'),
+        build13('tithe-69', 690, 69, '2 quarters, 4 dimes, 1 nickel and 5 pennies', 'Tithe 0.69 = 2 quarters, 1 dime, 1 nickel and 4 pennies. The rest is 0.31 = 3 dimes and 1 penny. Any set that totals 1.00 and can pay 0.69 is correct.'),
+        build13('tithe-74', 740, 74, '3 quarters, 2 dimes and 5 pennies', 'Tithe 0.74 = 2 quarters, 2 dimes and 4 pennies. The rest is 0.26 = 1 quarter and 1 penny. Any set that totals 1.00 and can pay 0.74 is correct.'),
+        restricted('only-dimes-pennies-62', 'Using ONLY dimes and pennies, build $0.62.', 62, ['penny', 'dime'], '6 dimes and 2 pennies', 'Check: 6 dimes and 2 pennies = 0.62.'),
+        mult13('x-4-9', 4, 9, '9 + 9 + 9 + 9 = 36.'), mult13('x-6-10', 6, 10, '6 × 10 = 60.'), mult13('x-5-9', 5, 9, '9 + 9 + 9 + 9 + 9 = 45.'),
+      ]),
+    Sheet('earned-or-spent', 'word-problems', 'Earned or Spent?',
+      'Money words can be tricky. Money you earned counts toward what you earned, but money you spent does not. Read the story twice, underline what was earned, and cross out what was spent. Then add only the amounts that were earned, so your total is right.',
+      'Nora raked leaves and earned $2.00, then weeded a garden and earned $1.30. She also spent $0.60 on a snack. Her tithe is 10 percent of what she EARNED.\nStep 1: earned = $2.00 and $1.30. The snack was spending, so ignore it.\nStep 2: 2.00 + 1.30 = 3.30.\nStep 3: 10 percent of $3.30 is $0.33.\nAnswer: the tithe is $0.33.', [
+        num13('beni', 'Beni unloaded groceries ($0.75) and cleaned the litter box ($0.50). Then he spent $0.40 on a sticker. How much did Beni earn?', 1.25, '0.75 + 0.50 = 1.25. The sticker is spending, so it is ignored.'),
+        num13('dani', "Dani earned $3.00 raking leaves and $1.80 washing a car. She spent $1.10 on a toy. Her tithe is 10 percent of what she EARNED. How much is Dani's tithe?", 0.48, 'Earned: 3.00 + 1.80 = 4.80. The toy is spending, so it is ignored. 10 percent of 4.80 = 0.48.'),
+        storyBuild('hugo', 'Hugo earned $1.70. His tithe is $0.17. He trades ONE $1 bill for coins. Build $1.00 in coins so he can pay exactly $0.17.', 17, '3 quarters, 1 dime, 2 nickels and 5 pennies', 'Tithe 0.17 = 1 dime, 1 nickel and 2 pennies. The rest is 0.83 = 3 quarters, 1 nickel and 3 pennies. Any set that totals 1.00 and can pay 0.17 is correct.'),
+        note('four-quarters-17', 'In one sentence, explain why 4 quarters can not pay a $0.17 tithe.', 'A good answer says quarters are worth 25 cents each, so 4 quarters only make 25, 50, 75 or 100, never 17.'),
+      ]),
+    bibleReading('Genesis 39:19-23', "Yesterday you wrote what the Bible says about God and Joseph. Find the same phrase in today's verses and write it here.", "A good answer is 'the Lord was with Joseph'. Their Bible's wording may differ a little."),
+  ]),
+  friday: Day([
+    Sheet('show-what-you-know', 'math', 'Show What You Know',
+      'Today uses everything from this week. For coins, build the tithe first, take it away from $1.00, build the rest, and check the total. For multiplication, think of groups and add them up. If you get stuck, go back to the worked example and follow the same steps one at a time.',
+      'You earned $6.80. Your tithe is $0.68. You trade ONE $1 bill for coins.\nStep 1: the tithe $0.68 = 2 quarters + 1 dime + 1 nickel + 3 pennies (50 + 10 + 5 + 3).\nStep 2: $1.00 − $0.68 = $0.32 left.\nStep 3: $0.32 = 1 quarter + 1 nickel + 2 pennies (25 + 5 + 2).\nStep 4: check. 3 quarters + 1 dime + 2 nickels + 5 pennies = 75 + 10 + 10 + 5 = $1.00.\n\n4 × 9 means 4 groups of 9. 9 + 9 + 9 + 9 = 36.', [
+        build13('tithe-19', 190, 19, '3 quarters, 1 dime, 2 nickels and 5 pennies', 'Tithe 0.19 = 1 dime, 1 nickel and 4 pennies. The rest is 0.81 = 3 quarters, 1 nickel and 1 penny. Any set that totals 1.00 and can pay 0.19 is correct.'),
+        build13('tithe-34', 340, 34, '3 quarters, 1 dime, 2 nickels and 5 pennies', 'Tithe 0.34 = 1 quarter, 1 nickel and 4 pennies. The rest is 0.66 = 2 quarters, 1 dime, 1 nickel and 1 penny. Any set that totals 1.00 and can pay 0.34 is correct.'),
+        pile('pile-2q-4d-3n-1p', 'Count this pile of coins. Type the total in dollars, like 0.84: 2 quarters, 4 dimes, 3 nickels and 1 penny.', { quarter: 2, dime: 4, nickel: 3, penny: 1 }, 106, '50 + 40 + 15 + 1 = 106 cents = 1.06.'),
+        restricted('only-quarters-pennies-78', 'Using ONLY quarters and pennies, build $0.78.', 78, ['penny', 'quarter'], '3 quarters and 3 pennies', 'Check: 3 quarters and 3 pennies = 0.78.'),
+        coin('tithe-7-of-70', 'You earned $0.70. Your tithe is $0.07. Build $0.70 in coins that can pay exactly $0.07.', 70, coins, { payCents: 7, parentNote: 'Model coins: 2 quarters, 1 dime, 1 nickel and 5 pennies (total 0.70). Tithe 0.07 = 1 nickel and 2 pennies. The rest is 0.63 = 2 quarters, 1 dime and 3 pennies. Any set that totals 0.70 and can pay 0.07 is correct.' }),
+        mult13('x-6-8', 6, 8, '8 + 8 + 8 + 8 + 8 + 8 = 48.'), mult13('x-7-10', 7, 10, '7 × 10 = 70.'), mult13('x-9-10', 9, 10, '9 × 10 = 90.'),
+      ]),
+    Sheet('tithe-stories-on-your-own', 'word-problems', 'Tithe Stories on Your Own',
+      'Read each story twice. Find what was earned and what was spent, then find the tithe or the coins. Take one step at a time and write each answer where it belongs. Working in order keeps the numbers from getting mixed up.',
+      'Zara earned $4.20 and spent $1.10. After she pays her $0.42 tithe, how much does she have left?\nStep 1: 4.20 − 1.10 = 3.10.\nStep 2: 3.10 − 0.42 = 2.68.\nAnswer: $2.68.', [
+        num13('jonas', 'Jonas earned $5.20 doing chores and spent $1.50. After he pays his $0.52 tithe, how much does he have left?', 3.18, '5.20 − 1.50 = 3.70. 3.70 − 0.52 = 3.18. Two subtractions with decimals; borrowing has been a past struggle.'),
+        storyBuild('priya', 'Priya earned $2.60. Her tithe is $0.26. She trades ONE $1 bill for coins. Build $1.00 in coins so she can pay exactly $0.26.', 26, '3 quarters, 2 dimes and 5 pennies', 'Tithe 0.26 = 1 quarter and 1 penny. The rest is 0.74 = 2 quarters, 2 dimes and 4 pennies. Any set that totals 1.00 and can pay 0.26 is correct.'),
+        storyBuild('ravi', 'Ravi earned $7.30. His tithe is $0.73. He trades ONE $1 bill for coins. Build $1.00 in coins so he can pay exactly $0.73.', 73, '3 quarters, 2 dimes and 5 pennies', 'Tithe 0.73 = 2 quarters, 2 dimes and 3 pennies. The rest is 0.27 = 1 quarter and 2 pennies. Any set that totals 1.00 and can pay 0.73 is correct.'),
+        note('how-you-knew', 'Tell how you knew which coins to ask for in problem 2.', 'A good answer says she found the tithe coins first, took the tithe away from $1.00, then built the rest.'),
+      ]),
+    bibleReading('Genesis 40:14, then 40:23, then 41:1', 'What did Joseph ask for, and what happened? Write 1 or 2 sentences.', 'A good answer says he asked the cupbearer to remember him and mention him to Pharaoh so he could get out of prison, but the cupbearer forgot him, and two years later Pharaoh had a dream.'),
+  ]),
+}, '2026-10-05');
+
+// Older son: "what percent is A of B" with blocks, same skill, no new skill. Every Math problem has a think-first
+// line ("more or less than half?") before the percent. One block per item; the help fades across the week:
+// Mon '1 block = X%' (unit), Tue a few clue labels, Wed bar only (none), Thu closed until he asks, Fri typing.
+const half = (part, whole, note) => withNote(Item(`half-${part}-of-${whole}`, 'fill-blank', `Before you work it out: is ${part} out of ${whole} more than half, or less than half?`, {
+  wordBank: ['more', 'less'], answer: [part * 2 > whole ? 'more' : 'less'],
+}), note);
+const pct13 = (id, prompt, part, whole, help, note) => withNote(wholeBlocks(id, prompt, part, whole, help), note);
+const typed13 = (id, prompt, part, whole, note) => withNote(plainPercent(id, prompt, part, whole), note);
+// A math line pair: the think-first line, then the percent (with the same working the plan gives the parent).
+const pair = (part, whole, help, halfText, percentText) => [
+  half(part, whole, halfText),
+  pct13(`${part}-of-${whole}`, `${part} out of ${whole} is what percent?`, part, whole, help, percentText),
+];
+
+const standard13 = Week('week-13', 'Week 13', [
+  Sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
+    Item('verse', 'fill-blank', "Don't copy the ___ and customs of this world, but let God ___ you into a new person by changing the way you think. Then you will learn to know God's will for you, which is good and ___ and perfect.", {
+      wordBank: ['behavior', 'transform', 'pleasing'], answer: ['behavior', 'transform', 'pleasing'],
+    }),
+  ], { citation: 'Romans 12:2 (NLT)' }),
+], {
+  monday: Day([
+    Sheet('more-or-less-then-percent', 'math', 'More or Less Than Half? Then the Percent',
+      "Before you do any math, make a guess. The 50% mark is half of the blocks. If you shade fewer than half of the blocks, the percent will be under 50, and if you shade more than half, it will be over 50. Then find the exact percent. All the blocks together make 100%, so one block is worth 100 divided by the total number of blocks, and the percent is the number of shaded blocks times what one block is worth. Your guess is a check: if your answer does not match your guess, look at your counting again.",
+      '7 out of 20. Guess: half of 20 is 10, and 7 is less than 10, so the answer should be less than 50. One block is 100 ÷ 20 = 5. 7 × 5 = 35. Answer: 35.\n\n11 out of 16. Guess: half of 16 is 8, and 11 is more than 8, so the answer should be more than 50. One block is 100 ÷ 16 = 6.25. 11 × 6.25 = 68.75. Answer: 68.75.', [
+        ...pair(3, 10, 'unit', 'Half of 10 is 5. 3 is less than 5, so the answer is less than 50.', '100 ÷ 10 = 10 per block. 3 × 10 = 30.'),
+        ...pair(19, 20, 'unit', 'Half of 20 is 10. 19 is more than 10, so the answer is more than 50.', '100 ÷ 20 = 5 per block. 19 × 5 = 95.'),
+        ...pair(5, 16, 'unit', 'Half of 16 is 8. 5 is less than 8, so the answer is less than 50.', '100 ÷ 16 = 6.25 per block. 5 × 6.25 = 31.25.'),
+        ...pair(16, 25, 'unit', 'Half of 25 is 12.5. 16 is more than 12.5, so the answer is more than 50.', '100 ÷ 25 = 4 per block. 16 × 4 = 64.'),
+      ]),
+    Sheet('percent-stories', 'word-problems', 'Percent Stories',
+      "A story can hide an 'A out of B' inside it. The total is the B, and the part you are asked about is the A. Turn the story into A out of B, make a guess about whether it is more or less than half, then find what one block is worth by dividing 100 by B and multiply by A. This works because all the blocks together are the whole, which is 100%.",
+      'A bag has 20 beads and 8 are red. 8 out of 20. Guess: half of 20 is 10, and 8 is less than 10, so the answer should be less than 50. One block is 100 ÷ 20 = 5. 8 × 5 = 40. Answer: 40.', [
+        pct13('free-throws', 'You made 4 out of 10 free throws in a game. What percent did you make?', 4, 10, 'unit', '100 ÷ 10 = 10 per block. 4 × 10 = 40.'),
+        pct13('library-card', 'A class has 25 kids, and 19 of them have a library card. What percent have a library card?', 19, 25, 'unit', '100 ÷ 25 = 4 per block. 19 × 4 = 76.'),
+        pct13('puzzle', 'A puzzle has 16 pieces, and you have put in 13 of them. What percent of the puzzle is done?', 13, 16, 'unit', '100 ÷ 16 = 6.25 per block. 13 × 6.25 = 81.25.'),
+      ]),
+    bibleReading('Genesis 37:1-11', 'Why were the brothers so upset? Write 2 sentences.', "A good answer says their father loved Joseph more than the rest of them, or that Joseph's dreams said they would bow down to him. Either counts, and so does both."),
+  ]),
+  tuesday: Day([
+    Sheet('bigger-block-sets', 'math', 'Bigger Block Sets',
+      'Today the picture labels only a block or two, so you do the counting and the multiplying yourself. With 16 blocks each block is worth 100 ÷ 16 = 6.25, and with 40 blocks each block is worth 100 ÷ 40 = 2.5. Percents can have decimals, because the blocks do not always split into whole numbers. Make your guess first by comparing the shaded blocks to half of the total, then multiply the shaded blocks by what one block is worth.',
+      '9 out of 16. Guess: half of 16 is 8, and 9 is more than 8, so the answer should be more than 50. One block is 100 ÷ 16 = 6.25. 9 × 6.25 = 56.25. Answer: 56.25.\n\n9 out of 40. Guess: half of 40 is 20, and 9 is less than 20, so the answer should be less than 50. One block is 100 ÷ 40 = 2.5. 9 × 2.5 = 22.5. Answer: 22.5.', [
+        ...pair(15, 16, 'clues', 'Half of 16 is 8. 15 is more than 8, so the answer is more than 50.', '100 ÷ 16 = 6.25 per block. 15 × 6.25 = 93.75.'),
+        ...pair(7, 25, 'clues', 'Half of 25 is 12.5. 7 is less than 12.5, so the answer is less than 50.', '100 ÷ 25 = 4 per block. 7 × 4 = 28.'),
+        ...pair(22, 40, 'clues', 'Half of 40 is 20. 22 is more than 20, so the answer is more than 50.', '100 ÷ 40 = 2.5 per block. 22 × 2.5 = 55.'),
+        ...pair(14, 40, 'clues', 'Half of 40 is 20. 14 is less than 20, so the answer is less than 50.', '100 ÷ 40 = 2.5 per block. 14 × 2.5 = 35.'),
+      ]),
+    codeQuest13(),
+    bibleReading('Genesis 37:12-36', 'What did the brothers do, and how did they act right afterward? Write 2 sentences.', 'A good answer says they sold Joseph to traders, then showed their father his bloody robe and let him believe an animal had killed him.'),
+  ]),
+  wednesday: Day([
+    Sheet('just-the-bar', 'math', 'Just the Bar',
+      'Today there are no labels at all, only the bar, so you work out what one block is worth yourself: divide 100 by the total number of blocks. Then multiply by the number of shaded blocks. Your guess still helps, because half of the total is the 50% mark, so you can tell right away whether your answer should be over or under 50. Decimals are fine, because some block sets do not split into whole numbers.',
+      '27 out of 40. Guess: half of 40 is 20, and 27 is more than 20, so the answer should be more than 50. One block is 100 ÷ 40 = 2.5. 27 × 2.5 = 67.5. Answer: 67.5.\n\n6 out of 16. Guess: half of 16 is 8, and 6 is less than 8, so the answer should be less than 50. One block is 100 ÷ 16 = 6.25. 6 × 6.25 = 37.5. Answer: 37.5.', [
+        ...pair(31, 40, 'none', 'Half of 40 is 20. 31 is more than 20, so the answer is more than 50.', '100 ÷ 40 = 2.5 per block. 31 × 2.5 = 77.5.'),
+        ...pair(7, 16, 'none', 'Half of 16 is 8. 7 is less than 8, so the answer is less than 50.', '100 ÷ 16 = 6.25 per block. 7 × 6.25 = 43.75.'),
+        ...pair(47, 50, 'none', 'Half of 50 is 25. 47 is more than 25, so the answer is more than 50.', '100 ÷ 50 = 2 per block. 47 × 2 = 94.'),
+        ...pair(4, 20, 'none', 'Half of 20 is 10. 4 is less than 10, so the answer is less than 50.', '100 ÷ 20 = 5 per block. 4 × 5 = 20.'),
+      ]),
+    codeQuest13(),
+    bibleReading('Genesis 39:1-6', 'What does it say about God and Joseph? Write 2 sentences.', "A good answer says the Lord was with Joseph, which is why he did well and why Potiphar's house was blessed."),
+  ]),
+  thursday: Day([
+    Sheet('try-it-first', 'math', 'Try It First, Blocks If You Need Them',
+      "Try each problem on your own first. If you get stuck, tap 'Show me the blocks' to see them. The blocks do not change the rule, they only let you see why it works. The steps are the same every time: guess more or less than half, divide 100 by the total to find what one block is worth, then multiply by the number you have.",
+      '17 out of 40. Guess: half of 40 is 20, and 17 is less than 20, so the answer should be less than 50. One block is 100 ÷ 40 = 2.5. 17 × 2.5 = 42.5. Answer: 42.5.', [
+        ...pair(23, 25, 'demand', 'Half of 25 is 12.5. 23 is more than 12.5, so the answer is more than 50.', '100 ÷ 25 = 4 per block. 23 × 4 = 92.'),
+        ...pair(1, 16, 'demand', 'Half of 16 is 8. 1 is less than 8, so the answer is less than 50.', '100 ÷ 16 = 6.25 per block. 1 × 6.25 = 6.25.'),
+        ...pair(18, 40, 'demand', 'Half of 40 is 20. 18 is less than 20, so the answer is less than 50.', '100 ÷ 40 = 2.5 per block. 18 × 2.5 = 45.'),
+        ...pair(37, 50, 'demand', 'Half of 50 is 25. 37 is more than 25, so the answer is more than 50.', '100 ÷ 50 = 2 per block. 37 × 2 = 74.'),
+      ]),
+    Sheet('percents-in-real-life', 'word-problems', 'Percents in Real Life',
+      "Real life is full of 'A out of B' numbers, like survey results and game scores. Find the total (B) and the part (A), guess whether it is more or less than half, divide 100 by B to get what one block is worth, then multiply by A. The blocks are hidden until you tap for them, so try it without them first.",
+      'In a survey of 50 people, 11 chose tacos. 11 out of 50. Guess: half of 50 is 25, and 11 is less than 25, so the answer should be less than 50. One block is 100 ÷ 50 = 2. 11 × 2 = 22. Answer: 22.', [
+        pct13('pizza-day', 'Your class has 25 kids and 17 of them voted for pizza day. What percent voted for pizza day?', 17, 25, 'demand', '100 ÷ 25 = 4 per block. 17 × 4 = 68.'),
+        pct13('marbles', 'A bag has 20 marbles and 5 of them are green. What percent are green?', 5, 20, 'demand', '100 ÷ 20 = 5 per block. 5 × 5 = 25.'),
+        pct13('soccer-survey', 'A survey asked 40 students, and 26 said they like soccer best. What percent like soccer best?', 26, 40, 'demand', '100 ÷ 40 = 2.5 per block. 26 × 2.5 = 65.'),
+      ]),
+    bibleReading('Genesis 39:19-23', "Yesterday you wrote what the Bible says about God and Joseph. Find the same phrase in today's verses and write it here.", "A good answer is 'the Lord was with Joseph'. Their Bible's wording may differ a little."),
+  ]),
+  friday: Day([
+    Sheet('show-what-you-know', 'math', 'Show What You Know',
+      'No blocks today. You know the steps now, so do them in your head or on the page: guess more or less than half, divide 100 by the total to find what one block is worth, then multiply by the number you have. Check your answer against your guess before you move on.',
+      '8 out of 25. Guess: half of 25 is 12.5, and 8 is less than 12.5, so the answer should be less than 50. One block is 100 ÷ 25 = 4. 8 × 4 = 32. Answer: 32.', [
+        half(3, 25, 'Half of 25 is 12.5. 3 is less than 12.5, so the answer is less than 50.'), typed13('3-of-25', '3 out of 25 is what percent?', 3, 25, '100 ÷ 25 = 4 per block. 3 × 4 = 12.'),
+        half(29, 40, 'Half of 40 is 20. 29 is more than 20, so the answer is more than 50.'), typed13('29-of-40', '29 out of 40 is what percent?', 29, 40, '100 ÷ 40 = 2.5 per block. 29 × 2.5 = 72.5.'),
+        half(2, 16, 'Half of 16 is 8. 2 is less than 8, so the answer is less than 50.'), typed13('2-of-16', '2 out of 16 is what percent?', 2, 16, '100 ÷ 16 = 6.25 per block. 2 × 6.25 = 12.5.'),
+        half(31, 50, 'Half of 50 is 25. 31 is more than 25, so the answer is more than 50.'), typed13('31-of-50', '31 out of 50 is what percent?', 31, 50, '100 ÷ 50 = 2 per block. 31 × 2 = 62.'),
+      ]),
+    Sheet('percent-stories-on-your-own', 'word-problems', 'Percent Stories on Your Own',
+      "Read each story twice and turn it into 'A out of B'. Then guess more or less than half, find what one block is worth by dividing 100 by B, and multiply by A. There are no blocks today because you already know why the steps work.",
+      'You finished 6 out of 40 pages of a comic book. 6 out of 40. Guess: half of 40 is 20, and 6 is less than 20, so the answer should be less than 50. One block is 100 ÷ 40 = 2.5. 6 × 2.5 = 15. Answer: 15.', [
+        typed13('video-game', 'A video game has 40 levels and you have beaten 21 of them. What percent of the levels have you beaten?', 21, 40, '100 ÷ 40 = 2.5 per block. 21 × 2.5 = 52.5.'),
+        typed13('crayons', 'A box has 16 crayons and 4 of them are broken. What percent are broken?', 4, 16, '100 ÷ 16 = 6.25 per block. 4 × 6.25 = 25.'),
+        typed13('math-survey', 'In a survey of 50 kids, 24 said they like math best. What percent like math best?', 24, 50, '100 ÷ 50 = 2 per block. 24 × 2 = 48.'),
+        note('how-you-knew', 'Tell how you knew whether problem 1 was more than half or less than half.', 'A good answer compares the number shaded with half of the total, for example 21 is more than half of 40, which is 20.'),
+      ]),
+    bibleReading('Genesis 40:14, then 40:23, then 41:1', 'What did Joseph ask for, and what happened? Write 2 sentences.', 'A good answer says he asked the cupbearer to remember him and mention him to Pharaoh so he could get out of prison, but the cupbearer forgot him, and two years later Pharaoh had a dream.'),
+  ]),
+}, '2026-10-05');
+
 export const DAILY_WORK = deepFreeze({
-  guided: { weeks: { 'week-11': guided, 'week-12': guided12 } },
-  standard: { weeks: { 'week-11': standard, 'week-12': standard12 } },
+  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13 } },
+  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13 } },
 });
 
 export function getWeek(track, weekId) {

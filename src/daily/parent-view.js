@@ -33,7 +33,13 @@ export function gradeSuggestion(item, value) {
     if (item.mustHave && (counts[item.mustHave.denom] || 0) < (item.mustHave.min || 1)) return false;
     return true;
   }
-  if (item.kind === 'coin-total' && item.pile) return Number(value) === Number(item.answer);
+  // A count-the-pile answer is authored in CENTS; the kid is told to type DOLLARS ("1.25"), so accept that, and
+  // also the same amount typed in cents ("125"). Anything else is for the grown-up to look at.
+  if (item.kind === 'coin-total' && item.pile) {
+    const typed = Number(value);
+    if (value === null || value === '' || !Number.isFinite(typed)) return false;
+    return Math.round(typed * 100) === item.answer || typed === item.answer;
+  }
   return null;
 }
 

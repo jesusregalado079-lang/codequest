@@ -247,6 +247,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .cqd-sheet[data-subject="memory-verse"] { --subject: #95600e; --subject-soft: #fff2d7; --subject-icon: '✧'; }
 .cqd-sheet[data-subject="word-problems"] { --subject: #087980; --subject-soft: #e4f5f3; --subject-icon: '?'; }
 .cqd-sheet[data-subject="codequest"] { --subject: #337f55; --subject-soft: #e8f5e8; --subject-icon: '⌘'; }
+.cqd-sheet[data-subject="bible-reading"] { --subject: #4a56a0; --subject-soft: #ecedf9; --subject-icon: '✝︎'; }
 .cqd-sheet-head {
   display: flex;
   align-items: center;

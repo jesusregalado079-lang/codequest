@@ -44,7 +44,7 @@ for (const track of ['guided', 'standard']) {
   assert.equal(DAILY_WORK[track].weeks['week-12'].assignedWeekOf, '2026-09-28');
   ['2026-09-21', '2026-09-25', '2026-09-26', '2026-09-27'].forEach((day) => assert.equal(currentWeek(DAILY_WORK, track, day).id, 'week-11', `${track} ${day}`));
   ['2026-09-28', '2026-10-02', '2026-10-03', '2026-10-04'].forEach((day) => assert.equal(currentWeek(DAILY_WORK, track, day).id, 'week-12', `${track} ${day}`));
-  assert.equal(currentWeek(DAILY_WORK, track, '2026-10-05'), null, 'no week is authored for Oct 5 yet: nothing to show');
+  assert.equal(currentWeek(DAILY_WORK, track, '2026-10-05').id, 'week-13', 'Week 13 takes over on Monday Oct 5');
   assert.equal(currentWeek(DAILY_WORK, track, '2026-09-20'), null, 'the Sunday before Week 11 shows nothing');
 }
 
