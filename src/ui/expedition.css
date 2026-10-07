@@ -23,3 +23,24 @@ body .next-adventure { background:linear-gradient(110deg,#2b5860,#294b4e); borde
 body .play-wrap { background:#142d49; } body .topbar { background:#203e57; color:#f3f7e7; border-bottom:1px solid #527887; } body .topbar .icon-btn { background:#31556b; color:#eef9df; box-shadow:0 3px 0 #0d2437; } body .canvas-box { background:radial-gradient(circle,#39695e,#172e40 75%); border:2px solid #598878; } body .run-btn { background:var(--gold); color:#183847; box-shadow:0 4px 0 #a77a37; } body .blockly-panel { border:3px solid #557f8c; box-shadow:0 5px 0 #0d2031; }
 @media(max-width:700px){body .menu-wrap{padding:13px 13px 42px}.brand-badge{display:none}body .quest-header{min-height:470px;padding:25px}.hero-copy{width:100%}.hero-scene{inset:auto -18px 0 -18px;height:270px;mask-image:linear-gradient(to bottom,transparent,black 18%)}.scene-caption{font-size:8px}.discovery-grid{grid-template-columns:1fr}.discovery-card{display:grid;grid-template-columns:43% 57%}.discovery-card .island-art{height:100%;min-height:125px}.world-panorama{height:195px}body .locked-world{grid-template-columns:38% 62%}.locked-copy{padding:15px}.locked-copy h2{font-size:19px}.quest-inventory{gap:8px;font-size:10px}}
 @media(prefers-reduced-motion:reduce){.island-explorer{animation:none}}
+
+/* Links on the dark panels (the grown-ups corner, the PIN screens, back links) were the light theme's dark teal on navy,
+   almost invisible. Light, bold and a real tap size instead. */
+body .menu-wrap .card .link-btn:not(.tiny) { color: #d9eeff; font-size: 1.05rem; font-weight: 800; opacity: 1; min-height: 44px; padding: 10px 14px; }
+body .menu-wrap .card .link-btn.tiny { color: #d9eeff; opacity: 1; }
+body .menu-wrap .card .link-btn:hover, body .menu-wrap .card .link-btn:focus-visible { color: #ffffff; }
+
+/* The grown-up buttons a locked-out kid or a parent has to find: a clear gold button, not a link. */
+body .menu-wrap .card .link-btn.grownup-btn {
+  display: inline-block; margin-top: 6px; padding: 14px 22px; border: 2px solid #ffe08a; border-radius: 14px;
+  background: rgba(255, 224, 138, 0.16); color: #ffeeb8; font-size: 1.1rem; font-weight: 800; text-decoration: none;
+}
+body .menu-wrap .card .link-btn.grownup-btn:hover, body .menu-wrap .card .link-btn.grownup-btn:focus-visible { background: rgba(255, 224, 138, 0.3); color: #ffffff; }
+/* "For grown-ups" at the bottom of the map sits on the light page, so it is a dark outlined button. */
+body .menu-wrap .link-btn.grownup-btn-light {
+  display: inline-block; padding: 12px 22px; border: 2px solid #0f4f63; border-radius: 14px; background: rgba(255, 255, 255, 0.8);
+  color: #0b3f50; font-size: 1.05rem; font-weight: 800; text-decoration: none; opacity: 1;
+}
+/* The Reset PIN button waits (readably) until the words are typed. */
+body .menu-wrap .pin-card .big-btn:disabled { opacity: 1; background: #52687f; color: #dbe6f2; box-shadow: none; }
+body .menu-wrap .picker-grownups { margin: 18px 0 0; text-align: center; }

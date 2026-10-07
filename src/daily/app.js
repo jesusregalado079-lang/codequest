@@ -10,9 +10,9 @@ import { createDailyMotion } from './motion.js';
 import { act as paydayReduce, newSession as newPayday } from '../payday/session.js';
 import { abandonOpen, actOnOpen, addSession, openSession } from '../payday/state.js';
 import { renderPayday } from '../payday/view.js';
-import { lockParent, parentUnlocked } from './pin.js';
+import { lockParent, parentUnlocked, resetParentPin } from './pin.js';
 import {
-  checkDailyParentPin, createParentState, gradeDailyWork, renderParent, setDailyParentPin,
+  RESET_PHRASE, checkDailyParentPin, createParentState, gradeDailyWork, renderParent, setDailyParentPin,
 } from './parent-view.js';
 
 const app = document.getElementById('app');
@@ -360,7 +360,18 @@ function onClick(event) {
       });
       return;
     }
-    if (action === 'daily-parent-forgot') { parentState.pinMessage = 'Ask the grown-up who set it up to reset the PIN from this iPad’s Settings.'; render(); return; }
+    if (action === 'daily-parent-forgot') { parentState.resetting = true; parentState.pinMessage = ''; render(); return; }
+    if (action === 'daily-parent-reset-back') { parentState.resetting = false; parentState.pinMessage = ''; render(); return; }
+    if (action === 'daily-parent-reset') {
+      // Clears only the PIN (and a lockout). Answers, grades and drawings are untouched; the reset is logged and shown in Parent Mode.
+      const phrase = app.querySelector('[data-parent-pin="phrase"]');
+      if (!phrase || phrase.value.trim().replace(/\s+/g, ' ').toUpperCase() !== RESET_PHRASE) { parentState.pinMessage = `Type ${RESET_PHRASE} exactly, then tap Reset PIN.`; render(); return; }
+      persist((s) => resetParentPin(s));
+      parentState.resetting = false;
+      parentState.pinMessage = 'The PIN is cleared. Choose a new 4-digit PIN.';
+      render();
+      return;
+    }
     if (action === 'daily-parent-day') { parentState.selectedDay = button.dataset.day; render(); return; }
     if (action === 'daily-parent-grade') {
       const key = button.dataset.gradeKey;

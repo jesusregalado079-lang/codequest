@@ -35,8 +35,8 @@ const PATTERNS = [
 // any new call anywhere) must never use them; the app builds its own in-screen UI instead.
 const DIALOG_RE = /\b(alert|confirm|prompt)\(/g;
 const DIALOG_ALLOWLIST = new Set([
-  'src/ui/menu.js:406', // delete a custom-built level — pre-existing, irreversible
-  'src/ui/menu.js:642', // remove a player and their progress — pre-existing, irreversible
+  'src/ui/menu.js:430', // delete a custom-built level — pre-existing, irreversible
+  'src/ui/menu.js:673', // remove a player and their progress — pre-existing, irreversible
 ]);
 
 function listJsFiles(dir) {

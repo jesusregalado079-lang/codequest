@@ -1365,3 +1365,6 @@ button.pd-stack:active { transform: translateY(2px); box-shadow: 0 1px 0 #dfe3dc
   .pd-stack { min-width: 92px; }
 }
 @media (prefers-reduced-motion: reduce) { button.pd-stack:active { transform: none; } }
+
+.cqd-pin-notice { margin: 0 0 14px; padding: 12px 16px; border: 1px solid #e6c987; border-radius: 14px; background: var(--cqd-gold-soft); color: #6d4a0c; font-weight: 800; }
+.cqd-parent-gate p { max-width: 36rem; }

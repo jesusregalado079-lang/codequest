@@ -8,7 +8,7 @@ import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek, weekdayKey } from '../cq/daily-work/schedule.js';
 import { paydaySummaryHtml } from '../payday/summary.js';
 import { canPayExactly, coinCounts, coinSummary, coinTotal, displayValue, money, storedDay, storedItem } from '../cq/daily-work/daily-work-ui.js';
-import { checkParentPin, hasParentPin, parentUnlocked, setParentPin } from './pin.js';
+import { checkParentPin, hasParentPin, parentUnlocked, recentPinResets, setParentPin } from './pin.js';
 import { dayStatus } from './calendar.js';
 import { sheetsForDay } from './sheet-view.js';
 
@@ -16,7 +16,7 @@ const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const esc = (value) => String(value).replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 
 export function createParentState() {
-  return { open: false, selectedDay: null, pinMessage: '' };
+  return { open: false, selectedDay: null, pinMessage: '', resetting: false };
 }
 
 export function gradeSuggestion(item, value) {
@@ -105,7 +105,28 @@ export async function checkDailyParentPin(store, pin, now) {
   }
 }
 
+// What the grown-up must type to clear a forgotten PIN. It is shown on screen on purpose: this is a guard against a
+// stray tap, not a lock. The protection is that every reset is logged and shown at the top of Parent Mode.
+export const RESET_PHRASE = 'RESET MY PIN';
+
+function resetGateHtml(state) {
+  return `<section class="cqd-parent-gate"><h1>Reset grown-up PIN</h1>
+    <p>This clears the PIN so you can choose a new one. Nothing the boys did is lost. The reset is shown at the top of Parent Mode so you can see if anyone else did it.</p>
+    <label class="cqd-field"><span>Type <b>${RESET_PHRASE}</b> to continue</span><input class="cqd-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" data-parent-pin="phrase" aria-label="Type ${RESET_PHRASE}"></label>
+    <p class="cqd-parent-error" aria-live="polite">${esc(state.pinMessage || '')}</p>
+    <button type="button" class="cqd-button cqd-primary" data-action="daily-parent-reset">Reset PIN</button>
+    <p><button type="button" class="cqd-link-button" data-action="daily-parent-reset-back">← Back</button></p></section>`;
+}
+
+// "The grown-up PIN was reset on ..." for the last 30 days, so a PIN a kid cleared is never a surprise.
+function pinResetNotice(store) {
+  const resets = recentPinResets(store);
+  if (!resets.length) return '';
+  return `<p class="cqd-pin-notice" role="status">⚠️ The grown-up PIN was reset on ${esc(resets.map((time) => new Date(time).toLocaleString()).join(', '))}. If that was not you, someone else may have changed it.</p>`;
+}
+
 function pinGateHtml(store, state) {
+  if (state.resetting) return resetGateHtml(state);
   if (!hasParentPin(store)) {
     return `<section class="cqd-parent-gate"><h1>Set a grown-up PIN</h1>
     <p>Choose a 4-digit PIN. This is a simple kids-only boundary, not a password.</p>
@@ -178,14 +199,14 @@ export function suggestedDay(store, week, todayIso) {
 
 function checkWorkHtml(store, state, todayIso) {
   const week = currentWeek(DAILY_WORK, store.track, todayIso);
-  if (!week) return `<section class="cqd-empty"><h1>No Daily Work yet</h1></section>${store.track === 'guided' ? `<section class="cqd-parent">${paydaySummaryHtml(store.payday)}</section>` : ''}`;
+  if (!week) return `${pinResetNotice(store)}<section class="cqd-empty"><h1>No Daily Work yet</h1></section>${store.track === 'guided' ? `<section class="cqd-parent">${paydaySummaryHtml(store.payday)}</section>` : ''}`;
   const showPayday = store.track === 'guided' && state.selectedDay === 'payday';
   const selectedDay = showPayday ? 'payday' : DAY_KEYS.includes(state.selectedDay) ? state.selectedDay : suggestedDay(store, week, todayIso);
   state.selectedDay = selectedDay;
   // The Payday Helper checks itself, so its tab is a read-only summary: no sheets, no Save button.
   if (showPayday) {
     return `<section class="cqd-parent"><header class="cqd-calendar-head"><span class="cqd-eyebrow">PARENT MODE · ${esc(week.label.toUpperCase())}</span><h1>Check work</h1></header>
-    ${trackerHtml(store, week, selectedDay)}
+    ${pinResetNotice(store)}${trackerHtml(store, week, selectedDay)}
     ${paydaySummaryHtml(store.payday)}</section>`;
   }
   const sheets = sheetsForDay(week, selectedDay);
@@ -194,7 +215,7 @@ function checkWorkHtml(store, state, todayIso) {
   const emptyHint = dayStatus(saved, sheets) === 'not-started' && others.length
     ? `<div class="cqd-empty-hint"><span>Nothing is saved for ${dayName(selectedDay)} yet. Work is saved for:</span><span class="cqd-empty-hint-days">${others.map((row) => `<button type="button" class="cqd-empty-day" data-action="daily-parent-day" data-day="${row.dayKey}">${dayName(row.dayKey)}</button>`).join(' ')}</span></div>` : '';
   return `<section class="cqd-parent"><header class="cqd-calendar-head"><span class="cqd-eyebrow">PARENT MODE · ${esc(week.label.toUpperCase())}</span><h1>Check work</h1></header>
-    ${trackerHtml(store, week, selectedDay)}
+    ${pinResetNotice(store)}${trackerHtml(store, week, selectedDay)}
     <p class="cqd-muted">${saved.submittedAt ? `Submitted ${esc(new Date(saved.submittedAt).toLocaleString())}` : 'Not submitted yet. You can still check any item.'}</p>
     ${emptyHint}
     ${sheets.length ? sheets.map((sheet) => `<article class="cqd-sheet cqd-check-sheet"><h3>${esc(sheet.title)}</h3><ol class="cqd-check-items">${sheet.items.map((item) => checkedItemHtml(sheet, item, storedItem(saved, sheet.id, item.id))).join('')}</ol></article>`).join('') : '<p class="cqd-muted">No work for this day.</p>'}

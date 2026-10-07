@@ -53,6 +53,9 @@ function showProfiles() {
   const add = el(`<button class="profile-btn add"><span class="avatar">➕</span>New explorer</button>`);
   add.onclick = () => { sounds.tap(); showCreate(); };
   row.append(add);
+  const grownups = el('<p class="picker-grownups"><button class="link-btn grownup-btn" id="grownups-picker">🔒 For grown-ups (reset a picture code or the PIN)</button></p>');
+  grownups.querySelector('#grownups-picker').onclick = () => { sounds.tap(); showParentsGate(() => showParents()); };
+  card.append(grownups);
   app.append(card);
   app.append(el(`<section class="world-peek"><div class="section-heading"><h2>So much to discover</h2><span>Code your way to every world</span></div><div class="discovery-grid">${[0,2,3].map((i,n)=>`<div class="discovery-card">${worldArt(i)}<div><small>WORLD ${i+1}</small><h3>${esc(WORLDS[i].place)}</h3><span>${['Move your robot','Make clever choices','Create your own moves'][n]}</span></div></div>`).join('')}</div></section>`));
 }
@@ -146,7 +149,9 @@ function showPictureUnlock(profile) {
     <p class="profile-code-name"><span class="avatar">${esc(profile.avatar)}</span> ${esc(profile.name)}</p>
     <p class="picture-help">Pick your 3 secret pictures, in order.</p>
     <div class="picture-slots" aria-label="Picture code slots"></div><div class="picture-grid"></div>
-    <p class="picture-error" aria-live="polite"></p><p><button class="link-btn" id="back">← back</button></p></div>`);
+    <p class="picture-error" aria-live="polite"></p>
+    <p><button class="link-btn grownup-btn" id="forgot-code">🔒 Forgot your picture code? A grown-up can reset it</button></p>
+    <p><button class="link-btn" id="back">← back</button></p></div>`);
   const slots = card.querySelector('.picture-slots');
   const message = card.querySelector('.picture-error');
   const render = () => {
@@ -179,7 +184,26 @@ function showPictureUnlock(profile) {
     card.querySelector('.picture-grid').append(b);
   }
   card.querySelector('#back').onclick = showProfiles;
+  card.querySelector('#forgot-code').onclick = () => { sounds.tap(); showParentsGate(() => showCodeReset(profile)); };
   render();
+  app.append(card);
+}
+
+// A grown-up (behind the PIN) clears one player's forgotten picture code; the player picks a new one right away.
+// Stars, progress and outfits are untouched: only the 3 secret pictures are cleared.
+function showCodeReset(profile) {
+  app.innerHTML = header();
+  const card = el(`<div class="card pin-card"><h2>Reset ${esc(profile.name)}'s picture code?</h2>
+    <p><span class="avatar">${esc(profile.avatar)}</span> ${esc(profile.name)} will pick 3 new secret pictures right now. Stars, progress and outfits stay exactly as they are.</p>
+    <button class="big-btn" id="do-reset">Reset and choose a new code</button>
+    <p><button class="link-btn" id="back">← back</button></p></div>`);
+  card.querySelector('#do-reset').onclick = () => {
+    sounds.tap();
+    clearPictureCode(profile.id);
+    const fresh = getProfiles().find((candidate) => candidate.id === profile.id);
+    if (fresh) showPictureCodeSetup(fresh); else showProfiles();
+  };
+  card.querySelector('#back').onclick = showProfiles;
   app.append(card);
 }
 
@@ -364,8 +388,8 @@ function showMap() {
     }
     app.append(card);
   });
-  const parents = el(`<p><button class="link-btn" id="parents">for grown-ups</button></p>`);
-  parents.querySelector('#parents').onclick = showParentsGate;
+  const parents = el(`<p><button class="link-btn grownup-btn-light" id="parents">🔒 For grown-ups</button></p>`);
+  parents.querySelector('#parents').onclick = () => showParentsGate();
   app.append(parents);
 }
 
@@ -455,19 +479,24 @@ function showOutfits() {
 }
 
 // ---------- parents corner ----------
-function showParentsGate() {
-  if (hasParentPin()) showParentPinEnter();
-  else showParentPinSet();
+// `afterPin` = what to open once the grown-up is in (default: the grown-ups corner). A click event passed by mistake is ignored.
+const afterPinOf = (value) => (typeof value === 'function' ? value : () => showParents());
+
+function showParentsGate(afterPin) {
+  const next = afterPinOf(afterPin);
+  if (hasParentPin()) showParentPinEnter(next);
+  else showParentPinSet(next);
 }
 
-function showParentPinSet() {
+function showParentPinSet(afterPin) {
+  const next = afterPinOf(afterPin);
   app.innerHTML = header();
   const card = el(`<div class="card pin-card"><h2>Set a grown-up PIN</h2>
     <p>Choose a 4-digit PIN. This is a simple kids-only boundary, not a password.</p>
     <form><p><input type="password" inputmode="numeric" maxlength="4" id="pin" aria-label="New 4 digit PIN" /></p>
     <p><input type="password" inputmode="numeric" maxlength="4" id="again" aria-label="Confirm 4 digit PIN" /></p>
     <p class="pin-error" aria-live="polite"></p><button class="big-btn">Save PIN</button></form>
-    <p><button class="link-btn" id="back">← back to the map</button></p></div>`);
+    <p><button class="link-btn" id="back">← back</button></p></div>`);
   const form = card.querySelector('form');
   const message = card.querySelector('.pin-error');
   form.onsubmit = async (event) => {
@@ -483,13 +512,14 @@ function showParentPinSet() {
       message.textContent = 'Use exactly 4 digits.';
       return;
     }
-    showParents();
+    next();
   };
   card.querySelector('#back').onclick = showMap;
   app.append(card);
 }
 
-function showParentPinEnter() {
+function showParentPinEnter(afterPin) {
+  const next = afterPinOf(afterPin);
   app.innerHTML = header();
   const parent = load().parent;
   const now = Date.now();
@@ -500,7 +530,7 @@ function showParentPinEnter() {
     <p class="pin-error" aria-live="polite">${locked ? `Too many tries — wait ${Math.ceil(remaining / 1000)} seconds` : ''}</p>
     <button class="big-btn" ${locked ? 'disabled' : ''}>Enter</button></form>
     <p><button class="link-btn" id="forgot">Forgot PIN?</button></p>
-    <p><button class="link-btn" id="back">← back to the map</button></p></div>`);
+    <p><button class="link-btn" id="back">← back</button></p></div>`);
   const form = card.querySelector('form');
   const message = card.querySelector('.pin-error');
   let checking = false;
@@ -518,7 +548,7 @@ function showParentPinEnter() {
       checking = false;
     }
     if (!card.isConnected) return;
-    if (result.ok) return showParents();
+    if (result.ok) return next();
     message.textContent = result.lockedMs
       ? `Too many tries — wait ${Math.ceil(result.lockedMs / 1000)} seconds`
       : `Wrong PIN — ${result.triesLeft} tries left before a 1-minute wait`;
@@ -526,7 +556,7 @@ function showParentPinEnter() {
       startPinCountdown(card, message);
     }
   };
-  card.querySelector('#forgot').onclick = showParentPinReset;
+  card.querySelector('#forgot').onclick = () => showParentPinReset(next);
   card.querySelector('#back').onclick = showMap;
   app.append(card);
   if (locked) {
@@ -553,7 +583,8 @@ function startPinCountdown(card, message) {
   }, 250);
 }
 
-function showParentPinReset() {
+function showParentPinReset(afterPin) {
+  const next = afterPinOf(afterPin);
   app.innerHTML = header();
   const card = el(`<div class="card pin-card"><h2>Reset grown-up PIN</h2>
     <p>This reset will be visible to the parent in the grown-ups corner.</p>
@@ -564,8 +595,8 @@ function showParentPinReset() {
   const phrase = card.querySelector('#phrase');
   const reset = card.querySelector('#reset');
   phrase.oninput = () => { reset.disabled = phrase.value === 'RESET MY PIN' ? false : true; };
-  reset.onclick = () => { resetParentPin(); showParentPinSet(); };
-  card.querySelector('#back').onclick = showParentPinEnter;
+  reset.onclick = () => { resetParentPin(); showParentPinSet(next); };
+  card.querySelector('#back').onclick = () => showParentPinEnter(next);
   app.append(card);
 }
 
@@ -600,7 +631,7 @@ function showParents() {
     <p class="pin-error" id="import-message" aria-live="polite"></p>
     <p><button class="link-btn" id="back">← back to the map</button></p></div>`);
   card.querySelector('#back').onclick = showMap;
-  card.querySelector('#change-pin').onclick = showParentPinSet;
+  card.querySelector('#change-pin').onclick = () => showParentPinSet();
   card.querySelector('#export').onclick = () => {
     const blob = new Blob([exportData()], { type: 'application/json' });
     const a = document.createElement('a');
