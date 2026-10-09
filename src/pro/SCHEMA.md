@@ -102,3 +102,9 @@ Engine reveals one at a time; each reveal costs 2 XP off the lesson award.
 - Before 2026-10-08 progress was keyed by URL. `legacy-keys.js` (frozen) maps those old keys to ids and `progress.js` `ensureMigrated()` applies it once on both pages. Never edit that table.
 - `progress.js` normalises everything it reads, reports failed saves instead of throwing, and exports/imports a JSON backup (Progress page, "Back up your progress").
 - `test/pro-career.test.js` checks the data (ids, URLs, hours, quiz answers, milestones) and the storage rules; `.foreman/scratch/browser/pro-career.cjs` checks the pages in a real browser.
+
+## Career Journey (since 2026-10-08)
+- `#/career-journey` is the visual map: rank by study hours, % of the core route, streak, the eight phases as a road with "you are here", milestone flags with dates at his pace, the Expedited stages, achievements and a 12-week grid. Ticking anything on the career pages that unlocks an achievement shows a toast and confetti (no confetti with reduced motion).
+- Saved alongside `studyDone`: `doneAt` (`{ key: 'YYYY-MM-DD' }`, the day each checkmark was made; ticks from before this have none and count without a date) and `settings.hoursPerWeek` (1–100, default 21 = 3 h a day). Both travel in backups; a merge keeps the earliest date.
+- All the math is pure in `career-logic.js` (`journey`, `achievements`, `careerRank`, `currentStreak`, `heatmap`) and tested in `test/pro-journey.test.js`; `.foreman/scratch/browser/pro-journey.cjs` checks the page in a real browser. Badge ids are permanent like item ids.
+- `#/career-path/<n>` opens the roadmap at Phase n.

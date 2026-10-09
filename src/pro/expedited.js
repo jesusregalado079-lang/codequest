@@ -43,7 +43,8 @@ function render() {
         <p>${esc(summary.subtitle)}</p>
       </div>
       <nav class="exp-nav" aria-label="Roadmap navigation">
-        <a class="active" href="./expedited.html">Expedited Roadmap</a>
+        <a href="./pro.html#/career-journey">★ My Journey</a>
+        <a class="active" href="./expedited.html" aria-current="page">Expedited Roadmap</a>
         <a href="./pro.html#/career-path">Full Roadmap</a>
         <a href="./pro.html#/career-progress">Full Progress</a>
         <a href="./pro.html">CodeQuest Pro</a>

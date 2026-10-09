@@ -4,13 +4,14 @@ import beginnerUnits from '../beginner/foundations.js';
 import expertChapters from '../expert/index.js';
 import studies from '../resources.js';
 import careerPath, { milestones, gate, extras } from '../career-path.js';
-import { gateKey, groupStats as groupStatsOf, outKey, passMark, quizKey } from '../career-logic.js';
+import expeditedStages from '../expedited-path.js';
+import { achievements, gateKey, groupStats as groupStatsOf, heatmap, journey, outKey, passMark, quizKey } from '../career-logic.js';
 import { run } from '../engine/runner.js';
 import { setHue } from './aether.js';
 import {
   isComplete, completeLesson, hintsUsed, revealHint,
   totalXp, rank, streakCount, chapterProgress, badgeEarned,
-  toggleStudyDone, setStudyDone, studyDoneMap, ensureMigrated,
+  toggleStudyDone, setStudyDone, studyDoneMap, ensureMigrated, doneDates, getSettings, setHoursPerWeek,
   exportProgress, importProgress, requestPersistentStorage,
 } from '../progress.js';
 
@@ -109,6 +110,7 @@ export function md(src) {
 function router() {
   const [seg, li] = location.hash.replace(/^#\/?/, '').split('/');
   scrollTo(0, 0);
+  document.title = 'CodeQuest Pro';
 
   // root → land on whichever tier you last used (no separate chooser page)
   if (!seg) {
@@ -132,20 +134,31 @@ function router() {
   // Studies: curated external study links
   if (seg === 'resources') {
     document.body.dataset.view = 'chapter';
+    document.title = 'Studies · CodeQuest Pro';
     setHue(48);
     return showResources();
   }
 
-  // Career Path: staged, sequenced roadmap (separate from the Studies grab-bag)
+  // Career Journey: the visual map of where he is and where he is going
+  if (seg === 'career-journey') {
+    document.body.dataset.view = 'chapter';
+    document.title = 'Career Journey · CodeQuest Pro';
+    setHue(152);
+    return showCareerJourney();
+  }
+
+  // Career Path: staged, sequenced roadmap (separate from the Studies grab-bag); #/career-path/3 opens Phase 3
   if (seg === 'career-path') {
     document.body.dataset.view = 'chapter';
+    document.title = 'Career Roadmap · CodeQuest Pro';
     setHue(152);
-    return showCareerPath();
+    return showCareerPath(li);
   }
 
   // Career Path progress: where you are, computed from the same checkboxes
   if (seg === 'career-progress') {
     document.body.dataset.view = 'chapter';
+    document.title = 'Career Progress · CodeQuest Pro';
     setHue(152);
     return showCareerProgress();
   }
@@ -153,6 +166,7 @@ function router() {
   // Career Path extras: optional side content, not part of the roadmap
   if (seg === 'career-extra') {
     document.body.dataset.view = 'chapter';
+    document.title = 'Career Extra · CodeQuest Pro';
     setHue(152);
     return showCareerExtra();
   }
@@ -216,7 +230,7 @@ function tierPage(active, bodyHtml) {
     <header class="pro-header">
       <h1>CodeQuest <span class="pro-mark">Pro</span></h1>
       <a class="studies-link" href="#/resources">Studies ↗</a>
-      <a class="studies-link" href="#/career-path">Career Path ↗</a>
+      <a class="studies-link" href="#/career-journey">Career Journey ↗</a>
       ${statusBar()}
     </header>
     ${tierSwitcher(active)}
@@ -378,7 +392,7 @@ function wireMiniQuizzes(groups) {
         const need = passMark(quiz.length);
         const toggle = app.querySelector(`.quiz-toggle[data-quiz-id="${CSS.escape(id)}"]`);
         if (right >= need) {
-          const saved = setStudyDone(quizKey(id), true);
+          const saved = withCelebration(() => setStudyDone(quizKey(id), true));
           if (!saved.ok) showSaveWarning();
           result.innerHTML = `<strong class="ok">Passed: ${right} of ${quiz.length}.</strong>`;
           if (toggle) { toggle.textContent = '✓ Passed. Review again'; toggle.classList.add('passed'); }
@@ -411,7 +425,7 @@ function wireStudyChecks(groups) {
   app.querySelectorAll('.study-check').forEach((btn) => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.key;
-      const res = toggleStudyDone(key);
+      const res = withCelebration(() => toggleStudyDone(key));
       if (!res.ok) showSaveWarning();
       const done = studyDoneMap();
       app.querySelectorAll(`.study-check[data-key="${CSS.escape(key)}"]`).forEach((b) => {
@@ -443,10 +457,7 @@ function refocus(key) {
 
 function showResources() {
   app.innerHTML = `
-    <header class="pro-header">
-      <a class="back" href="#/">← Back to lessons</a>
-      ${statusBar()}
-    </header>
+    ${careerHeader('resources')}
     <main class="chapter-page" style="--hue:48">
       <div class="tier-tag">Studies</div>
       <h1>Extra Studies</h1>
@@ -460,22 +471,244 @@ function showResources() {
 
 /* ---------- Career Path (staged, sequenced roadmap) ---------- */
 
-function careerHeader() {
+const CAREER_TABS = [
+  ['career-journey', 'Journey'],
+  ['career-path', 'Roadmap'],
+  ['career-progress', 'Progress'],
+  ['career-extra', 'Extra'],
+  ['resources', 'Studies'],
+];
+function careerHeader(active) {
   return `
-    <header class="pro-header">
-      <a class="back" href="#/">← Back to lessons</a>
-      <nav class="career-nav">
-        <a href="#/career-path">Roadmap</a>
-        <a href="#/career-progress">Progress</a>
-        <a href="#/career-extra">Extra</a>
+    <header class="pro-header career-head">
+      <a class="back" href="#/">← Lessons</a>
+      <nav class="career-nav" aria-label="Career">
+        ${CAREER_TABS.map(([id, label]) => `<a href="#/${id}"${id === active ? ' class="on" aria-current="page"' : ''}>${label}</a>`).join('')}
+        <a class="exp-link" href="./expedited.html">⚡ Expedited</a>
       </nav>
-      ${statusBar()}
     </header>`;
 }
 
-function showCareerPath() {
+// What the career pages share: the checkmark map, its dates, the pace, today, and everything computed from them.
+const todayIso = () => new Date().toLocaleDateString('en-CA');
+function careerState() {
+  const done = studyDoneMap();
+  const doneAt = doneDates();
+  const { hoursPerWeek } = getSettings();
+  const j = journey({ full: careerPath, milestones, gate, stages: expeditedStages, done, doneAt, hoursPerWeek, todayIso: todayIso() });
+  const badges = achievements({ done, doneAt, full: careerPath, extras, stages: expeditedStages, gate, j });
+  return { done, doneAt, j, badges };
+}
+
+// ---------- celebrations ----------
+const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function confetti() {
+  if (reducedMotion()) return;
+  const layer = document.createElement('div');
+  layer.className = 'confetti';
+  layer.setAttribute('aria-hidden', 'true');
+  const colors = ['#42d6a4', '#ffd166', '#5aa9ff', '#ff7aa2', '#c084fc', '#ffffff'];
+  for (let i = 0; i < 70; i += 1) {
+    const bit = document.createElement('i');
+    bit.style.left = `${Math.random() * 100}%`;
+    bit.style.background = colors[i % colors.length];
+    bit.style.animationDelay = `${Math.random() * 0.35}s`;
+    bit.style.animationDuration = `${1.6 + Math.random() * 1.4}s`;
+    bit.style.setProperty('--drift', `${(Math.random() - 0.5) * 220}px`);
+    bit.style.setProperty('--spin', `${(Math.random() - 0.5) * 1080}deg`);
+    layer.appendChild(bit);
+  }
+  document.body.appendChild(layer);
+  setTimeout(() => layer.remove(), 3600);
+}
+function celebrate(newBadges) {
+  if (!newBadges.length) return;
+  let stack = document.getElementById('achievement-toasts');
+  if (!stack) {
+    stack = document.createElement('div');
+    stack.id = 'achievement-toasts';
+    stack.className = 'achievement-toasts';
+    stack.setAttribute('role', 'status');
+    stack.setAttribute('aria-live', 'polite');
+    document.body.appendChild(stack);
+  }
+  newBadges.forEach((b, i) => {
+    const toast = document.createElement('div');
+    toast.className = `achievement-toast${b.phase ? ' big' : ''}`;
+    toast.style.animationDelay = `${i * 0.25}s, ${4.6 + i * 0.25}s`; // one delay per animation: in, then out
+    toast.innerHTML = `<span class="at-icon" aria-hidden="true">${b.icon}</span><span><small>${b.phase ? 'Phase complete' : 'Achievement unlocked'}</small><strong>${esc(b.name)}</strong></span>`;
+    stack.appendChild(toast);
+    setTimeout(() => toast.remove(), 5200 + i * 250);
+  });
+  confetti();
+}
+const earnedIds = (badges) => new Set(badges.filter((b) => b.earned).map((b) => b.id));
+// Run a change, then celebrate whatever it unlocked.
+function withCelebration(change) {
+  const before = earnedIds(careerState().badges);
+  const result = change();
+  const after = careerState().badges.filter((b) => b.earned && !before.has(b.id));
+  celebrate(after);
+  return result;
+}
+
+/* ---------- Career Journey: where you are, where you are going, what you have unlocked ---------- */
+
+const fmtDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+const fmtDay = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+function ringSvg(pct, size = 132, stroke = 12) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  return `<svg class="jr-ring" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
+    <defs><linearGradient id="jrGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#42d6a4"/><stop offset="1" stop-color="#5aa9ff"/></linearGradient></defs>
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="${stroke}"/>
+    <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="url(#jrGrad)" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${(c * pct) / 100} ${c}" transform="rotate(-90 ${size / 2} ${size / 2})"/>
+  </svg>`;
+}
+
+function rankEmblem(level) {
+  return `<svg class="jr-emblem" viewBox="0 0 100 112" aria-hidden="true">
+    <defs><linearGradient id="emb" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#ffd166"/><stop offset="1" stop-color="#f08a24"/></linearGradient></defs>
+    <path d="M50 4 94 29v54L50 108 6 83V29Z" fill="rgba(255,209,102,.12)" stroke="url(#emb)" stroke-width="5"/>
+    <path d="M50 20 80 37v38L50 92 20 75V37Z" fill="url(#emb)" opacity=".22"/>
+    <text x="50" y="66" text-anchor="middle" font-size="34" font-weight="800" fill="#ffe6a6">${level}</text>
+  </svg>`;
+}
+
+function milestoneFlag(m) {
+  const status = m.reached ? '<span class="flag-when done">Reached ✓</span>'
+    : m.onTheJob ? `<span class="flag-when">${esc(m.when)}</span>`
+      : `<span class="flag-when">ETA ${fmtDate(m.etaIso)}${m.hoursLeft === 0 ? ' · deliverables left' : ` · ${m.hoursLeft}h to go`}</span>`;
+  return `<div class="jr-flag${m.reached ? ' reached' : ''}${m.big ? ' big' : ''}"><span class="flag-icon" aria-hidden="true">${m.reached ? '🏆' : '🏁'}</span><div><strong>${esc(m.label)}</strong>${status}</div></div>`;
+}
+
+function trailNode(p, j) {
+  const icons = { done: '✓', current: '★', ahead: String(p.n), lane: String(p.n), 'active-lane': String(p.n) };
+  const label = p.state === 'done' ? 'Complete' : p.state === 'current' ? 'You are here' : p.lane ? 'Side quest · optional' : 'Ahead';
+  const flags = j.milestones.filter((m) => m.after === p.n && !/optional/i.test(m.when)).map(milestoneFlag).join('') + j.milestones.filter((m) => m.after === p.n && /optional/i.test(m.when)).map(milestoneFlag).join('');
+  return `
+    <li class="jr-node ${p.state}${p.lane ? ' is-lane' : ''}" style="--p:${p.pct}">
+      <a class="jr-dot" href="#/career-path/${p.n}" aria-label="Phase ${p.n}, ${esc(p.short)}: ${p.pct}% done, ${label}">${icons[p.state] || p.n}${p.state === 'current' ? '<span class="you">YOU</span>' : ''}</a>
+      <a class="jr-card" href="#/career-path/${p.n}">
+        <span class="jr-tag">Phase ${p.n} · ${label}</span>
+        <strong>${esc(p.short)}</strong>
+        <span class="jr-bar"><i style="width:${p.pct}%"></i></span>
+        <span class="jr-meta">${p.done}/${p.total} done · ${p.hoursDone}/${p.hoursTotal} h · months ${esc(p.months)}</span>
+      </a>
+      ${flags ? `<div class="jr-flags">${flags}</div>` : ''}
+    </li>`;
+}
+
+function showCareerJourney() {
+  const { j, badges } = careerState();
+  const earned = badges.filter((b) => b.earned);
+  const nextBadges = badges.filter((b) => !b.earned).sort((a, b) => (b.have / b.need) - (a.have / a.need)).slice(0, 3);
+  const r = j.rank;
+  const days = Math.max(1, Math.round(j.hoursPerWeek / 7 * 10) / 10);
+  const heat = heatmap(doneDates(), todayIso(), 12);
+  const firstJob = j.milestones.find((m) => /first technical role/i.test(m.label));
+  const nextCard = j.next ? `
+      <section class="jr-next" aria-label="Next up">
+        <div class="jr-next-tag">Next up · Phase ${j.next.phase}</div>
+        <h2>${esc(j.next.name)}</h2>
+        <p>${j.next.kind === 'link' ? `${esc(j.next.by)}${j.next.hours ? ` · about ${j.next.hours} h` : ''}` : 'Deliverable: something you can point at'}</p>
+        <div class="jr-next-actions">
+          ${j.next.url ? `<a class="jr-btn" href="${esc(j.next.url)}" target="_blank" rel="noopener noreferrer">Open it ↗</a>` : ''}
+          <button type="button" class="jr-btn primary" data-journey-done="${esc(j.next.id)}">Mark done ✓</button>
+          <a class="jr-btn ghost" href="#/career-path/${j.next.phase}">See the phase</a>
+        </div>
+      </section>` : `
+      <section class="jr-next done"><h2>Every core phase is complete.</h2><p>You walked the whole road. Pick a side quest or go deeper in Phase 8.</p></section>`;
+
   app.innerHTML = `
-    ${careerHeader()}
+    ${careerHeader('career-journey')}
+    <main class="journey">
+      <section class="jr-hero">
+        <div class="jr-rank">
+          ${rankEmblem(r.level)}
+          <div>
+            <div class="jr-kicker">Rank ${r.level} of 9</div>
+            <h1>${esc(r.title)}</h1>
+            ${r.next ? `<div class="jr-rankbar" role="img" aria-label="${r.pct}% of the way to ${esc(r.next.title)}"><i style="width:${Math.max(3, r.pct)}%"></i></div><p class="jr-sub">${r.toNext} study hours to <strong>${esc(r.next.title)}</strong></p>` : '<p class="jr-sub">Top rank reached.</p>'}
+          </div>
+        </div>
+        <div class="jr-overall">
+          ${ringSvg(j.pct)}
+          <div class="jr-ring-label"><b>${j.pct}%</b><span>of the core path</span></div>
+        </div>
+        <div class="jr-stats">
+          <div><b>${j.allHoursDone}<small> h</small></b><span>studied</span></div>
+          <div><b>${j.streak}<small> ${j.streak === 1 ? 'day' : 'days'}</small></b><span>streak${j.bestStreak > j.streak ? ` · best ${j.bestStreak}` : ''}</span></div>
+          <div><b>${earned.length}<small>/${badges.length}</small></b><span>achievements</span></div>
+          <div><b>${fmtDate(j.finishIso)}</b><span>core path done at your pace</span></div>
+        </div>
+      </section>
+
+      <section class="jr-pace">
+        <label for="jr-hours">My pace</label>
+        <input id="jr-hours" type="number" min="1" max="100" step="1" inputmode="numeric" value="${j.hoursPerWeek}" aria-describedby="jr-pace-help"> <span>hours a week</span>
+        <span id="jr-pace-help" class="jr-pace-help">About ${days} h a day. ${j.weeksLeft} weeks of core study left${firstJob && !firstJob.reached ? `. First technical role: around <strong>${fmtDate(firstJob.etaIso)}</strong>` : ''}.</span>
+      </section>
+
+      ${nextCard}
+
+      <section class="jr-map" aria-label="Your road">
+        <h2 class="jr-h2">Your road</h2>
+        <ol class="jr-trail">
+          ${j.phases.map((p) => trailNode(p, j)).join('')}
+        </ol>
+      </section>
+
+      <section class="jr-exp" aria-label="Expedited track">
+        <h2 class="jr-h2">Expedited track <a href="./expedited.html">open ↗</a></h2>
+        <div class="jr-exp-row">
+          ${j.expedited.map((st) => {
+            const [tag, name] = st.title.split(' — ');
+            const gateStop = /^Employment Gate/.test(tag);
+            return `<div class="jr-chip${gateStop ? ' gate' : ''}${st.pct === 100 ? ' done' : st.pct > 0 ? ' going' : ''}" style="--p:${st.pct}%"><small>${esc(gateStop ? tag.replace('Employment ', '') : tag)}</small><span>${esc(name || tag)}</span><b>${st.pct === 100 ? '✓' : `${st.pct}%`}</b></div>`;
+          }).join('')}
+        </div>
+      </section>
+
+      <section class="jr-badges" aria-label="Achievements">
+        <h2 class="jr-h2">Achievements <span>${earned.length} of ${badges.length}</span></h2>
+        ${nextBadges.length ? `<div class="jr-closest">${nextBadges.map((b) => `<div class="jr-close"><span aria-hidden="true">${b.icon}</span><div><strong>${esc(b.name)}</strong><small>${esc(b.how)}</small><span class="jr-bar"><i style="width:${Math.round((b.have / b.need) * 100)}%"></i></span></div><em>${b.have}/${b.need}</em></div>`).join('')}</div>` : ''}
+        <ul class="jr-badge-grid">
+          ${badges.map((b) => `<li class="jr-badge${b.earned ? ' earned' : ''}" title="${esc(b.how)}"><span class="jb-icon" aria-hidden="true">${b.earned ? b.icon : '🔒'}</span><strong>${esc(b.name)}</strong><small>${b.earned ? (b.date ? fmtDay(b.date) : 'Unlocked') : `${b.have}/${b.need}`}</small></li>`).join('')}
+        </ul>
+      </section>
+
+      <section class="jr-heat" aria-label="Study days, last 12 weeks">
+        <h2 class="jr-h2">Last 12 weeks</h2>
+        <div class="jr-heat-grid">
+          ${heat.map((col) => `<div class="jr-heat-col">${col.map((d) => `<i class="h${d.future ? 'f' : Math.min(4, d.count)}" title="${d.iso}: ${d.count} ticked"></i>`).join('')}</div>`).join('')}
+        </div>
+        <p class="jr-sub">Each square is a day; brighter means more items ticked. Items ticked before today's update have no date, so they show in your totals but not here.</p>
+      </section>
+    </main>`;
+
+  const hours = app.querySelector('#jr-hours');
+  hours.addEventListener('change', () => {
+    if (!setHoursPerWeek(hours.value).ok) showSaveWarning();
+    showCareerJourney();
+    const again = app.querySelector('#jr-hours');
+    if (again) again.focus();
+  });
+  const doneBtn = app.querySelector('[data-journey-done]');
+  if (doneBtn) {
+    doneBtn.addEventListener('click', () => {
+      withCelebration(() => { if (!setStudyDone(doneBtn.dataset.journeyDone, true).ok) showSaveWarning(); });
+      showCareerJourney();
+      const next = app.querySelector('[data-journey-done]');
+      if (next) next.focus();
+    });
+  }
+}
+
+function showCareerPath(phase) {
+  app.innerHTML = `
+    ${careerHeader('career-path')}
     <main class="chapter-page" style="--hue:152">
       <div class="tier-tag">Career Path</div>
       <h1>Operator to Engineer</h1>
@@ -484,15 +717,21 @@ function showCareerPath() {
       ${renderStudyGroups(careerPath)}
     </main>`;
 
+  app.querySelectorAll('.study-group[data-gi]').forEach((section) => {
+    const g = careerPath[Number(section.dataset.gi)];
+    if (g) { section.id = `phase-${g.n}`; section.tabIndex = -1; }
+  });
   wireStudyChecks(careerPath);
   wireMiniQuizzes(careerPath);
+  const target = phase && app.querySelector(`#phase-${CSS.escape(String(phase))}`);
+  if (target) { target.scrollIntoView({ block: 'start' }); target.focus({ preventScroll: true }); }
 }
 
 /* ---------- Career Path · Extra (optional, off-path side content) ---------- */
 
 function showCareerExtra() {
   app.innerHTML = `
-    ${careerHeader()}
+    ${careerHeader('career-extra')}
     <main class="chapter-page" style="--hue:152">
       <div class="tier-tag">Career Path · Extra</div>
       <h1>Extra Curriculum</h1>
@@ -568,16 +807,16 @@ function showCareerProgress(backupStatus) {
   const hoursTotal = stats.reduce((s, x) => s + x.hoursTotal, 0);
   const hoursDone = stats.reduce((s, x) => s + x.hoursDone, 0);
   const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
-  const hoursLeft = Math.max(0, hoursTotal - hoursDone);
-  const daysLeft = Math.ceil(hoursLeft / 2);
-  const weeksLeft = Math.ceil(daysLeft / 7);
-  const current = stats.find((x) => x.pct < 100) || null;
+  // pace, weeks left and "you are here" come from the Journey: the core route at his saved hours a week
+  const { j } = careerState();
+  const current = j.current ? stats.find((x) => x.p.n === j.current.n) : null;
+  const etaFor = new Map(j.milestones.map((m) => [m.label, m]));
   const complete = (n) => stats.find((x) => x.p.n === n)?.pct === 100;
 
   const phaseRows = stats
     .map(
       (x) => `
-      <a class="prog-row${x.p.lane ? ' lane' : ''}${current && current.p.n === x.p.n ? ' current' : ''}${x.pct === 100 ? ' complete' : ''}" href="#/career-path">
+      <a class="prog-row${x.p.lane ? ' lane' : ''}${current && current.p.n === x.p.n ? ' current' : ''}${x.pct === 100 ? ' complete' : ''}" href="#/career-path/${x.p.n}">
         <div class="prog-n">${x.p.n}</div>
         <div class="prog-body">
           <div class="prog-title">${esc(x.p.title.replace(/^Phase \d+ — /, ''))}${x.p.lane ? ' <span class="study-lane">income lane</span>' : ''}${current && current.p.n === x.p.n ? ' <span class="prog-here">you are here</span>' : ''}</div>
@@ -596,7 +835,7 @@ function showCareerProgress(backupStatus) {
       <div class="ms-row${reached ? ' reached' : ''}${m.big ? ' big' : ''}">
         <div class="ms-check">${reached ? '✓' : ''}</div>
         <div class="ms-body">
-          <div class="ms-when">${esc(m.when)}</div>
+          <div class="ms-when">${esc(m.when)}${!reached && etaFor.get(m.label)?.etaIso ? ` · your pace: ${fmtDate(etaFor.get(m.label).etaIso)}` : ''}</div>
           <div class="ms-label">${esc(m.label)}</div>
           <div class="ms-ev">${esc(m.evidence)} · needs phase${m.requires.length > 1 ? 's' : ''} ${m.requires.join(', ')} complete</div>
         </div>
@@ -619,7 +858,7 @@ function showCareerProgress(backupStatus) {
     .join('');
 
   app.innerHTML = `
-    ${careerHeader()}
+    ${careerHeader('career-progress')}
     <main class="chapter-page prog-page" style="--hue:152">
       <div class="tier-tag">Career Path · Progress</div>
       <h1>Where you are</h1>
@@ -633,7 +872,7 @@ function showCareerProgress(backupStatus) {
           <b>${hoursDone}<small>/${hoursTotal}</small></b><span>study hours done</span>
         </div>
         <div class="prog-big">
-          <b>${weeksLeft}<small> wks</small></b><span>~${daysLeft} days left at 2 hrs/day</span>
+          <b>${j.weeksLeft}<small> wks</small></b><span>core route left at ${j.hoursPerWeek} h/week · <a href="#/career-journey">change pace</a></span>
         </div>
         <div class="prog-big">
           <b>${current ? `Phase ${current.p.n}` : 'Done'}</b><span>${current ? esc(current.p.title.replace(/^Phase \d+ — /, '')) : 'every phase complete'}</span>
@@ -644,7 +883,7 @@ function showCareerProgress(backupStatus) {
       <h2 class="prog-h2">Phases</h2>
       <div class="prog-list">${phaseRows}</div>
 
-      <h2 class="prog-h2">Milestones <span class="study-group-progress">Codex timeline at 14 hrs/week</span></h2>
+      <h2 class="prog-h2">Milestones <span class="study-group-progress">plan windows at 14 h/week · dates at your ${j.hoursPerWeek} h/week</span></h2>
       <div class="ms-list">${milestoneRows}</div>
 
       <h2 class="prog-h2">Paid-cert gate <span class="study-group-progress">${gateDone}/${gate.conditions.length} conditions · ${gateOpen ? 'OPEN' : 'closed'}</span></h2>
@@ -666,7 +905,7 @@ function showCareerProgress(backupStatus) {
   app.querySelectorAll('.study-check').forEach((btn) => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.key;
-      if (!toggleStudyDone(key).ok) showSaveWarning();
+      if (!withCelebration(() => toggleStudyDone(key)).ok) showSaveWarning();
       showCareerProgress();
       refocus(key);
     });

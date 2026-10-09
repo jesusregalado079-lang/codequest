@@ -19,7 +19,8 @@ const RANKS = [
   [1000, 'Engineer-in-Training'],
 ];
 
-const empty = () => ({ completed: {}, hintsUsed: {}, streak: { count: 0, last: null }, studyDone: {}, migrations: {} });
+export const DEFAULT_HOURS_PER_WEEK = 21; // 3 hours a day
+const empty = () => ({ completed: {}, hintsUsed: {}, streak: { count: 0, last: null }, studyDone: {}, doneAt: {}, settings: { hoursPerWeek: DEFAULT_HOURS_PER_WEEK }, migrations: {} });
 
 const plain = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 const okKey = (k) => typeof k === 'string' && k.length > 0 && k.length <= 400 && k !== '__proto__' && k !== 'constructor' && k !== 'prototype';
@@ -41,6 +42,10 @@ export function normalizeState(raw) {
   out.streak = { count: Number.isInteger(st.count) && st.count >= 0 ? st.count : 0, last: isDay(st.last) ? st.last : null };
   Object.keys(plain(o.studyDone)).forEach((k) => { if (okKey(k) && o.studyDone[k] === true) out.studyDone[k] = true; });
   Object.keys(plain(o.migrations)).forEach((k) => { if (okKey(k) && o.migrations[k] === true) out.migrations[k] = true; });
+  // the day each checkmark was made (only for checkmarks that are still set; older ones have no date)
+  Object.keys(plain(o.doneAt)).forEach((k) => { if (out.studyDone[k] && isDay(o.doneAt[k])) out.doneAt[k] = o.doneAt[k]; });
+  const hpw = plain(o.settings).hoursPerWeek;
+  out.settings.hoursPerWeek = Number.isInteger(hpw) && hpw >= 1 && hpw <= 100 ? hpw : DEFAULT_HOURS_PER_WEEK;
   return out;
 }
 
@@ -134,17 +139,32 @@ export function studyDoneMap() {
 // Returns { ok, done }: `done` is the new state, `ok` false when it could not be saved.
 export function toggleStudyDone(key) {
   const s = load();
-  if (s.studyDone[key]) delete s.studyDone[key];
-  else s.studyDone[key] = true;
+  if (s.studyDone[key]) { delete s.studyDone[key]; delete s.doneAt[key]; } else { s.studyDone[key] = true; s.doneAt[key] = today(); }
   const ok = save(s);
   return { ok, done: s.studyDone[key] === true };
 }
 
 export function setStudyDone(key, value) {
   const s = load();
-  if (value) s.studyDone[key] = true;
-  else delete s.studyDone[key];
+  if (value) { if (!s.studyDone[key]) s.doneAt[key] = today(); s.studyDone[key] = true; } else { delete s.studyDone[key]; delete s.doneAt[key]; }
   return { ok: save(s), done: value === true };
+}
+
+// The day each checkmark was made ({ key: 'YYYY-MM-DD' }); checkmarks from before dates were kept have none.
+export function doneDates() {
+  return { ...load().doneAt };
+}
+
+export function getSettings() {
+  return { ...load().settings };
+}
+
+export function setHoursPerWeek(hours) {
+  const s = load();
+  const n = Math.round(Number(hours));
+  if (!Number.isFinite(n) || n < 1 || n > 100) return { ok: false };
+  s.settings.hoursPerWeek = n;
+  return { ok: save(s) };
 }
 
 // One-time move of checkmarks saved under old keys to the permanent ids. Runs once per name, never undoes anything,
@@ -188,6 +208,7 @@ export function importProgress(text, mode = 'merge') {
     Object.keys(incoming.completed).forEach((k) => { next.completed[k] = Math.max(next.completed[k] ?? 0, incoming.completed[k]); });
     Object.keys(incoming.hintsUsed).forEach((k) => { next.hintsUsed[k] = Math.max(next.hintsUsed[k] ?? 0, incoming.hintsUsed[k]); });
     Object.keys(incoming.migrations).forEach((k) => { next.migrations[k] = true; });
+    Object.keys(incoming.doneAt).forEach((k) => { if (!next.doneAt[k] || incoming.doneAt[k] < next.doneAt[k]) next.doneAt[k] = incoming.doneAt[k]; });
     if (incoming.streak.last && (!next.streak.last || incoming.streak.last > next.streak.last)) next.streak = incoming.streak;
   }
   if (!save(next)) return { ok: false, error: 'This browser could not save the imported progress (storage is full or blocked).' };
