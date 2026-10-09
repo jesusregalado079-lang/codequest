@@ -5,6 +5,7 @@ import expertChapters from '../expert/index.js';
 import studies from '../resources.js';
 import careerPath, { milestones, gate, extras } from '../career-path.js';
 import expeditedStages from '../expedited-path.js';
+import { examSummary, leaveExam, showExam } from './exam.js';
 import { achievements, gateKey, groupStats as groupStatsOf, heatmap, journey, outKey, passMark, quizKey } from '../career-logic.js';
 import { run } from '../engine/runner.js';
 import { setHue } from './aether.js';
@@ -108,9 +109,11 @@ export function md(src) {
 /* ---------- routing ---------- */
 
 function router() {
-  const [seg, li] = location.hash.replace(/^#\/?/, '').split('/');
+  const parts = location.hash.replace(/^#\/?/, '').split('/');
+  const [seg, li] = parts;
   scrollTo(0, 0);
   document.title = 'CodeQuest Pro';
+  leaveExam(); // stop an exam clock or key listener from the page we are leaving
 
   // root → land on whichever tier you last used (no separate chooser page)
   if (!seg) {
@@ -145,6 +148,14 @@ function router() {
     document.title = 'Career Journey · CodeQuest Pro';
     setHue(152);
     return showCareerJourney();
+  }
+
+  // Certification exam practice (Security+ SY0-801): #/exam, #/exam/domain/<n>, #/exam/session, #/exam/result/<id>
+  if (seg === 'exam') {
+    document.body.dataset.view = 'chapter';
+    document.title = 'Security+ Exam Practice · CodeQuest Pro';
+    setHue(212);
+    return showExam(parts.slice(1), { app, header: careerHeader, esc, celebrate: withCelebration, saveWarn: showSaveWarning });
   }
 
   // Career Path: staged, sequenced roadmap (separate from the Studies grab-bag); #/career-path/3 opens Phase 3
@@ -473,6 +484,7 @@ function showResources() {
 
 const CAREER_TABS = [
   ['career-journey', 'Journey'],
+  ['exam', 'Sec+ Exam'],
   ['career-path', 'Roadmap'],
   ['career-progress', 'Progress'],
   ['career-extra', 'Extra'],
@@ -496,8 +508,9 @@ function careerState() {
   const doneAt = doneDates();
   const { hoursPerWeek } = getSettings();
   const j = journey({ full: careerPath, milestones, gate, stages: expeditedStages, done, doneAt, hoursPerWeek, todayIso: todayIso() });
-  const badges = achievements({ done, doneAt, full: careerPath, extras, stages: expeditedStages, gate, j });
-  return { done, doneAt, j, badges };
+  const exam = examSummary();
+  const badges = achievements({ done, doneAt, full: careerPath, extras, stages: expeditedStages, gate, j, exam });
+  return { done, doneAt, j, badges, exam };
 }
 
 // ---------- celebrations ----------
@@ -601,7 +614,7 @@ function trailNode(p, j) {
 }
 
 function showCareerJourney() {
-  const { j, badges } = careerState();
+  const { j, badges, exam } = careerState();
   const earned = badges.filter((b) => b.earned);
   const nextBadges = badges.filter((b) => !b.earned).sort((a, b) => (b.have / b.need) - (a.have / a.need)).slice(0, 3);
   const r = j.rank;
@@ -650,6 +663,16 @@ function showCareerJourney() {
         <input id="jr-hours" type="number" min="1" max="100" step="1" inputmode="numeric" value="${j.hoursPerWeek}" aria-describedby="jr-pace-help"> <span>hours a week</span>
         <span id="jr-pace-help" class="jr-pace-help">About ${days} h a day. ${j.weeksLeft} weeks of core study left${firstJob && !firstJob.reached ? `. First technical role: around <strong>${fmtDate(firstJob.etaIso)}</strong>` : ''}.</span>
       </section>
+
+      <a class="jr-exam${exam.ready ? ' ready' : ''}" href="#/exam">
+        <div class="jr-exam-tag">${esc(exam.name)} · exam readiness</div>
+        <div class="jr-exam-row">
+          <b>${exam.avg3 === null ? 'No mock yet' : `${exam.avg3}%`}</b>
+          <span class="jr-exam-bar" aria-hidden="true"><i style="width:${exam.avg3 ?? 0}%"></i><em style="left:${exam.target}%"></em></span>
+          <span class="jr-exam-go">Open exam practice →</span>
+        </div>
+        <small>${exam.avg3 === null ? 'Take a full mock to see where you stand.' : `Average of your last ${Math.min(3, exam.mocks)} mock${exam.mocks === 1 ? '' : 's'}; ready = 3 in a row at ${exam.target}%+.`} ${exam.due} due in review · ${exam.seen}/${exam.total} questions seen.</small>
+      </a>
 
       ${nextCard}
 

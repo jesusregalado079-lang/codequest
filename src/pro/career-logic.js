@@ -177,6 +177,12 @@ const stageKeys = (ctx, n) => ((ctx.stages.find((s) => s.n === n) || {}).items |
 const countBadge = (id, icon, name, need, how) => ({ id, icon, name, how, group: 'Momentum', test: (ctx) => ({ have: countDone(ctx, allKeys(ctx)), need }) });
 const hoursBadge = (id, icon, name, need) => ({ id, icon, name, how: `Log ${need} study hours on the roadmap`, group: 'Hours', test: (ctx) => ({ have: ctx.j.allHoursDone, need, keys: linkIds(ctx) }) });
 const phaseBadge = (n, icon, name) => ({ id: `phase-${n}`, icon, name, how: `Finish every item in Phase ${n}`, group: 'Phases', phase: n, test: (ctx) => { const keys = phaseKeys(ctx, n); return { have: countDone(ctx, keys), need: keys.length, keys }; } });
+// Exam practice badges read ctx.exam (the exam page's summary); no exam data means no progress, never a crash.
+const examBadge = (id, icon, name, how, have, need) => ({ id, icon, name, how, group: 'Exam', test: (ctx) => {
+  const e = ctx.exam;
+  const n = typeof need === 'function' ? (e ? need(e) : 1) : need;
+  return { have: e ? have(e) : 0, need: Math.max(1, n), noDate: true };
+} });
 const streakBadge = (id, icon, name, need) => ({ id, icon, name, how: `Tick something ${need} days in a row`, group: 'Consistency', test: (ctx) => ({ have: ctx.j.bestStreak, need, noDate: true }) });
 
 export const BADGES = Object.freeze([
@@ -208,6 +214,11 @@ export const BADGES = Object.freeze([
   streakBadge('streak-30', '🌋', 'Unstoppable', 30),
   { id: 'exp-gate-1', icon: '🚪', name: 'Ready to Apply', how: 'Finish Expedited Employment Gate #1', group: 'Expedited', test: (ctx) => { const keys = stageKeys(ctx, 2); return { have: countDone(ctx, keys), need: Math.max(1, keys.length), keys }; } },
   { id: 'exp-gate-2', icon: '🛰️', name: 'SOC Contender', how: 'Finish Expedited Employment Gate #2', group: 'Expedited', test: (ctx) => { const keys = stageKeys(ctx, 6); return { have: countDone(ctx, keys), need: Math.max(1, keys.length), keys }; } },
+  examBadge('exam-first-mock', '📝', 'First Mock', 'Finish a full Security+ mock exam', (e) => e.mocks, 1),
+  examBadge('exam-above-bar', '🎯', 'Above the Bar', 'Score 85% or more on a full mock', (e) => (e.best !== null && e.best >= e.target ? 1 : 0), 1),
+  examBadge('exam-ready', '🛡️', 'Exam Ready', 'Three full mocks in a row at 85% or more', (e) => e.runAtTarget, 3),
+  examBadge('exam-seen-100', '📚', 'Hundred Questions', 'Answer 100 different exam questions', (e) => e.seen, 100),
+  examBadge('exam-seen-all', '🗺️', 'Seen It All', 'Answer every question in the Security+ bank', (e) => e.seen, (e) => e.total),
   { id: 'gate-open', icon: '🔓', name: 'Gate Open', how: 'Meet all four paid-cert gate conditions', group: 'Milestones', test: (ctx) => { const keys = (ctx.gate.conditions || []).map(gateKey); return { have: countDone(ctx, keys), need: Math.max(1, keys.length), keys }; } },
 ]);
 
