@@ -243,10 +243,6 @@ export default {
    "Dell Latitude 3300 Owner's Manual: Safety precautions",
    "https://www.dell.com/support/manuals/en-us/latitude-13-3300-laptop/latitude_3300_om/safety-precautions?guid=guid-02d78b5c-3672-4add-8e91-809a7cce9516"
   ],
-  "digital-gov-cx": [
-   "Digital.gov: A small team's journey through digital maturity",
-   "https://digital.gov/2024/07/08/a-small-teams-journey-through-digital-maturity/"
-  ],
   "digital-gov-jargon": [
    "Digital.gov Plain Language Guide: Avoid jargon",
    "https://digital.gov/guides/plain-language/principles/avoid-jargon"
@@ -311,10 +307,6 @@ export default {
    "GNU Bash Manual: Filename Expansion",
    "https://www.gnu.org/software/bash/manual/html_node/Filename-Expansion.html"
   ],
-  "gnu-gpl-faq": [
-   "GNU Project: Frequently Asked Questions about the GNU Licenses",
-   "https://www.gnu.org/licenses/gpl-faq.html"
-  ],
   "google-cache": [
    "Google Account Help Clear Cache and Cookies",
    "https://support.google.com/accounts/answer/32050?hl=en"
@@ -366,6 +358,10 @@ export default {
   "iphone": [
    "Apple Support: iPhone 17 technical specifications",
    "https://support.apple.com/en-us/125089"
+  ],
+  "la-county-customer-service": [
+   "Los Angeles County: Customer Service Information Guide",
+   "https://hr.lacounty.gov/wp-content/uploads/2019/11/CustomerServiceGuide20091208.pdf"
   ],
   "lid-action": [
    "Microsoft Learn: Lid switch close action",
@@ -914,6 +910,10 @@ export default {
   "osha-sds": [
    "OSHA Brief: Hazard Communication Standard, Safety Data Sheets",
    "https://www.osha.gov/sites/default/files/publications/OSHA3514.pdf"
+  ],
+  "osi-gplv3": [
+   "Open Source Initiative: GNU General Public License version 3",
+   "https://opensource.org/license/gpl-3.0"
   ],
   "owasp-sql": [
    "OWASP SQL Injection",
@@ -2022,14 +2022,14 @@ export default {
     "chkdsk D:",
     "chkdsk D: /f",
     "chkdsk D: /r",
-    "sfc /scannow"
+    "chkdsk D: /scan"
    ],
    "answer": 2,
    "why": "chkdsk /r locates bad sectors and recovers readable information. It includes everything /f does plus analysis of physical disk errors. Because /r reads every sector, copy important data off a failing drive first, especially one making clicking noises.",
    "whyNot": {
-    "0": "Without parameters chkdsk only reports the volume status and does not fix anything.",
-    "1": "/f fixes logical file system errors but does not scan for bad sectors; /r adds that physical check.",
-    "3": "sfc repairs protected Windows system files; it does not check a data volume for bad sectors."
+    "0": "Without parameters, chkdsk reports volume status and does not repair errors or recover readable data.",
+    "1": "/f fixes logical file system errors but does not scan for bad sectors; /r adds that check.",
+    "3": "/scan checks an NTFS volume online for file system problems; it does not scan bad sectors or recover readable data from them."
    },
    "src": [
     "ms-chkdsk"
@@ -5678,19 +5678,19 @@ export default {
    "id": "ap2-4.3-101",
    "obj": "4.3",
    "diff": 2,
-   "q": "A small office rotates its backup media using a grandfather-father-son (GFS) scheme. Which description matches GFS?",
+   "q": "A small office rotates backup media for its workstations using a grandfather-father-son (GFS) scheme. Which description matches GFS?",
    "choices": [
-    "Keep three copies on two media types, with one copy stored offsite",
-    "Build each new full from the last full plus the later incrementals",
+    "Daily backups are fathers, weekly fulls sons, monthly fulls grandfathers",
+    "Daily backups are sons, weekly fulls grandfathers, monthly fulls fathers",
     "Daily backups are sons, weekly fulls fathers, monthly fulls grandfathers",
-    "Monthly backups are sons, weekly fulls fathers, daily backups grandfathers"
+    "Daily backups are grandfathers, weekly fulls fathers, monthly fulls sons"
    ],
    "answer": 2,
    "why": "In GFS the daily backups (sons) are reused soonest, the last full backup of each week (father) is kept longer, and the last full of each month (grandfather) is kept longest and should be stored offsite.",
    "whyNot": {
-    "0": "That is the 3-2-1 rule, which counts copies, media types and locations rather than rotating generations.",
-    "1": "That describes a synthetic full backup, which is a backup type, not a media rotation scheme.",
-    "3": "This reverses the generations: daily backups are the sons and monthly fulls are the grandfathers."
+    "0": "Daily backups are sons, not fathers; the weekly full backups are fathers.",
+    "1": "Weekly fulls are fathers, while the last full backup of each month is a grandfather.",
+    "3": "This reverses daily and monthly generations: daily backups are sons and monthly fulls are grandfathers."
    },
    "src": [
     "arcserve-gfs"
@@ -5700,7 +5700,7 @@ export default {
    "id": "ap2-4.3-102",
    "obj": "4.3",
    "diff": 2,
-   "q": "A server gets a full backup on Sunday night and an incremental backup every night from Monday to Friday. The disk fails on Thursday afternoon. Which backups restore the data to its most recent backed-up state?",
+   "q": "An office workstation gets a full backup on Sunday night and an incremental backup every night from Monday to Friday. Its disk fails Thursday afternoon. Which backups restore it to its most recent backed-up state?",
    "choices": [
     "Sunday's full plus only Wednesday night's incremental",
     "Only Wednesday night's incremental, the most recent one",
@@ -6064,22 +6064,22 @@ export default {
    "id": "ap2-4.6-101",
    "obj": "4.6",
    "diff": 2,
-   "q": "A company modifies an application released under the GNU General Public License (GPL) and plans to sell the modified version to its customers. What does the license require?",
+   "q": "A company modifies an application licensed under GNU GPL version 3 and plans to sell the modified version to customers. What must the company do?",
    "choices": [
-    "Nothing, because the GPL covers only the original author's code",
-    "Make the modified source code available to users under the GPL",
-    "Pay the original authors a royalty for each copy that is sold",
-    "Stop charging, because GPL software has to be given away free"
+    "License only the original code under GPLv3 and close the changes",
+    "Offer the modified source under GPLv3 to recipients of the program",
+    "Ship the changes under a proprietary license with no source",
+    "Provide the source but forbid customers from redistributing it"
    ],
    "answer": 1,
-   "why": "The GPL is a copyleft open-source license. You may change and even sell the software, but a modified version you distribute must be released as a whole under the GPL with its source code. Private, undistributed changes need not be released.",
+   "why": "GPLv3 allows a company to sell a modified program. When it distributes the program, it must license the covered work as a whole under GPLv3 and make the corresponding source available to recipients. Private changes that are not distributed need not be released.",
    "whyNot": {
-    "0": "A distributed modified version must be released as a whole under the GPL, including the company's own changes.",
-    "2": "The GPL lets anyone sell copies and asks no royalty; its condition is making the source available.",
-    "3": "The GPL FAQ says anyone may charge for copies; the obligation is to provide the source code."
+    "0": "GPLv3 covers the modified work as a whole, including the company's changes, when distributed.",
+    "2": "A distributed modified GPLv3 work must be licensed under GPLv3, with its corresponding source available.",
+    "3": "GPLv3 recipients keep the right to redistribute the covered work; the company cannot remove that right."
    },
    "src": [
-    "gnu-gpl-faq"
+    "osi-gplv3"
    ]
   },
   {
@@ -6094,7 +6094,7 @@ export default {
     "Two devices, as long as both of them are owned by the buyer"
    ],
    "answer": 2,
-   "why": "The Office 2024 EULA says the software is licensed, not sold, and grants one instance on one licensed device for one person at a time. It may move to another device he owns no more than once every 90 days, removed from the old one.",
+   "why": "The Office 2024 retail EULA licenses one instance on one device for one person at a time. A stand-alone copy may be moved to another device the buyer owns, but it must be removed from the old device. Transfers are limited to once every 90 days, except after hardware failure.",
    "whyNot": {
     "0": "The terms say the software is licensed, not sold, so buying a copy grants only the rights in the agreement.",
     "1": "One person at a time is a condition of use on the single licensed device; it does not add a second device.",
@@ -6120,7 +6120,7 @@ export default {
    "whyNot": {
     "0": "An AUP sets rules for how people may use an organization's systems and network, not secrecy for disclosed designs.",
     "1": "An SLA defines service levels such as response times or uptime between a provider and a customer.",
-    "2": "A EULA sets the terms for using licensed software, not a promise to keep shared business information secret."
+    "2": "An EULA sets the terms for using licensed software, not a promise to keep shared business information secret."
    },
    "src": [
     "nist-nda"
@@ -6131,7 +6131,7 @@ export default {
    "id": "ap2-4.6-104",
    "obj": "4.6",
    "diff": 2,
-   "q": "A technician at a US medical clinic is asked to copy patient records with diagnoses and treatment notes to a USB drive so a staff member can work on them at home. Which regulation most directly governs this data?",
+   "q": "A technician at a US medical clinic that electronically bills insurers is asked to copy patient records with diagnoses and treatment notes to a USB drive for work at home. Which regulation most directly governs this data?",
    "choices": [
     "HIPAA Privacy Rule",
     "PCI DSS",
@@ -6347,7 +6347,7 @@ export default {
     "2": "The supplier already gave a delivery window; withholding it leaves the user unable to plan."
    },
    "src": [
-    "digital-gov-cx"
+    "la-county-customer-service"
    ],
    "checkOnly": true
   },
