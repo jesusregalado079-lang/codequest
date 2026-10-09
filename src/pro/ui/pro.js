@@ -4,12 +4,14 @@ import beginnerUnits from '../beginner/foundations.js';
 import expertChapters from '../expert/index.js';
 import studies from '../resources.js';
 import careerPath, { milestones, gate, extras } from '../career-path.js';
+import { gateKey, groupStats as groupStatsOf, outKey, passMark, quizKey } from '../career-logic.js';
 import { run } from '../engine/runner.js';
 import { setHue } from './aether.js';
 import {
   isComplete, completeLesson, hintsUsed, revealHint,
   totalXp, rank, streakCount, chapterProgress, badgeEarned,
-  isStudyDone, toggleStudyDone,
+  toggleStudyDone, setStudyDone, studyDoneMap, ensureMigrated,
+  exportProgress, importProgress, requestPersistentStorage,
 } from '../progress.js';
 
 const app = document.getElementById('app');
@@ -69,7 +71,7 @@ function tierSwitcher(active) {
 /* ---------- markdown-lite renderer (SCHEMA.md subset) ---------- */
 
 const esc = (s) =>
-  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 const inline = (s) =>
   esc(s)
@@ -187,6 +189,9 @@ function router() {
   location.hash = ''; // unknown route → home
 }
 window.addEventListener('hashchange', router);
+// Before anything renders: carry checkmarks saved under old URL keys over to the permanent ids (runs once).
+ensureMigrated();
+requestPersistentStorage();
 
 /* ---------- shared header (XP bar / rank / streak) ---------- */
 
@@ -220,54 +225,41 @@ function tierPage(active, bodyHtml) {
 
 /* ---------- shared: study-group cards (used by Studies and Career Path) ---------- */
 
-// Progress keys: resources are keyed by URL; deliverables ("outputs") by `out:<key>`;
-// gate conditions by `gate:<key>`. All go through the same isStudyDone/toggleStudyDone.
-const outKey = (o) => `out:${o.key}`;
-const gateKey = (c) => `gate:${c.key}`;
+// Progress keys and per-group counts live in career-logic.js (pure, tested). Old URL keys were moved over once by
+// ensureMigrated().
+const groupStats = (g, done = studyDoneMap()) => groupStatsOf(g, done);
 
-function groupItems(g) {
-  // Every checkable thing in a group, in display order.
-  const links = g.links.map((l) => ({ key: l.url, hours: l.hours || 0 }));
-  const outs = (g.outputs || []).map((o) => ({ key: outKey(o), hours: 0 }));
-  return [...links, ...outs];
-}
-
-function groupStats(g) {
-  const items = groupItems(g);
-  const done = items.filter((i) => isStudyDone(i.key));
-  const hoursTotal = items.reduce((s, i) => s + i.hours, 0);
-  const hoursDone = done.reduce((s, i) => s + i.hours, 0);
-  return { done: done.length, total: items.length, hoursDone, hoursTotal, pct: items.length ? Math.round((done.length / items.length) * 100) : 0 };
-}
+const checkLabel = (name, done, doneWord = 'studied', notWord = 'not studied') => `Mark ${name} as ${done ? notWord : doneWord}`;
 
 function renderStudyGroups(groups) {
+  const done = studyDoneMap();
   return groups
-    .map((g) => {
-      const st = groupStats(g);
+    .map((g, gi) => {
+      const st = groupStats(g, done);
       const meta = [
         g.lane ? '<span class="study-lane">income lane</span>' : '',
         g.months ? `<span class="study-meta">months ${esc(g.months)}</span>` : '',
         g.hours ? `<span class="study-meta">~${g.hours[0]}–${g.hours[1]} hrs</span>` : '',
       ].join('');
       return `
-      <section class="study-group${g.lane ? ' lane' : ''}">
+      <section class="study-group${g.lane ? ' lane' : ''}" data-gi="${gi}">
         <h2>${esc(g.title)} <span class="study-group-progress">${st.done}/${st.total} done</span></h2>
         ${meta ? `<div class="study-metarow">${meta}</div>` : ''}
         <p class="chapter-lead">${esc(g.blurb)}</p>
         <div class="study-list">
           ${g.links
             .map((l) => {
-              const done = isStudyDone(l.url);
+              const isDone = done[l.id] === true;
               return `
-            <div class="study-card${done ? ' done' : ''}">
-              <button class="study-check" data-url="${esc(l.url)}" aria-pressed="${done}" aria-label="Mark ${esc(l.name)} as ${done ? 'not studied' : 'studied'}">${done ? '✓' : ''}</button>
+            <div class="study-card${isDone ? ' done' : ''}">
+              <button type="button" class="study-check" data-key="${esc(l.id)}" data-name="${esc(l.name)}" aria-pressed="${isDone}" aria-label="${esc(checkLabel(l.name, isDone))}">${isDone ? '✓' : ''}</button>
               <div class="study-col">
                 <a class="study-link" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
                   <div class="study-by">${esc(l.by)}${l.hours ? ` <span class="study-hrs">~${l.hours}h</span>` : ''}${l.codex ? ' <span class="study-codex">codex addition</span>' : ''}</div>
                   <div class="study-name">${esc(l.name)} <span class="ext">↗</span></div>
                   <div class="study-note">${esc(l.note)}</div>
                 </a>
-                ${l.quiz ? renderMiniQuiz(l.url, l.quiz) : ''}
+                ${l.quiz ? renderMiniQuiz(l.id, l.quiz, done) : ''}
               </div>
             </div>`;
             })
@@ -280,10 +272,10 @@ function renderStudyGroups(groups) {
           ${g.outputs
             .map((o) => {
               const k = outKey(o);
-              const done = isStudyDone(k);
+              const isDone = done[k] === true;
               return `
-            <div class="study-card output${done ? ' done' : ''}">
-              <button class="study-check" data-url="${esc(k)}" aria-pressed="${done}" aria-label="Mark ${esc(o.name)} as ${done ? 'not done' : 'done'}">${done ? '✓' : ''}</button>
+            <div class="study-card output${isDone ? ' done' : ''}">
+              <button type="button" class="study-check" data-key="${esc(k)}" data-name="${esc(o.name)}" data-words="done|not done" aria-pressed="${isDone}" aria-label="${esc(checkLabel(o.name, isDone, 'done', 'not done'))}">${isDone ? '✓' : ''}</button>
               <div class="study-link study-static"><div class="study-name">${esc(o.name)}</div></div>
             </div>`;
             })
@@ -301,14 +293,13 @@ function renderStudyGroups(groups) {
     .join('');
 }
 
-const quizKey = (url) => `quiz:${url}`;
-
-function renderMiniQuiz(url, quiz) {
-  const passed = isStudyDone(quizKey(url));
+function renderMiniQuiz(id, quiz, done = studyDoneMap()) {
+  const passed = done[quizKey(id)] === true;
+  const panelId = `quiz-${id}`;
   return `
     <div class="mini-quiz-wrap">
-      <button type="button" class="quiz-toggle${passed ? ' passed' : ''}" data-quiz-url="${esc(url)}">${passed ? '✓ Tested yourself — review again' : 'Test yourself ↓'}</button>
-      <div class="mini-quiz" data-quiz-for="${esc(url)}" hidden>
+      <button type="button" class="quiz-toggle${passed ? ' passed' : ''}" data-quiz-id="${esc(id)}" aria-expanded="false" aria-controls="${esc(panelId)}">${passed ? '✓ Passed. Review again' : 'Test yourself ↓'}</button>
+      <div class="mini-quiz" id="${esc(panelId)}" data-quiz-for="${esc(id)}" hidden>
         ${quiz
           .map(
             (q, qi) => `
@@ -321,69 +312,131 @@ function renderMiniQuiz(url, quiz) {
           </div>`,
           )
           .join('')}
+        <div class="quiz-result" role="status" aria-live="polite" hidden></div>
       </div>
     </div>`;
 }
 
-function wireMiniQuizzes() {
+// Quizzes are looked up by the id of the card they sit in, from the groups on THIS page (so the same course listed in
+// two phases can never grade one quiz with the other's answers).
+function wireMiniQuizzes(groups) {
+  const quizzes = new Map();
+  groups.forEach((g) => g.links.forEach((l) => { if (l.quiz) quizzes.set(l.id, l.quiz); }));
+
   app.querySelectorAll('.quiz-toggle').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const panel = app.querySelector(`.mini-quiz[data-quiz-for="${CSS.escape(btn.dataset.quizUrl)}"]`);
+      const panel = app.querySelector(`.mini-quiz[data-quiz-for="${CSS.escape(btn.dataset.quizId)}"]`);
+      if (!panel) return;
       panel.hidden = !panel.hidden;
+      btn.setAttribute('aria-expanded', String(!panel.hidden));
     });
   });
 
   app.querySelectorAll('.mini-quiz').forEach((panel) => {
-    const url = panel.dataset.quizFor;
+    const id = panel.dataset.quizFor;
+    const quiz = quizzes.get(id) || [];
     const cards = panel.querySelectorAll('.q-card');
-    const answered = new Array(cards.length).fill(false);
-    panel.querySelectorAll('.choice').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const card = btn.closest('.q-card');
-        const qi = Number(card.dataset.q);
-        if (answered[qi]) return;
-        const ci = Number(btn.dataset.c);
-        const question = quizByUrl(url)[qi];
-        const correct = ci === question.answer;
+    const result = panel.querySelector('.quiz-result');
+    let answered = new Array(cards.length).fill(null);
 
-        card.querySelectorAll('.choice').forEach((b, bi) => {
-          b.disabled = true;
-          if (bi === question.answer) b.classList.add('correct');
-          else if (bi === ci) b.classList.add('wrong');
-        });
+    const reset = () => {
+      answered = new Array(cards.length).fill(null);
+      cards.forEach((card) => {
+        card.querySelectorAll('.choice').forEach((b) => { b.disabled = false; b.classList.remove('correct', 'wrong'); });
         const why = card.querySelector('.q-why');
-        why.innerHTML = `${correct ? '<strong class="ok">Right.</strong> ' : '<strong class="no">Not quite.</strong> '}${esc(question.why)}`;
-        why.hidden = false;
+        why.hidden = true;
+        why.innerHTML = '';
+      });
+      result.hidden = true;
+      result.innerHTML = '';
+      const first = panel.querySelector('.choice');
+      if (first) first.focus();
+    };
 
-        answered[qi] = true;
-        if (answered.every(Boolean) && !isStudyDone(quizKey(url))) {
-          toggleStudyDone(quizKey(url));
-          const toggleBtn = app.querySelector(`.quiz-toggle[data-quiz-url="${CSS.escape(url)}"]`);
-          toggleBtn.textContent = '✓ Tested yourself — review again';
-          toggleBtn.classList.add('passed');
+    panel.addEventListener('click', (event) => {
+      if (event.target.closest('.quiz-retry')) { reset(); return; }
+      const btn = event.target.closest('.choice');
+      if (!btn || btn.disabled) return;
+      const card = btn.closest('.q-card');
+      const qi = Number(card.dataset.q);
+      const question = quiz[qi];
+      if (!question || answered[qi] !== null) return;
+      const ci = Number(btn.dataset.c);
+      const correct = ci === question.answer;
+      card.querySelectorAll('.choice').forEach((b, bi) => {
+        b.disabled = true;
+        if (bi === question.answer) b.classList.add('correct');
+        else if (bi === ci) b.classList.add('wrong');
+      });
+      const why = card.querySelector('.q-why');
+      why.innerHTML = `${correct ? '<strong class="ok">Right.</strong> ' : '<strong class="no">Not quite.</strong> '}${esc(question.why)}`;
+      why.hidden = false;
+      answered[qi] = correct;
+
+      if (answered.every((a) => a !== null)) {
+        const right = answered.filter(Boolean).length;
+        const need = passMark(quiz.length);
+        const toggle = app.querySelector(`.quiz-toggle[data-quiz-id="${CSS.escape(id)}"]`);
+        if (right >= need) {
+          const saved = setStudyDone(quizKey(id), true);
+          if (!saved.ok) showSaveWarning();
+          result.innerHTML = `<strong class="ok">Passed: ${right} of ${quiz.length}.</strong>`;
+          if (toggle) { toggle.textContent = '✓ Passed. Review again'; toggle.classList.add('passed'); }
+        } else {
+          result.innerHTML = `<strong class="no">${right} of ${quiz.length} right.</strong> You need ${need} to pass. <button type="button" class="quiz-retry">Try again</button>`;
         }
+        result.hidden = false;
+      }
+    });
+  });
+}
+
+// "This browser did not save that" banner, shown whenever a save fails (storage full, blocked or unavailable).
+function showSaveWarning() {
+  let bar = document.getElementById('pro-save-warning');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'pro-save-warning';
+    bar.className = 'save-warning';
+    bar.setAttribute('role', 'alert');
+    bar.innerHTML = '<strong>Your last change was not saved.</strong> This browser’s storage is full or blocked. <a href="#/career-progress">Back up your progress</a> before closing this page.';
+    document.body.appendChild(bar);
+  }
+  bar.hidden = false;
+}
+
+// Checkmarks on Studies, Roadmap and Extra update in place: the page is not redrawn, so keyboard focus, scroll
+// position and any open quiz stay exactly where they were.
+function wireStudyChecks(groups) {
+  app.querySelectorAll('.study-check').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      const res = toggleStudyDone(key);
+      if (!res.ok) showSaveWarning();
+      const done = studyDoneMap();
+      app.querySelectorAll(`.study-check[data-key="${CSS.escape(key)}"]`).forEach((b) => {
+        const isDone = done[key] === true;
+        const [yes, no] = (b.dataset.words || 'studied|not studied').split('|');
+        b.setAttribute('aria-pressed', String(isDone));
+        b.setAttribute('aria-label', checkLabel(b.dataset.name || '', isDone, yes, no));
+        b.textContent = isDone ? '✓' : '';
+        b.closest('.study-card').classList.toggle('done', isDone);
+      });
+      app.querySelectorAll('.study-group[data-gi]').forEach((section) => {
+        const g = groups[Number(section.dataset.gi)];
+        if (!g) return;
+        const st = groupStats(g, done);
+        const label = section.querySelector('.study-group-progress');
+        if (label) label.textContent = `${st.done}/${st.total} done`;
       });
     });
   });
 }
 
-function quizByUrl(url) {
-  for (const g of [...studies, ...careerPath]) {
-    const l = g.links.find((x) => x.url === url && x.quiz);
-    if (l) return l.quiz;
-  }
-  return [];
-}
-
-function wireStudyChecks(rerender) {
-  app.querySelectorAll('.study-check').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const y = window.scrollY;
-      toggleStudyDone(btn.dataset.url);
-      rerender();
-      window.scrollTo(0, y);
-    });
-  });
+// Pages that redraw on a tick (Progress) put focus back on the same checkbox afterwards.
+function refocus(key) {
+  const again = app.querySelector(`.study-check[data-key="${CSS.escape(key)}"]`);
+  if (again) again.focus({ preventScroll: true });
 }
 
 /* ---------- Studies (curated external links) ---------- */
@@ -401,7 +454,8 @@ function showResources() {
       ${renderStudyGroups(studies)}
     </main>`;
 
-  wireStudyChecks(showResources);
+  wireStudyChecks(studies);
+  wireMiniQuizzes(studies);
 }
 
 /* ---------- Career Path (staged, sequenced roadmap) ---------- */
@@ -430,8 +484,8 @@ function showCareerPath() {
       ${renderStudyGroups(careerPath)}
     </main>`;
 
-  wireStudyChecks(showCareerPath);
-  wireMiniQuizzes();
+  wireStudyChecks(careerPath);
+  wireMiniQuizzes(careerPath);
 }
 
 /* ---------- Career Path · Extra (optional, off-path side content) ---------- */
@@ -446,13 +500,69 @@ function showCareerExtra() {
       ${renderStudyGroups(extras)}
     </main>`;
 
-  wireStudyChecks(showCareerExtra);
+  wireStudyChecks(extras);
+  wireMiniQuizzes(extras);
 }
 
 /* ---------- Career Path · Progress ---------- */
 
-function showCareerProgress() {
-  const stats = careerPath.map((p) => ({ p, ...groupStats(p) }));
+const LAST_EXPORT_KEY = 'codequest-pro-last-export';
+function lastExportText() {
+  let at = null;
+  try { at = localStorage.getItem(LAST_EXPORT_KEY); } catch { /* storage unavailable */ }
+  const when = at ? new Date(at) : null;
+  if (!when || Number.isNaN(when.getTime())) return 'No backup exported from this browser yet.';
+  const days = Math.floor((Date.now() - when.getTime()) / 86400000);
+  return `Last backup exported ${days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`} (${when.toLocaleDateString()}).`;
+}
+
+function backupHtml(status) {
+  return `
+      <h2 class="prog-h2" id="backup">Back up your progress</h2>
+      <p class="chapter-lead">Every checkmark is saved only in this browser on this device. Clearing browser data or switching devices would lose it, so export a backup file now and then. Import it to bring everything back, here or on another device.</p>
+      <div class="backup-row">
+        <button type="button" class="backup-btn" data-backup="export">Export backup file</button>
+        <label class="backup-btn">Import a backup file<input type="file" accept="application/json,.json" data-backup="import" class="visually-hidden"></label>
+      </div>
+      <label class="backup-mode"><input type="checkbox" data-backup="replace"> Replace everything here with the file (otherwise the file is added to what is already here)</label>
+      <p class="backup-status" role="status" aria-live="polite">${esc(status || lastExportText())}</p>`;
+}
+
+function wireBackup() {
+  const exportBtn = app.querySelector('[data-backup="export"]');
+  const input = app.querySelector('[data-backup="import"]');
+  const status = app.querySelector('.backup-status');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      const now = new Date();
+      const blob = new Blob([exportProgress(now)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `codequest-pro-progress-${now.toLocaleDateString('en-CA')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      try { localStorage.setItem(LAST_EXPORT_KEY, now.toISOString()); } catch { /* storage unavailable */ }
+      status.textContent = `Backup file saved (${a.download}). Keep it somewhere safe, like your Google Drive.`;
+    });
+  }
+  if (input) {
+    input.addEventListener('change', async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const replace = app.querySelector('[data-backup="replace"]').checked;
+      const result = importProgress(await file.text(), replace ? 'replace' : 'merge');
+      showCareerProgress(result.ok ? `Imported. ${result.items} checkmarks are saved here now.` : result.error);
+      const again = app.querySelector('.backup-status');
+      if (again) again.focus();
+    });
+  }
+}
+
+function showCareerProgress(backupStatus) {
+  const doneMap = studyDoneMap();
+  const stats = careerPath.map((p) => ({ p, ...groupStats(p, doneMap) }));
   const totalItems = stats.reduce((s, x) => s + x.total, 0);
   const doneItems = stats.reduce((s, x) => s + x.done, 0);
   const hoursTotal = stats.reduce((s, x) => s + x.hoursTotal, 0);
@@ -494,15 +604,15 @@ function showCareerProgress() {
     })
     .join('');
 
-  const gateDone = gate.conditions.filter((c) => isStudyDone(gateKey(c))).length;
+  const gateDone = gate.conditions.filter((c) => doneMap[gateKey(c)] === true).length;
   const gateOpen = gateDone === gate.conditions.length;
   const gateRows = gate.conditions
     .map((c) => {
       const k = gateKey(c);
-      const done = isStudyDone(k);
+      const done = doneMap[k] === true;
       return `
       <div class="study-card output${done ? ' done' : ''}">
-        <button class="study-check" data-url="${esc(k)}" aria-pressed="${done}" aria-label="Mark gate condition as ${done ? 'not met' : 'met'}">${done ? '✓' : ''}</button>
+        <button type="button" class="study-check" data-key="${esc(k)}" aria-pressed="${done}" aria-label="Mark gate condition ${esc(c.name)} as ${done ? 'not met' : 'met'}">${done ? '✓' : ''}</button>
         <div class="study-link study-static"><div class="study-name">${esc(c.name)}</div></div>
       </div>`;
     })
@@ -550,9 +660,18 @@ function showCareerProgress() {
         <p class="study-note"><strong>Ratings Codex overruled:</strong></p>
         <ul class="gate-ul">${gate.overruled.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>
       </div>
+      ${backupHtml(backupStatus)}
     </main>`;
 
-  wireStudyChecks(showCareerProgress);
+  app.querySelectorAll('.study-check').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      if (!toggleStudyDone(key).ok) showSaveWarning();
+      showCareerProgress();
+      refocus(key);
+    });
+  });
+  wireBackup();
 }
 
 /* ---------- Beginner tier ---------- */

@@ -94,3 +94,11 @@ Engine reveals one at a time; each reveal costs 2 XP off the lesson award.
 | 6 | Working With Text & Data | string methods, parsing, formatting real data |
 | 7 | Thinking in Higher Order | callbacks, map/filter/reduce, composition |
 | 8 | The Engineer's Toolkit | binary/numbers, Big-O intuition, debugging, reading code |
+
+## Career Path progress (since 2026-10-08)
+- Every checkable resource in `career-path.js` (phases and `extras`) and `resources.js` has a permanent `id`; that id is its progress key. Change a link's `url` or `name` freely, never its `id`. New items get a new unique id (`p<phase>-…`, `x<group>-…`, `s<group>-…`). The same course listed on two pages shares one id (`ai-fluency`, `linkedin-genai-career-essentials`).
+- Expedited items use their `key`; the two Professor Messer courses use the Full roadmap ids so one checkmark shows on both roadmaps.
+- Deliverables are `out:<key>`, gate conditions `gate:<key>`, a passed quiz `quiz:<id>` (2 of 3 right).
+- Before 2026-10-08 progress was keyed by URL. `legacy-keys.js` (frozen) maps those old keys to ids and `progress.js` `ensureMigrated()` applies it once on both pages. Never edit that table.
+- `progress.js` normalises everything it reads, reports failed saves instead of throwing, and exports/imports a JSON backup (Progress page, "Back up your progress").
+- `test/pro-career.test.js` checks the data (ids, URLs, hours, quiz answers, milestones) and the storage rules; `.foreman/scratch/browser/pro-career.cjs` checks the pages in a real browser.

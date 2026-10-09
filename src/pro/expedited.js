@@ -1,5 +1,5 @@
 import stages, { summary } from './expedited-path.js';
-import { isStudyDone, toggleStudyDone } from './progress.js';
+import { ensureMigrated, isStudyDone, requestPersistentStorage, toggleStudyDone } from './progress.js';
 
 const app = document.getElementById('expedited-app');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -84,10 +84,27 @@ function render() {
 
   app.querySelectorAll('[data-check]').forEach((button) => {
     button.addEventListener('click', () => {
-      toggleStudyDone(button.dataset.check);
+      const key = button.dataset.check;
+      const saved = toggleStudyDone(key).ok;
       render();
+      // the page is redrawn: put keyboard focus back on the same checkbox
+      const again = app.querySelector(`[data-check="${CSS.escape(key)}"]`);
+      if (again) again.focus({ preventScroll: true });
+      if (!saved) showSaveWarning();
     });
   });
+}
+
+function showSaveWarning() {
+  let bar = document.getElementById('exp-save-warning');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'exp-save-warning';
+    bar.setAttribute('role', 'alert');
+    bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:60;padding:12px 16px;border-radius:12px;background:#5a1f17;color:#fff;font:600 15px/1.4 system-ui,sans-serif';
+    bar.innerHTML = 'Your last change was not saved. This browser’s storage is full or blocked. <a style="color:#ffd9cf" href="./pro.html#/career-progress">Back up your progress</a> before closing this page.';
+    document.body.appendChild(bar);
+  }
 }
 
 function renderStage(stage) {
@@ -128,4 +145,7 @@ function renderItem(item) {
     </div>`;
 }
 
+// Before anything renders: carry checkmarks saved under old keys over to the permanent ids (runs once).
+ensureMigrated();
+requestPersistentStorage();
 render();

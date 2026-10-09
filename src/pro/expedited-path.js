@@ -6,7 +6,7 @@ export const summary = {
   title: 'Expedited Cybersecurity Roadmap',
   subtitle: 'Zero IT experience → first technical role → security role',
   target: 'Start IT applications around months 2–3; become security-competitive around months 6–9 while continuing the full roadmap as backup training.',
-  costNote: 'Training can be mostly free. Current planning budget for all three CompTIA exams at US retail: A+ $548 total ($274 × 2), Network+ $399, Security+ $439 = $1,386 before discounts, taxes, retakes, or bundles. Verify pricing before purchase.',
+  costNote: 'Training can be mostly free. Current planning budget for all three CompTIA exams at US retail: A+ $548 total ($274 × 2), Network+ $399, Security+ $439 = $1,386 before discounts, taxes, retakes, or bundles. Verify pricing before purchase. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026; SY0-701 stays bookable until CompTIA retires it, so study for whichever version you will actually sit.',
 };
 
 const E = (n, title, opts) => ({ n, title, ...opts });
@@ -21,7 +21,7 @@ export default [
     items: [
       { key: 'exp0-windows', name: 'Windows basics: files, processes, Task Manager, Device Manager, updates, users and permissions', hours: 5, url: 'https://learn.microsoft.com/en-us/windows/' },
       { key: 'exp0-shell', name: 'Absolute-beginner shell navigation: pwd, ls, cd, mkdir, cp, mv, rm, help/man', hours: 4, url: 'https://swcarpentry.github.io/shell-novice/' },
-      { key: 'exp0-vm', name: 'Create one disposable Windows or Linux virtual machine and document how to start, stop, snapshot and restore it', hours: 4 },
+      { key: 'exp0-vm', name: 'Create one disposable Windows or Linux virtual machine and document how to start, stop, snapshot and restore it. On an Apple M1 Mac, use UTM or Parallels with Windows 11 on ARM, or a cloud VM; VirtualBox cannot run an x86 Windows guest', hours: 4 },
       { key: 'exp0-proof', name: 'Checkpoint: explain administrator vs standard user, file permissions, process vs service, and what an operating system does without AI assistance', hours: 2 },
     ],
   }),
@@ -30,11 +30,13 @@ export default [
     timing: '8–12 weeks',
     months: 'months 1–3',
     cost: '$548 retail exam budget',
-    hours: [90, 130],
+    hours: [110, 170],
     blurb: 'Your first major foundation because you are starting from zero traditional IT experience. Learn both A+ cores and practice the troubleshooting skills that entry-level IT support jobs screen for. Do not wait for perfection before moving to the employment gate.',
     items: [
       { key: 'exp1-a-core1', name: 'A+ Core 1 (220-1201): hardware, mobile devices, networking, virtualization/cloud, troubleshooting', hours: 45, url: 'https://www.comptia.org/certifications/a' },
       { key: 'exp1-a-core2', name: 'A+ Core 2 (220-1202): operating systems, security, software troubleshooting, operational procedures', hours: 45, url: 'https://www.comptia.org/certifications/a' },
+      { key: 'exp1-messer-a-core1', name: 'Professor Messer free A+ 220-1201 Core 1 video course', hours: 10, url: 'https://www.professormesser.com/free-a-plus-training/220-1201/220-1201-video/220-1201-training-course/' },
+      { key: 'exp1-messer-a-core2', name: 'Professor Messer free A+ 220-1202 Core 2 video course', hours: 14, url: 'https://www.professormesser.com/free-a-plus-training/220-1202/220-1202-video/220-1202-training-course/' },
       { key: 'exp1-lab', name: 'Hands-on support lab: create user, change permissions, install/remove software, inspect startup apps/services, troubleshoot a broken network setting, document fixes', hours: 15 },
       { key: 'exp1-practice', name: 'Readiness gate: consistently score about 80–85%+ on reputable practice exams and explain missed answers without relying on AI', hours: 10 },
       { key: 'exp1-exam1', name: 'Optional/expected: pass A+ Core 1 exam — current planning price $274 retail', hours: 0 },
@@ -62,9 +64,9 @@ export default [
     months: 'months 3–5',
     cost: '$0 learning / $399 Network+ exam if taken',
     hours: [55, 80],
-    blurb: 'Cybersecurity becomes much easier once networking stops being mysterious. Learn the Network+ material whether or not you immediately buy the exam.',
+    blurb: 'Cybersecurity becomes much easier once networking stops being mysterious. Learn the Network+ material whether or not you immediately buy the exam. CompTIA estimates N10-009 retirement in 2027; check the exam version before booking.',
     items: [
-      { key: 'https://www.professormesser.com/network-plus/n10-009/n10-009-video/n10-009-training-course/', name: 'Professor Messer Network+ N10-009 full course + notes/practice', hours: 40, url: 'https://www.professormesser.com/network-plus/n10-009/n10-009-video/n10-009-training-course/' },
+      { key: 'p2-comptia-network-n10-009-free-course', was: 'https://www.professormesser.com/network-plus/n10-009/n10-009-video/n10-009-training-course/', name: 'Professor Messer Network+ N10-009 full course + notes/practice', hours: 40, url: 'https://www.professormesser.com/network-plus/n10-009/n10-009-video/n10-009-training-course/' },
       { key: 'exp3-wireshark', name: 'Wireshark lab: capture DNS, TCP handshake and HTTP/HTTPS traffic; identify source/destination IPs and ports', hours: 8, url: 'https://www.wireshark.org/docs/' },
       { key: 'exp3-dns', name: 'Troubleshooting gate: machine can ping 8.8.8.8 but names do not resolve — diagnose and explain why DNS is suspected', hours: 3 },
       { key: 'exp3-core', name: 'Explain DHCP, DNS, NAT, TCP vs UDP, common ports, subnetting basics, routers, switches, VPNs and firewalls without AI', hours: 5 },
@@ -77,14 +79,14 @@ export default [
     months: 'months 4–6',
     cost: '$0 learning / $439 Security+ exam',
     hours: [55, 80],
-    blurb: 'Build the broad security vocabulary employers expect, but pair it with actual Windows/Linux evidence. Take Security+ when you understand the material and can afford the exam without creating financial strain.',
+    blurb: 'Build the broad security vocabulary employers expect, but pair it with actual Windows/Linux evidence. Take Security+ when you understand the material and can afford the exam without creating financial strain. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026; SY0-701 stays bookable until CompTIA retires it, so study for whichever version you will actually sit.',
     items: [
-      { key: 'https://www.professormesser.com/security-plus/sy0-701/sy0-701-video/sy0-701-comptia-security-plus-course/', name: 'Professor Messer Security+ SY0-701 course + notes/practice', hours: 35, url: 'https://www.professormesser.com/security-plus/sy0-701/sy0-701-video/sy0-701-comptia-security-plus-course/' },
+      { key: 'p2-comptia-security-sy0-701-foundations-checkpoint', was: 'https://www.professormesser.com/security-plus/sy0-701/sy0-701-video/sy0-701-comptia-security-plus-course/', name: 'Professor Messer Security+ SY0-701 course + notes/practice', hours: 35, url: 'https://www.professormesser.com/security-plus/sy0-701/sy0-701-video/sy0-701-comptia-security-plus-course/' },
       { key: 'exp4-windowslogs', name: 'Windows security lab: local users/groups, failed/successful logins, Event Viewer filtering and exported evidence', hours: 8, url: 'https://learn.microsoft.com/en-us/shows/inside/event-viewer' },
       { key: 'exp4-linux', name: 'Linux practice: complete Bandit through at least level 15 before SOC lab; continue the full game on the backup roadmap', hours: 8, url: 'https://overthewire.org/wargames/bandit/' },
       { key: 'exp4-incident', name: 'Write one mini incident report separating detection, containment, eradication, recovery and lessons learned', hours: 3 },
       { key: 'exp4-practice', name: 'Security+ readiness gate: stable 80–85%+ practice scores plus ability to explain threat/vulnerability/risk, authn/authz, hashing/encryption and incident response', hours: 5 },
-      { key: 'exp4-secexam', name: 'Pass Security+ SY0-701 — current planning price $439 retail', hours: 0 },
+      { key: 'exp4-secexam', name: 'Pass Security+ SY0-701, current planning price $439 retail', hours: 0 },
     ],
   }),
 
@@ -93,9 +95,9 @@ export default [
     months: 'months 5–7',
     cost: '$0–$50 typical lab budget',
     hours: [45, 70],
-    blurb: 'Turn certifications into evidence. Build a small Windows/Linux defensive lab, generate known activity, collect logs, write a detection and explain a false positive. This is the expedited version of your deeper Phase 3 Defensive Engineering Lab.',
+    blurb: 'Turn certifications into evidence. Build a small Windows/Linux defensive lab, generate known activity, collect logs, write a detection and explain a false positive. This is the expedited version of your deeper Phase 3 Defensive Engineering Lab. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026; SY0-701 stays bookable until CompTIA retires it, so study for whichever version you will actually sit.',
     items: [
-      { key: 'exp5-lab', name: 'Build Windows + Linux VM lab and one simple network diagram', hours: 10 },
+      { key: 'exp5-lab', name: 'Build Windows + Linux VM lab and one simple network diagram. On an Apple M1 Mac, use UTM or Parallels with Windows 11 on ARM, or a cloud VM; check Sysmon and Wazuh agent support on Windows ARM', hours: 10 },
       { key: 'exp5-sysmon', name: 'Install/configure Sysmon and identify useful process/network/login telemetry', hours: 7, url: 'https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon' },
       { key: 'exp5-wazuh', name: 'Send lab telemetry to Wazuh and verify events arrive reliably', hours: 10, url: 'https://documentation.wazuh.com/' },
       { key: 'exp5-attack', name: 'Simulate at least two harmless, controlled techniques in your own lab and map them to MITRE ATT&CK', hours: 8, url: 'https://attack.mitre.org/' },
@@ -127,7 +129,7 @@ export default [
     blurb: 'Add Python, PowerShell, cloud/IAM and CI only after the employment-first foundation is moving. Pull the deeper material from your original roadmap as the exact job or portfolio gap demands.',
     items: [
       { key: 'exp7-python', name: 'Python: files, JSON, requests, regex, error handling; build one log or IOC automation', hours: 20, url: 'https://docs.python.org/3/tutorial/' },
-      { key: 'exp7-powershell', name: 'PowerShell: objects, pipelines, Get-Process, Get-WinEvent, Export-Csv; automate one evidence collection task', hours: 10, url: 'https://learn.microsoft.com/en-us/training/modules/introduction-to-powershell/' },
+      { key: 'exp7-powershell', name: 'PowerShell: objects, pipelines, Get-Process, Get-WinEvent, Export-Csv; automate one evidence collection task', hours: 10, url: 'https://learn.microsoft.com/en-us/powershell/scripting/learn/ps101/00-introduction' },
       { key: 'exp7-cloud', name: 'Cloud/IAM lab: users/roles, least privilege, MFA, logging; deliberately misconfigure something in a controlled lab and prove the remediation', hours: 20 },
       { key: 'exp7-ci', name: 'Add tests/CI to one security automation repository and preserve a failing-before/passing-after example', hours: 8 },
     ],
@@ -140,7 +142,8 @@ export default [
     hours: [45, 80],
     blurb: 'This is where your existing agentic-AI experience becomes a differentiator. Treat AI security as a specialization layered on top of conventional IT/security, not as a shortcut around it.',
     items: [
-      { key: 'exp8-owasp', name: 'Study OWASP LLM/GenAI risks and reproduce harmless prompt-injection/evaluation cases using synthetic data', hours: 12, url: 'https://owasp.org/www-project-top-10-for-large-language-model-applications/' },
+      { key: 'exp8-owasp', name: 'Study the 2026 OWASP LLM/GenAI risks and reproduce harmless prompt-injection/evaluation cases using synthetic data', hours: 12, url: 'https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/' },
+      { key: 'exp8-owasp-agentic-applications', name: 'Read the OWASP Top 10 for Agentic Applications 2026 and map agent risks to the MCP threat model', hours: 4, url: 'https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/' },
       { key: 'exp8-atlas', name: 'Map two AI-system threat scenarios to MITRE ATLAS', hours: 6, url: 'https://atlas.mitre.org/' },
       { key: 'exp8-mcp', name: 'Threat-model one MCP/agent workflow: tools, permissions, trust boundaries, injection paths, data exposure and human approval gates', hours: 12, url: 'https://modelcontextprotocol.io/' },
       { key: 'exp8-project', name: 'Publish one sanitized AI-agent security assessment project with test cases, observed failures, mitigations and manual verification', hours: 15 },

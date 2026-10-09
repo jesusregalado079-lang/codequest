@@ -1,5 +1,13 @@
 // Pro-track progress in localStorage. One key, plain JSON. Mirrors ../progress.js style.
+//
+// Everything read from storage is normalised field by field (a damaged or hand-edited save can never stop a page
+// from rendering), every write goes through one guarded save() that reports failure instead of throwing, and the
+// learner can export his progress to a file and import it back (the only copy otherwise lives in this browser).
+import { LEGACY_KEYS_V1 } from './legacy-keys.js';
+
 const KEY = 'codequest-pro-v1';
+export const EXPORT_FORMAT = 'codequest-pro-progress';
+export const EXPORT_VERSION = 1;
 
 const RANKS = [
   [0, 'Newcomer'],
@@ -11,20 +19,52 @@ const RANKS = [
   [1000, 'Engineer-in-Training'],
 ];
 
-const empty = () => ({ completed: {}, hintsUsed: {}, streak: { count: 0, last: null }, studyDone: {} });
+const empty = () => ({ completed: {}, hintsUsed: {}, streak: { count: 0, last: null }, studyDone: {}, migrations: {} });
+
+const plain = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+const okKey = (k) => typeof k === 'string' && k.length > 0 && k.length <= 400 && k !== '__proto__' && k !== 'constructor' && k !== 'prototype';
+const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+// A clean state from anything: wrong types are dropped one field at a time, valid parts are kept.
+export function normalizeState(raw) {
+  const o = plain(raw);
+  const out = empty();
+  Object.keys(plain(o.completed)).forEach((k) => {
+    const xp = o.completed[k];
+    if (okKey(k) && typeof xp === 'number' && Number.isFinite(xp) && xp >= 0 && xp <= 10000) out.completed[k] = xp;
+  });
+  Object.keys(plain(o.hintsUsed)).forEach((k) => {
+    const n = o.hintsUsed[k];
+    if (okKey(k) && Number.isInteger(n) && n >= 0 && n <= 3) out.hintsUsed[k] = n;
+  });
+  const st = plain(o.streak);
+  out.streak = { count: Number.isInteger(st.count) && st.count >= 0 ? st.count : 0, last: isDay(st.last) ? st.last : null };
+  Object.keys(plain(o.studyDone)).forEach((k) => { if (okKey(k) && o.studyDone[k] === true) out.studyDone[k] = true; });
+  Object.keys(plain(o.migrations)).forEach((k) => { if (okKey(k) && o.migrations[k] === true) out.migrations[k] = true; });
+  return out;
+}
 
 function load() {
   try {
-    const s = JSON.parse(localStorage.getItem(KEY)) ?? {};
-    return { ...empty(), ...s, streak: { ...empty().streak, ...s.streak } };
+    return normalizeState(JSON.parse(localStorage.getItem(KEY)));
   } catch {
     return empty();
   }
 }
 
+// Storage can be full, blocked or unavailable. A failed save never throws into a click handler; it is recorded so
+// the page can tell the learner his last change was not kept.
+let lastSave = { ok: true };
 function save(state) {
-  localStorage.setItem(KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(state));
+    lastSave = { ok: true };
+  } catch (error) {
+    lastSave = { ok: false, error: String(error && error.name ? error.name : error) };
+  }
+  return lastSave.ok;
 }
+export const lastSaveOk = () => lastSave.ok;
 
 const today = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
 // Local calendar day before today. Uses date arithmetic (not now-24h) so the
@@ -81,15 +121,85 @@ export function streakCount() {
   return last === today() || last === yesterday() ? count : 0;
 }
 
-export function isStudyDone(url) {
-  return !!load().studyDone[url];
+// Study/roadmap checkmarks. `key` is an item's permanent id (or `out:`/`gate:`/`quiz:` keys built from one).
+export function isStudyDone(key) {
+  return load().studyDone[key] === true;
 }
 
-export function toggleStudyDone(url) {
+// Every saved checkmark at once, for pages that read many (one storage read instead of one per item).
+export function studyDoneMap() {
+  return { ...load().studyDone };
+}
+
+// Returns { ok, done }: `done` is the new state, `ok` false when it could not be saved.
+export function toggleStudyDone(key) {
   const s = load();
-  if (s.studyDone[url]) delete s.studyDone[url];
-  else s.studyDone[url] = true;
+  if (s.studyDone[key]) delete s.studyDone[key];
+  else s.studyDone[key] = true;
+  const ok = save(s);
+  return { ok, done: s.studyDone[key] === true };
+}
+
+export function setStudyDone(key, value) {
+  const s = load();
+  if (value) s.studyDone[key] = true;
+  else delete s.studyDone[key];
+  return { ok: save(s), done: value === true };
+}
+
+// One-time move of checkmarks saved under old keys to the permanent ids. Runs once per name, never undoes anything,
+// and leaves the old keys in place (harmless, and a way back if ever needed).
+export function applyKeyMigration(name, pairs) {
+  const s = load();
+  if (s.migrations[name]) return { ran: false, moved: 0 };
+  let moved = 0;
+  pairs.forEach(([from, to]) => {
+    if (s.studyDone[from] === true && s.studyDone[to] !== true) { s.studyDone[to] = true; moved += 1; }
+  });
+  s.migrations[name] = true;
   save(s);
+  return { ran: true, moved };
+}
+
+export function ensureMigrated() {
+  return applyKeyMigration('ids-2026-10-08', LEGACY_KEYS_V1);
+}
+
+// ---------- backup ----------
+export function exportProgress(now = new Date()) {
+  return JSON.stringify({ format: EXPORT_FORMAT, version: EXPORT_VERSION, exportedAt: now.toISOString(), progress: load() }, null, 2);
+}
+
+// mode 'merge' (default): keep everything already here and add what the file has (a checkmark is never removed,
+// XP keeps the higher value). mode 'replace': the file becomes the progress. Returns { ok, error?, items }.
+export function importProgress(text, mode = 'merge') {
+  let parsed;
+  try { parsed = JSON.parse(text); } catch { return { ok: false, error: 'That file is not a CodeQuest Pro backup (it is not valid JSON).' }; }
+  const o = plain(parsed);
+  if (o.format !== EXPORT_FORMAT || !Number.isInteger(o.version) || o.version < 1) return { ok: false, error: 'That file is not a CodeQuest Pro backup.' };
+  if (o.version > EXPORT_VERSION) return { ok: false, error: 'That backup was made by a newer version of the app.' };
+  const incoming = normalizeState(o.progress);
+  let next;
+  if (mode === 'replace') next = incoming;
+  else {
+    const here = load();
+    next = normalizeState(here);
+    Object.keys(incoming.studyDone).forEach((k) => { next.studyDone[k] = true; });
+    Object.keys(incoming.completed).forEach((k) => { next.completed[k] = Math.max(next.completed[k] ?? 0, incoming.completed[k]); });
+    Object.keys(incoming.hintsUsed).forEach((k) => { next.hintsUsed[k] = Math.max(next.hintsUsed[k] ?? 0, incoming.hintsUsed[k]); });
+    Object.keys(incoming.migrations).forEach((k) => { next.migrations[k] = true; });
+    if (incoming.streak.last && (!next.streak.last || incoming.streak.last > next.streak.last)) next.streak = incoming.streak;
+  }
+  if (!save(next)) return { ok: false, error: 'This browser could not save the imported progress (storage is full or blocked).' };
+  return { ok: true, items: Object.keys(next.studyDone).length };
+}
+
+// Ask the browser not to clear this site's data when space is short (best effort; some browsers ignore it).
+export function requestPersistentStorage() {
+  try {
+    if (globalThis.navigator && navigator.storage && navigator.storage.persist) return navigator.storage.persist().catch(() => false);
+  } catch { /* optional */ }
+  return Promise.resolve(false);
 }
 
 export function chapterProgress(chapter) {
