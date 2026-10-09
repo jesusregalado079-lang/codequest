@@ -3,7 +3,7 @@
 import { bestScore, isPassed, recordRun } from '../../labs/lab-logic.js';
 import { LAB_SOURCES } from '../../labs/catalog.js';
 import { getLabs, saveLabs } from '../../progress.js';
-import exam from '../../exam/secplus-801.js';
+import { SECPLUS_801 } from '../../exam/blueprints.js';
 
 export const S = { ctx: null, cleanups: [] };
 
@@ -17,10 +17,11 @@ export function leaveAll() {
 export const esc = (s) => S.ctx.esc(s);
 export const itemIdOf = (lab, kase) => `${lab.id}/${kase.id}`;
 
-const OBJ_LABELS = Object.fromEntries(exam.blueprint.domains.flatMap((d) => d.objectives.map((o) => [o.id, o.label])));
+// Security+ objective labels from its blueprint only (never its question bank, which is a separate chunk).
+const OBJ_LABELS = Object.fromEntries(SECPLUS_801.domains.flatMap((d) => d.objectives.map((o) => [o.id, o.label])));
 export const objLabel = (id) => OBJ_LABELS[id] || '';
 export function objChips(objs, cls = '') {
-  return `<span class="lb-objs ${cls}">${(objs || []).map((o) => `<a class="lb-obj" href="#/exam/domain/${esc(String(o).split('.')[0])}" title="${esc(objLabel(o))}">Sec+ ${esc(o)}</a>`).join('')}</span>`;
+  return `<span class="lb-objs ${cls}">${(objs || []).map((o) => `<a class="lb-obj" href="#/exam/${SECPLUS_801.id}/domain/${esc(String(o).split('.')[0])}" title="${esc(objLabel(o))}">Sec+ ${esc(o)}</a>`).join('')}</span>`;
 }
 
 export const levelName = (n) => ['', 'Level 1 · warm-up', 'Level 2 · working', 'Level 3 · exam-hard'][n] || `Level ${n}`;

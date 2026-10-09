@@ -164,7 +164,7 @@ export function journey({ full, milestones, gate, stages = [], done, doneAt = {}
 
 // ---------- achievements ----------
 // Each badge: id, icon, name, how (what earns it), and test(ctx) -> { earned, progress: [have, need] }.
-// ctx: { done, doneAt, full, extras, stages, gate, j (journey), exam?, labs? }.
+// ctx: { done, doneAt, full, extras, stages, gate, j (journey), exam? (Security+ summary), exams? ({ [examId]: summary }), labs? }.
 const countDone = (ctx, keys) => keys.filter((k) => ctx.done[k] === true).length;
 const latestDate = (ctx, keys) => keys.map((k) => ctx.doneAt[k]).filter(Boolean).sort().pop() || null;
 const linkIds = (ctx) => ctx.full.flatMap((p) => p.links.map((l) => l.id));
@@ -185,6 +185,13 @@ const examBadge = (id, icon, name, how, have, need) => ({ id, icon, name, how, g
 } });
 // Hands-on lab badges read ctx.labs (labSummary from labs/lab-logic.js: { total, passed, perfect, perLab }); no lab data
 // means no progress, never a crash. need() may depend on the catalog (a lab's case count grows with its content).
+// "Ready" for the other exams: the same rule as exam-ready (three full mocks in a row at the target), read from
+// ctx.exams[examId] (every exam's summary). Security+ mocks never count toward these.
+const examReadyBadge = (id, icon, name, examId, short) => ({ id, icon, name, how: `Three full ${short} mocks in a row at 85% or more`, group: 'Exam', test: (ctx) => {
+  const e = ctx.exams && typeof ctx.exams === 'object' ? ctx.exams[examId] : null;
+  const run = e && Number.isFinite(e.runAtTarget) ? e.runAtTarget : 0;
+  return { have: run, need: 3, noDate: true };
+} });
 const labOne = (l, id) => (l && Array.isArray(l.perLab) ? l.perLab.find((x) => x && x.id === id) : null) || null;
 const labBadge = (id, icon, name, how, have, need) => ({ id, icon, name, how, group: 'Labs', test: (ctx) => {
   const l = ctx.labs && typeof ctx.labs === 'object' ? ctx.labs : null;
@@ -229,6 +236,9 @@ export const BADGES = Object.freeze([
   examBadge('exam-ready', '🛡️', 'Exam Ready', 'Three full mocks in a row at 85% or more', (e) => e.runAtTarget, 3),
   examBadge('exam-seen-100', '📚', 'Hundred Questions', 'Answer 100 different exam questions', (e) => e.seen, 100),
   examBadge('exam-seen-all', '🗺️', 'Seen It All', 'Answer every question in the Security+ bank', (e) => e.seen, (e) => e.total),
+  examReadyBadge('exam-np9-ready', '🌐', 'Network+ Ready', 'netplus-009', 'Network+'),
+  examReadyBadge('exam-ap1-ready', '🔧', 'A+ Core 1 Ready', 'aplus-1201', 'A+ Core 1'),
+  examReadyBadge('exam-ap2-ready', '🖥️', 'A+ Core 2 Ready', 'aplus-1202', 'A+ Core 2'),
   labBadge('lab-first', '🧪', 'First Lab', 'Pass any hands-on lab case', (l) => l.passed || 0, 1),
   labBadge('lab-fw', '🧱', 'Firewall Fixer', 'Pass every Firewall & Network Diagram case', ...labCases('fw')),
   labBadge('lab-logs', '🔎', 'Log Detective', 'Pass every Log Detective set', ...labCases('logs')),
@@ -245,8 +255,9 @@ export const BADGES = Object.freeze([
 export function achievements(ctx) {
   return BADGES.map((b) => {
     const r = b.test(ctx);
-    const earned = r.need > 0 && r.have >= r.need;
+    const storedDate = ctx.kept && Object.hasOwn(ctx.kept, b.id) ? ctx.kept[b.id] : null;
+    const earned = (r.need > 0 && r.have >= r.need) || storedDate !== null;
     const keys = r.keys || (b.group === 'Momentum' ? allKeys(ctx) : []);
-    return { id: b.id, icon: b.icon, name: b.name, how: b.how, group: b.group, phase: b.phase || null, earned, have: Math.min(r.have, r.need), need: r.need, date: earned && !r.noDate ? latestDate(ctx, keys) : null };
+    return { id: b.id, icon: b.icon, name: b.name, how: b.how, group: b.group, phase: b.phase || null, earned, have: Math.min(r.have, r.need), need: r.need, date: storedDate || (earned && !r.noDate ? latestDate(ctx, keys) : null) };
   });
 }

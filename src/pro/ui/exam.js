@@ -1,25 +1,39 @@
-// Certification exam practice pages (#/exam...). Security+ SY0-801 first; the rules live in ../exam/exam-logic.js.
-//   #/exam                 hub: readiness, mock exams, review queue, study first, domains, history
-//   #/exam/domain/<n>      one domain: objectives, accuracy, practice
-//   #/exam/session         the open session (mock, domain check, practice, review)
-//   #/exam/result/<id>     a finished mock or check
-import exam from '../exam/secplus-801.js';
+// Certification exam practice pages (#/exam...), one set of pages for every exam in ../exam/registry.js. The rules live
+// in ../exam/exam-logic.js. Loaded on demand by the router (pro.js), with the open exam's bank already loaded.
+//   #/exam                            exams hub: one card per exam
+//   #/exam/<examId>                   that exam's hub: readiness, mock exams, review queue, study first, domains, history
+//   #/exam/<examId>/domain/<n>        one domain: objectives, accuracy, practice
+//   #/exam/<examId>/session           the open session (mock, domain check, practice, review)
+//   #/exam/<examId>/result/<id>       a finished mock or check
+import { EXAMS } from '../exam/registry.js';
+import { examSummaries } from '../exam/summary.js';
 import {
   domainQuotas, domainAverages, domainStats, drawExam, finishExamSession, newSession, objectiveStats,
   practiceOrder, practiceSet, readiness, reviewDue, studyFirst, visibleInPractice, addEntries,
 } from '../exam/exam-logic.js';
 import { getExamState, saveExamState } from '../progress.js';
-import { labsForObjectives, labsSummary } from './labs/index.js';
+import { LAB_LIST, labObjsFor, labsForObjectives, labsSummary } from './labs/summary.js';
 
-const { blueprint: bp, questions, sources, byId } = exam;
-const EXAM = bp.id;
+export { examSummary } from '../exam/summary.js';
+
 const LETTERS = ['A', 'B', 'C', 'D'];
-const MOCK_MS = bp.minutes * 60000;
 const CHECK_SIZE = 15;
-const quotas = domainQuotas(bp.domains, bp.questions);
-const domainOf = (n) => bp.domains.find((d) => String(d.n) === String(n));
 
-let ctx = null; // { app, header, esc, celebrate, saveWarn, fmtDate }
+// The exam whose pages are showing: its blueprint, questions, sources and byId (set by showExam).
+let bp = null;
+let questions = [];
+let sources = {};
+let byId = {};
+let quotas = {};
+let base = '/exam'; // this exam's route prefix, e.g. '/exam/netplus-009'
+const domainOf = (n) => bp.domains.find((d) => String(d.n) === String(n));
+function useExam(exam) {
+  ({ blueprint: bp, questions, sources, byId } = exam);
+  quotas = domainQuotas(bp.domains, bp.questions);
+  base = `/exam/${bp.id}`;
+}
+
+let ctx = null; // { app, header, esc, celebrate, saveWarn }
 let timer = null;
 let keyHandler = null;
 let pendingStart = null; // a start that needs "replace the unfinished session?" confirmation
@@ -40,9 +54,9 @@ export function leaveExam() {
   if (keyHandler) { document.removeEventListener('keydown', keyHandler); keyHandler = null; }
 }
 
-const load = () => getExamState(EXAM);
+const load = () => getExamState(bp.id);
 function store(state) {
-  const r = saveExamState(EXAM, state);
+  const r = saveExamState(bp.id, state);
   if (!r.ok) ctx.saveWarn();
   return r.ok;
 }
@@ -54,12 +68,25 @@ const fmtClock = (ms) => {
 const fmtDay = (t) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 const fmtIso = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 const pctBar = (pct, cls = '') => `<span class="ex-bar ${cls}"><i style="width:${pct ?? 0}%"></i></span>`;
+const todayIso = () => new Date().toLocaleDateString('en-CA');
 
-export function showExam(parts, context) {
+// "V8 launches Nov 17, 2026 · SY0-701 retires Jun 11, 2027" or "V9 launched Jun 20, 2024 · retirement estimated 2027"
+function statusLine(b) {
+  if (b.launches) {
+    const verb = b.launches > todayIso() ? 'launches' : 'launched';
+    return `${b.version} ${verb} ${fmtIso(b.launches)}${b.previous ? ` · ${b.previous.code} retires ${fmtIso(b.previous.retires)}` : ''}`;
+  }
+  return `${b.version} launched ${fmtIso(b.launched)}${b.retiresEst ? ` · retirement estimated ${b.retiresEst}` : ''}`;
+}
+
+// route: from ../exam/routes.js ({ hub } or { examId, view, arg }); exam: the loaded bank module (null for the hub).
+export function showExam(route, exam, context) {
   ctx = context;
   leaveExam();
   pendingStart = null;
-  const [view, arg] = parts;
+  if (!exam || route.hub) return showExamsHub();
+  useExam(exam);
+  const { view, arg } = route;
   if (!questions.length) return showEmpty();
   if (view === 'domain' && domainOf(arg)) return showDomain(Number(arg));
   if (view === 'session') return showSession();
@@ -68,7 +95,44 @@ export function showExam(parts, context) {
 }
 
 function showEmpty() {
-  ctx.app.innerHTML = `${ctx.header('exam')}<main class="exam"><h1>Exam practice</h1><p>The question bank is not loaded yet.</p></main>`;
+  ctx.app.innerHTML = `${ctx.header('exam')}<main class="exam"><a class="ex-back" href="#/exam">← All exams</a><h1>${ctx.esc(bp.short)} practice</h1><p>The question bank is not loaded yet.</p></main>`;
+}
+
+/* ---------------- exams hub ---------------- */
+
+function showExamsHub() {
+  const { esc } = ctx;
+  const all = examSummaries();
+  ctx.app.innerHTML = `
+    ${ctx.header('exam')}
+    <main class="exam">
+      <div class="ex-kicker">CompTIA certification practice</div>
+      <h1>Exam practice</h1>
+      <p class="ex-muted ex-lead">Four exams, each with its own mocks, review queue and readiness. Readiness is the average of your last three full mocks against this app's ${EXAMS[0].blueprint.target}% bar.</p>
+      <section class="ex-exams" aria-label="Exams">
+        ${EXAMS.map((e, i) => {
+    const b = e.blueprint;
+    const s = all[e.id];
+    return `
+        <article class="ex-exam${s.ready ? ' ready' : ''}" style="--i:${i}">
+          <a class="ex-exam-head" href="#/exam/${esc(e.id)}"><strong>${esc(b.short)}</strong><span>${esc(b.code)}</span></a>
+          <p class="ex-exam-status">${esc(statusLine(b))}</p>
+          <div class="ex-exam-ready">
+            <b>${s.avg3 === null ? 'No mock yet' : `${s.avg3}%`}</b>
+            <span class="jr-exam-bar" aria-hidden="true"><i style="width:${s.avg3 ?? 0}%"></i><em style="left:${s.target}%"></em></span>
+            <small>${s.avg3 === null ? `Target ${s.target}%` : `last ${Math.min(3, s.mocks)} mock${s.mocks === 1 ? '' : 's'} · target ${s.target}%`}${s.ready ? ' · ready' : ''}</small>
+          </div>
+          <ul class="ex-exam-stats">
+            <li><b>${s.due}</b> due in review</li>
+            <li><b>${s.seen}/${s.total}</b> seen</li>
+            ${s.open ? '<li class="ex-exam-open">unfinished session</li>' : ''}
+          </ul>
+          <a class="ex-btn primary small" href="#/exam/${esc(e.id)}">Open ${esc(b.short)} →</a>
+        </article>`;
+  }).join('')}
+      </section>
+      <p class="ex-muted ex-foot">Exam facts checked against comptia.org. Retirement years for Network+ and A+ are CompTIA's usual three years after launch, not announced dates.</p>
+    </main>`;
 }
 
 /* ---------------- starting sessions ---------------- */
@@ -91,12 +155,12 @@ function start(spec) {
   pendingStart = null;
   if (!spec.ids.length) return;
   state.session = newSession({ ...spec });
-  if (store(state)) location.hash = '/exam/session';
+  if (store(state)) location.hash = `${base}/session`;
 }
 
 function startMock() {
   const d = drawExam({ questions, domains: bp.domains, state: load(), total: bp.questions });
-  start({ kind: 'mock', title: `Full mock exam · ${d.ids.length} questions`, limitMs: MOCK_MS, ...d });
+  start({ kind: 'mock', title: `Full mock exam · ${d.ids.length} questions`, limitMs: bp.minutes * 60000, ...d });
 }
 function startCheck(n) {
   const d = drawExam({ questions, domains: bp.domains, state: load(), total: CHECK_SIZE, onlyDomain: n });
@@ -116,7 +180,7 @@ function startMisses(ids) {
   start({ kind: 'practice', title: `Practice your ${list.length} misses`, ...practiceSet(list, 50) });
 }
 
-/* ---------------- hub ---------------- */
+/* ---------------- one exam's hub ---------------- */
 
 function readinessGauge(r) {
   const size = 150;
@@ -135,10 +199,17 @@ function readinessGauge(r) {
   </svg>`;
 }
 
+function examNote() {
+  const { esc } = ctx;
+  const checked = `Checked against <a href="${esc(bp.links.page)}" target="_blank" rel="noopener noreferrer">CompTIA</a>${bp.links.objectives ? ` and the <a href="${esc(bp.links.objectives)}" target="_blank" rel="noopener noreferrer">${esc(bp.version)} objectives</a>` : ' and its exam objectives'} on ${fmtIso(bp.checked)}.`;
+  if (bp.previous) return `${esc(bp.previous.code)} stays bookable until ${fmtIso(bp.previous.retires)}. ${checked}`;
+  return `Launched ${fmtIso(bp.launched)}. CompTIA usually retires an exam about three years after launch, so expect ${esc(bp.retiresEst)}. ${checked}`;
+}
+
 function showHub() {
   const { esc } = ctx;
   const state = load();
-  const r = readiness(state, questions, bp.target);
+  const r = readiness(state, questions, bp.target, bp.questions);
   const due = reviewDue(questions, state);
   const first = studyFirst(questions, state, bp);
   const avgs = domainAverages(state);
@@ -149,21 +220,23 @@ function showHub() {
   const verdict = r.mocks === 0 ? 'Take your first full mock to get a readiness score.'
     : r.ready ? `Ready by your own bar: your last three mocks were all ${bp.target}% or higher.`
       : `Ready means three mocks in a row at ${bp.target}%+. You have ${r.mocks} mock${r.mocks === 1 ? '' : 's'} so far.`;
+  const small = questions.length < bp.questions;
 
   ctx.app.innerHTML = `
     ${ctx.header('exam')}
     <main class="exam">
+      <a class="ex-back" href="#/exam">← All exams</a>
       <section class="ex-hero">
         <div class="ex-hero-text">
-          <div class="ex-kicker">${esc(bp.name)} · ${esc(bp.code)} (${esc(bp.version)}) · launches ${fmtIso(bp.launches)}</div>
-          <h1>Exam practice</h1>
+          <div class="ex-kicker">${esc(bp.name)} · ${esc(bp.code)} · ${esc(statusLine(bp))}</div>
+          <h1>${esc(bp.short)} practice</h1>
           <ul class="ex-facts">
             <li><b>${bp.questions}</b> questions max</li>
             <li><b>${bp.minutes}</b> minutes</li>
-            <li>pass <b>750</b> of 900</li>
+            <li>pass <b>${bp.passScore}</b> of 900</li>
             <li>multiple choice + hands-on sims</li>
           </ul>
-          <p class="ex-note">${esc(bp.previous.code)} stays bookable until ${fmtIso(bp.previous.retires)}. Checked against <a href="${esc(bp.links.page)}" target="_blank" rel="noopener noreferrer">CompTIA</a> and the <a href="${esc(bp.links.objectives)}" target="_blank" rel="noopener noreferrer">V8 objectives</a> on ${fmtIso(bp.checked)}.</p>
+          <p class="ex-note">${examNote()}</p>
         </div>
         <div class="ex-ready${r.ready ? ' is-ready' : ''}">
           <div class="ex-gauge-wrap">${readinessGauge(r)}<div class="ex-gauge-label"><b>${r.avg3 === null ? 'n/a' : `${r.avg3}%`}</b><span>last 3 mocks</span></div></div>
@@ -177,7 +250,7 @@ function showHub() {
       ${s ? `
       <section class="ex-open" aria-label="Unfinished session">
         <div><strong>Unfinished:</strong> ${esc(sessionLabel(s))}${s.kind === 'mock' ? ` · ${fmtClock(s.limitMs - s.elapsedMs)} left` : ''}</div>
-        <div class="ex-actions"><a class="ex-btn primary" href="#/exam/session">Resume</a><button type="button" class="ex-btn ghost" data-discard>Discard it</button></div>
+        <div class="ex-actions"><a class="ex-btn primary" href="#${esc(base)}/session">Resume</a><button type="button" class="ex-btn ghost" data-discard>Discard it</button></div>
       </section>` : ''}
 
       ${pendingStart ? `
@@ -190,7 +263,7 @@ function showHub() {
         <article class="ex-card big">
           <div class="ex-card-tag">Exam conditions</div>
           <h2>Full mock exam</h2>
-          <p>A fresh ${bp.questions}-question draw by the official domain weights, ${bp.minutes}-minute clock, no answers until you submit. Questions you have not seen or got wrong come first.</p>
+          <p>A fresh ${bp.questions}-question draw by the official domain weights, ${bp.minutes}-minute clock, no answers until you submit. Questions you have not seen or got wrong come first.${small ? ` This bank has ${questions.length} questions so far, so a mock uses what it has.` : ''}</p>
           <button type="button" class="ex-btn primary" data-mock>Start a new mock</button>
         </article>
         <article class="ex-card">
@@ -208,7 +281,7 @@ function showHub() {
       </section>
 
       <section>
-        <h2 class="ex-h2">Study first</h2>
+        <h2 class="ex-h2 c-h2">Study first</h2>
         ${first.length ? `<ol class="ex-first">${first.map((o) => `
           <li><span class="ex-obj">${esc(o.id)}</span><div><strong>${esc(o.label)}</strong><small>${o.wrong} missed on your latest answers · ${o.accuracy}% right</small></div>
           <button type="button" class="ex-btn small" data-obj="${esc(o.id)}">Practice</button></li>`).join('')}</ol>`
@@ -216,18 +289,18 @@ function showHub() {
       </section>
 
       <section>
-        <h2 class="ex-h2">Domains</h2>
+        <h2 class="ex-h2 c-h2">Domains</h2>
         <div class="ex-domains">
           ${bp.domains.map((d) => {
     const st = domainStats(questions, state, d.n);
     const chk = lastChecks[d.n];
     return `
           <article class="ex-domain" style="--w:${d.weight}">
-            <a class="ex-domain-head" href="#/exam/domain/${d.n}"><span class="ex-dn">${d.n}.0</span><strong>${esc(d.name)}</strong></a>
+            <a class="ex-domain-head" href="#${esc(base)}/domain/${d.n}"><span class="ex-dn">${d.n}.0</span><strong>${esc(d.name)}</strong></a>
             <div class="ex-weight"><span>${d.weight}% of the exam</span><span>about ${quotas[d.n]} of ${bp.questions}</span></div>
             ${pctBar(st.accuracy, st.accuracy === null ? '' : st.accuracy >= bp.target ? 'good' : st.accuracy >= 70 ? 'mid' : 'low')}
             <div class="ex-dstats"><span>${st.accuracy === null ? 'not started' : `${st.accuracy}% right`}</span><span>${st.seen}/${st.total} seen</span>${chk ? `<span>check ${chk.percent}%</span>` : ''}${avgs[d.n] !== undefined && avgs[d.n] !== null ? `<span>mocks ${avgs[d.n]}%</span>` : ''}</div>
-            <div class="ex-actions"><button type="button" class="ex-btn small" data-dpractice="${d.n}">Practice 10</button><button type="button" class="ex-btn small ghost" data-check="${d.n}">Check · ${CHECK_SIZE}</button></div>
+            <div class="ex-actions"><button type="button" class="ex-btn small" data-dpractice="${d.n}" ${st.practice || st.seen ? '' : 'disabled'}>Practice 10</button><button type="button" class="ex-btn small ghost" data-check="${d.n}" ${st.total ? '' : 'disabled'}>Check · ${CHECK_SIZE}</button></div>
           </article>`;
   }).join('')}
         </div>
@@ -237,17 +310,17 @@ function showHub() {
 
       ${mocks.length ? `
       <section>
-        <h2 class="ex-h2">Mock history <span>${mocks.length}</span></h2>
+        <h2 class="ex-h2 c-h2">Mock history <span>${mocks.length}</span></h2>
         <div class="ex-trend" aria-hidden="true">${mocks.slice(0, 12).reverse().map((a) => `<i class="${a.percent >= bp.target ? 'good' : ''}" style="height:${Math.max(6, a.percent)}%" title="${a.percent}%"></i>`).join('')}<b style="bottom:${bp.target}%"></b></div>
-        <ul class="ex-history">${mocks.map((a) => `<li><a href="#/exam/result/${esc(a.id)}"><span>${fmtDay(a.finishedAt)}</span><strong class="${a.percent >= bp.target ? 'good' : ''}">${a.percent}%</strong><span>${a.correct}/${a.total}</span><span>${fmtClock(a.seconds * 1000)}${a.overTime ? ' · over time' : ''}</span></a></li>`).join('')}</ul>
+        <ul class="ex-history">${mocks.map((a) => `<li><a href="#${esc(base)}/result/${esc(a.id)}"><span>${fmtDay(a.finishedAt)}</span><strong class="${a.percent >= bp.target ? 'good' : ''}">${a.percent}%</strong><span>${a.correct}/${a.total}</span><span>${fmtClock(a.seconds * 1000)}${a.overTime ? ' · over time' : ''}</span></a></li>`).join('')}</ul>
       </section>` : ''}
 
       <section class="ex-honest">
-        <h2 class="ex-h2">What this is, honestly</h2>
+        <h2 class="ex-h2 c-h2">What this is, honestly</h2>
         <ul>
-          <li>Every question is original and checked against official sources (NIST, CISA, OWASP, MITRE, vendor docs). None are real exam questions.</li>
-          <li>The real exam also has hands-on simulations (a firewall, a network diagram, a terminal). Practice those in the <a href="#/labs">Hands-on Labs</a>, and try <a href="${esc(bp.links.demo)}" target="_blank" rel="noopener noreferrer">CompTIA's own demo simulation</a>.</li>
-          <li>CompTIA's pass mark is a scaled 750 of 900, not a fixed percentage. ${bp.target}% here is a stricter bar on purpose, the way 80% got you through the pest-control exam.</li>
+          <li>Every question is original and checked against official sources (${esc(bp.sourcesNote)}). None are real exam questions.</li>
+          <li>The real exam also has hands-on simulations. Practice those in the <a href="#/labs">Hands-on Labs</a>, and try <a href="${esc(bp.links.demo)}" target="_blank" rel="noopener noreferrer">CompTIA's own demo simulation</a>.</li>
+          <li>CompTIA's pass mark is a scaled ${bp.passScore} of 900, not a fixed percentage. ${bp.target}% here is a stricter bar on purpose, the way 80% got you through the pest-control exam.</li>
           <li>Some questions are held out: they only show up in mocks and domain checks, so a mock is never just a repeat of practice.</li>
         </ul>
       </section>
@@ -261,33 +334,41 @@ function showHub() {
   on('[data-dpractice]', (el) => startPractice(questions.filter((q) => String(q.d) === el.dataset.dpractice), `Domain ${el.dataset.dpractice} practice`, 10));
   on('[data-check]', (el) => startCheck(Number(el.dataset.check)));
   on('[data-discard]', () => { const st = load(); st.session = null; store(st); pendingStart = null; showHub(); });
-  on('[data-replace]', () => { const spec = pendingStart; const st = load(); if (!spec.ids.length) return; st.session = newSession({ ...spec }); pendingStart = null; if (store(st)) location.hash = '/exam/session'; });
+  on('[data-replace]', () => { const spec = pendingStart; const st = load(); if (!spec.ids.length) return; st.session = newSession({ ...spec }); pendingStart = null; if (store(st)) location.hash = `${base}/session`; });
   on('[data-keep]', () => { pendingStart = null; showHub(); });
 }
 
+// Labs whose cases practice this exam's objectives (Security+ reads each lab's `objs`, the others `examObjs`).
+const examLabs = () => LAB_LIST.filter((l) => labObjsFor(l, bp.id).length);
+
 // Hands-on practice: the labs are the exam's performance-based questions (PBQs), practiced.
 function labsHub() {
-  const l = labsSummary();
+  const mine = new Set(examLabs().map((l) => l.id));
+  const all = labsSummary();
+  const per = all.perLab.filter((x) => mine.has(x.id));
+  const list = per.length ? per : all.perLab;
+  const passed = list.reduce((s, x) => s + x.passed, 0);
+  const total = list.reduce((s, x) => s + x.total, 0);
   return `
       <section class="ex-labs" aria-label="Hands-on practice">
-        <h2 class="ex-h2">Hands-on practice <span>${l.passed} of ${l.total} lab cases passed</span></h2>
+        <h2 class="ex-h2 c-h2">Hands-on practice <span>${passed} of ${total} lab cases passed</span></h2>
         <a class="ex-labs-card" href="#/labs">
-          <span class="ex-labs-icons" aria-hidden="true">${l.perLab.map((x) => x.icon).join('')}</span>
-          <span><strong>CompTIA's exam includes performance-based questions.</strong> A firewall to fix, a terminal, logs, an inbox. Practice them in the Hands-on Labs: passed ${l.passed} of ${l.total}.</span>
+          <span class="ex-labs-icons" aria-hidden="true">${list.map((x) => x.icon).join('')}</span>
+          <span><strong>CompTIA's exam includes performance-based questions.</strong> ${per.length === all.perLab.length ? 'A firewall to fix, a terminal, logs, an inbox.' : `${per.length} of the labs practice ${ctx.esc(bp.short)} objectives.`} Practice them in the Hands-on Labs: passed ${passed} of ${total}.</span>
           <span class="ex-labs-go">Open the labs →</span>
         </a>
       </section>`;
 }
 
 function domainLabs(d) {
-  const labs = labsForObjectives(d.objectives.map((o) => o.id));
+  const labs = labsForObjectives(d.objectives.map((o) => o.id), bp.id);
   if (!labs.length) return '';
   const { esc } = ctx;
   const mine = new Set(d.objectives.map((o) => o.id));
   return `
       <section class="ex-labs" aria-label="Hands-on labs for this domain">
-        <h2 class="ex-h2">Hands-on labs for this domain</h2>
-        <ul class="ex-domain-labs">${labs.map((lab) => `<li><a href="#/labs/${esc(lab.id)}"><span aria-hidden="true">${lab.icon}</span><strong>${esc(lab.name)}</strong><small>${lab.objs.filter((o) => mine.has(o)).map((o) => `Sec+ ${esc(o)}`).join(' · ')}</small></a></li>`).join('')}</ul>
+        <h2 class="ex-h2 c-h2">Hands-on labs for this domain</h2>
+        <ul class="ex-domain-labs">${labs.map((lab) => `<li><a href="#/labs/${esc(lab.id)}"><span aria-hidden="true">${lab.icon}</span><strong>${esc(lab.name)}</strong><small>${labObjsFor(lab, bp.id).filter((o) => mine.has(o)).map((o) => `${esc(bp.short)} ${esc(o)}`).join(' · ')}</small></a></li>`).join('')}</ul>
       </section>`;
 }
 
@@ -301,15 +382,15 @@ function showDomain(n) {
   ctx.app.innerHTML = `
     ${ctx.header('exam')}
     <main class="exam">
-      <a class="ex-back" href="#/exam">← Exam practice</a>
-      <div class="ex-kicker">Domain ${d.n}.0 · ${d.weight}% of the exam · about ${quotas[d.n]} of ${bp.questions} questions</div>
+      <a class="ex-back" href="#${esc(base)}">← ${esc(bp.short)} practice</a>
+      <div class="ex-kicker">${esc(bp.short)} · Domain ${d.n}.0 · ${d.weight}% of the exam · about ${quotas[d.n]} of ${bp.questions} questions</div>
       <h1>${esc(d.name)}</h1>
       <p class="ex-muted">${st.seen} of ${st.total} questions seen${st.accuracy === null ? '' : ` · ${st.accuracy}% right on your latest answers`} · ${st.total - st.practice} held out for mocks and checks.</p>
-      <div class="ex-actions"><button type="button" class="ex-btn primary" data-dpractice>Practice 10</button><button type="button" class="ex-btn" data-check>Domain check · ${CHECK_SIZE}</button></div>
+      <div class="ex-actions"><button type="button" class="ex-btn primary" data-dpractice>Practice 10</button><button type="button" class="ex-btn" data-check ${st.total ? '' : 'disabled'}>Domain check · ${CHECK_SIZE}</button></div>
       <ul class="ex-objs">
         ${d.objectives.map((o) => {
     const os = objectiveStats(questions, state, o.id);
-    return `<li><span class="ex-obj">${esc(o.id)}</span><div><strong>${esc(o.label)}</strong>${pctBar(os.accuracy, os.accuracy === null ? '' : os.accuracy >= bp.target ? 'good' : os.accuracy >= 70 ? 'mid' : 'low')}<small>${os.seen}/${os.total} seen${os.accuracy === null ? '' : ` · ${os.accuracy}% right`}${os.wrong ? ` · ${os.wrong} to fix` : ''}</small></div><button type="button" class="ex-btn small" data-obj="${esc(o.id)}">Practice</button></li>`;
+    return `<li><span class="ex-obj">${esc(o.id)}</span><div><strong>${esc(o.label)}</strong>${pctBar(os.accuracy, os.accuracy === null ? '' : os.accuracy >= bp.target ? 'good' : os.accuracy >= 70 ? 'mid' : 'low')}<small>${os.seen}/${os.total} seen${os.accuracy === null ? '' : ` · ${os.accuracy}% right`}${os.wrong ? ` · ${os.wrong} to fix` : ''}</small></div><button type="button" class="ex-btn small" data-obj="${esc(o.id)}" ${os.total ? '' : 'disabled'}>Practice</button></li>`;
   }).join('')}
       </ul>
       ${domainLabs(d)}
@@ -321,14 +402,19 @@ function showDomain(n) {
 
 /* ---------------- the session runner ---------------- */
 
+// The clock belongs to one exam's session (timer.examId), whichever exam's pages are showing when it flushes.
 function flushTimer(force = false) {
   if (!timer) return;
   const now = Date.now();
   if (timer.visible) timer.pending += now - timer.since;
   timer.since = now;
   if (timer.pending >= 1000 || (force && timer.pending > 0)) {
-    const st = load();
-    if (st.session && st.session.id === timer.sid) { st.session.elapsedMs += timer.pending; timer.session.elapsedMs = st.session.elapsedMs; store(st); }
+    const st = getExamState(timer.examId);
+    if (st.session && st.session.id === timer.sid) {
+      st.session.elapsedMs += timer.pending;
+      timer.session.elapsedMs = st.session.elapsedMs;
+      if (!saveExamState(timer.examId, st).ok && ctx) ctx.saveWarn();
+    }
     timer.pending = 0;
   }
 }
@@ -356,9 +442,9 @@ function showSession() {
   leaveExam(); // one timer and one key listener at a time
   const state = load();
   const s = state.session;
-  if (!s) { location.hash = '/exam'; return; }
+  if (!s) { location.hash = base; return; }
   const live = s.ids.filter((id) => byId[id]);
-  if (!live.length) { state.session = null; store(state); location.hash = '/exam'; return; }
+  if (!live.length) { state.session = null; store(state); location.hash = base; return; }
   const id = s.ids[s.pos];
   const q = byId[id];
   const order = s.orders[id];
@@ -371,16 +457,17 @@ function showSession() {
 
   ctx.app.innerHTML = `
     ${ctx.header('exam')}
-    <main class="exam ex-run" data-kind="${s.kind}">
+    <main class="exam ex-run" data-kind="${s.kind}" data-exam="${esc(bp.id)}">
+      <h1 class="visually-hidden">${esc(bp.short)} exam session</h1>
       <div class="ex-runbar">
-        <div><div class="ex-kicker">${esc(s.title)}</div><strong>Question ${s.pos + 1} of ${s.ids.length}</strong> <span class="ex-muted">· ${answeredCount} answered</span></div>
+        <div><div class="ex-kicker">${esc(bp.short)} · ${esc(s.title)}</div><strong>Question ${s.pos + 1} of ${s.ids.length}</strong> <span class="ex-muted">· ${answeredCount} answered</span></div>
         ${isTimed ? `<div class="ex-timer" aria-live="off"><span id="ex-clock">${fmtClock(s.limitMs - s.elapsedMs)}</span><small>left</small></div>` : ''}
       </div>
       ${pctBar(Math.round((answeredCount / s.ids.length) * 100), 'thin')}
       ${isTimed ? '<p class="ex-overtime" id="ex-overtime" hidden>Time is up. On the real exam it would end here; submit when you are ready.</p>' : ''}
       ${q ? `
       <article class="ex-q">
-        ${s.feedback ? `<div class="ex-obj-tag">${esc(q.obj)} · ${esc((domainOf(q.d).objectives.find((o) => o.id === q.obj) || {}).label || '')}</div>` : ''}
+        ${s.feedback ? `<div class="ex-obj-tag">${esc(q.obj)} · ${esc(((domainOf(q.d) || { objectives: [] }).objectives.find((o) => o.id === q.obj) || {}).label || '')}</div>` : ''}
         <h2 id="ex-qtext">${esc(q.q)}</h2>
         <div class="ex-choices" role="group" aria-labelledby="ex-qtext">
           ${order.map((bank, i) => {
@@ -438,7 +525,7 @@ function showSession() {
   click('[data-finish]', () => finishPractice());
 
   if (isTimed) {
-    timer = { id: 0, sid: s.id, session: s, since: Date.now(), pending: 0, visible: document.visibilityState === 'visible' };
+    timer = { id: 0, examId: bp.id, sid: s.id, session: s, since: Date.now(), pending: 0, visible: document.visibilityState === 'visible' };
     const tick = () => {
       if (!timer) return;
       const now = Date.now();
@@ -449,11 +536,7 @@ function showSession() {
       if (clock) clock.textContent = fmtClock(left);
       const over = document.getElementById('ex-overtime');
       if (over) over.hidden = left > 0;
-      if (timer.pending >= 10000) {
-        const st = load();
-        if (st.session && st.session.id === timer.sid) { st.session.elapsedMs += timer.pending; s.elapsedMs = st.session.elapsedMs; store(st); }
-        timer.pending = 0;
-      }
+      if (timer.pending >= 10000) flushTimer();
     };
     timer.id = setInterval(tick, 1000);
     tick();
@@ -477,13 +560,13 @@ function finishScored() {
     attempt = res.attempt;
     store(res.state);
   });
-  if (attempt) location.hash = `/exam/result/${attempt.id}`;
+  if (attempt) location.hash = `${base}/result/${attempt.id}`;
 }
 
 function finishPractice() {
   const st = load();
   const s = st.session;
-  if (!s) { location.hash = '/exam'; return; }
+  if (!s) { location.hash = base; return; }
   const right = s.ids.filter((qid) => byId[qid] && s.answers[qid] === byId[qid].answer).length;
   const total = Object.keys(s.answers).length;
   st.session = null;
@@ -492,10 +575,10 @@ function finishPractice() {
     ${ctx.header('exam')}
     <main class="exam">
       <section class="ex-done">
-        <div class="ex-kicker">${ctx.esc(s.title)}</div>
+        <div class="ex-kicker">${ctx.esc(bp.short)} · ${ctx.esc(s.title)}</div>
         <h1>${right} of ${total} right</h1>
         <p class="ex-muted">Every answer is in your history: misses come back in the review queue now, right answers after 1, 3, 7, 14 and 30 days.</p>
-        <div class="ex-actions"><a class="ex-btn primary" href="#/exam">Back to exam practice</a></div>
+        <div class="ex-actions"><a class="ex-btn primary" href="#${ctx.esc(base)}">Back to ${ctx.esc(bp.short)} practice</a></div>
       </section>
     </main>`;
   const b = ctx.app.querySelector('.ex-done .ex-btn');
@@ -508,7 +591,7 @@ function showResult(attemptId) {
   const { esc } = ctx;
   const state = load();
   const a = state.attempts.find((x) => x.id === attemptId);
-  if (!a) { location.hash = '/exam'; return; }
+  if (!a) { location.hash = base; return; }
   const mocks = state.attempts.filter((x) => x.kind === a.kind && (a.kind !== 'check' || x.domain === a.domain));
   const prev = mocks[mocks.findIndex((x) => x.id === a.id) - 1];
   const delta = prev ? a.percent - prev.percent : null;
@@ -517,9 +600,10 @@ function showResult(attemptId) {
   ctx.app.innerHTML = `
     ${ctx.header('exam')}
     <main class="exam">
-      <a class="ex-back" href="#/exam">← Exam practice</a>
+      <h1 class="visually-hidden">${esc(bp.short)} exam result</h1>
+      <a class="ex-back" href="#${esc(base)}">← ${esc(bp.short)} practice</a>
       <section class="ex-score${atBar ? ' good' : ''}">
-        <div class="ex-kicker">${a.kind === 'mock' ? 'Full mock exam' : `Domain ${a.domain} check`} · ${fmtDay(a.finishedAt)} · ${fmtClock(a.seconds * 1000)}${a.overTime ? ' (over time)' : ''}</div>
+        <div class="ex-kicker">${esc(bp.short)} · ${a.kind === 'mock' ? 'Full mock exam' : `Domain ${a.domain} check`} · ${fmtDay(a.finishedAt)} · ${fmtClock(a.seconds * 1000)}${a.overTime ? ' (over time)' : ''}</div>
         <div class="ex-score-row">
           <b class="ex-big">${a.percent}%</b>
           <div>
@@ -530,12 +614,12 @@ function showResult(attemptId) {
         </div>
       </section>
       <section>
-        <h2 class="ex-h2">By domain</h2>
+        <h2 class="ex-h2 c-h2">By domain</h2>
         <ul class="ex-bydomain">${Object.entries(a.byDomain).filter(([d]) => domainOf(d)).map(([d, [c, t]]) => { const p = t ? Math.round((c / t) * 100) : 0; return `<li><span>${d}.0 ${esc(domainOf(d).name)}</span>${pctBar(p, p >= bp.target ? 'good' : p >= 70 ? 'mid' : 'low')}<b>${c}/${t}</b></li>`; }).join('')}</ul>
       </section>
       ${missed.length ? `
       <section>
-        <h2 class="ex-h2">What you missed <span>${missed.length}</span></h2>
+        <h2 class="ex-h2 c-h2">What you missed <span>${missed.length}</span></h2>
         <div class="ex-actions"><button type="button" class="ex-btn primary" data-misses>Practice these ${missed.length} now</button></div>
         <div class="ex-missed">${missed.map((qid, i) => {
     const q = byId[qid];
@@ -548,14 +632,4 @@ function showResult(attemptId) {
     </main>`;
   const b = ctx.app.querySelector('[data-misses]');
   if (b) b.addEventListener('click', () => startMisses(missed));
-}
-
-// For the Journey page: a one-line summary of exam practice.
-export function examSummary() {
-  const state = load();
-  const r = readiness(state, questions, bp.target);
-  let run = 0;
-  const mocks = state.attempts.filter((a) => a.kind === 'mock' && a.removed === 0);
-  for (let i = mocks.length - 1; i >= 0 && mocks[i].percent >= bp.target && run < 3; i -= 1) run += 1;
-  return { ...r, due: reviewDue(questions, state).length, total: questions.length, target: bp.target, name: `${bp.name} ${bp.code}`, runAtTarget: run };
 }

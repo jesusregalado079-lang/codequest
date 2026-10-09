@@ -5,7 +5,7 @@
 // Rules live in ../../labs/ (pure); attempts are saved through progress.js as runs.
 import './labs.css';
 import { labSummary } from '../../labs/lab-logic.js';
-import { LABS, caseOf, labOf } from '../../labs/catalog.js';
+import { LABS, caseOf, labOf, labsForObjectives } from '../../labs/catalog.js';
 import { getLabs } from '../../progress.js';
 import { S, bestLine, esc, leaveAll, levelName, objChips } from './shared.js';
 import { showFirewall } from './firewall.js';
@@ -25,11 +25,9 @@ export function labsSummary() {
   return labSummary(getLabs(), LABS);
 }
 
-// Labs whose cases practice any of these objective ids (for the exam domain pages).
-export function labsForObjectives(objIds) {
-  const want = new Set(objIds.map(String));
-  return LABS.filter((l) => l.objs.some((o) => want.has(o)));
-}
+// Labs whose cases practice any of these objective ids on one exam (Security+ when none is given). Lives in the catalog
+// so the exam pages can use it without loading the labs pages.
+export { labsForObjectives };
 
 export function showLabs(parts, context) {
   S.ctx = context;
@@ -96,7 +94,7 @@ function showHub() {
 
       ${sum.recent.length ? `
       <section>
-        <h2 class="ex-h2">Recent runs <span>${sum.runs} saved</span></h2>
+        <h2 class="ex-h2 c-h2">Recent runs <span>${sum.runs} saved</span></h2>
         <ul class="lb-recent">${sum.recent.map((r) => {
     const lab = labOf(r.labId);
     const c = lab && lab.cases.find((x) => x.id === r.caseId);
@@ -106,7 +104,7 @@ function showHub() {
       </section>` : ''}
 
       <section class="ex-honest">
-        <h2 class="ex-h2">How these work</h2>
+        <h2 class="ex-h2 c-h2">How these work</h2>
         <ul>
           <li>Every case is original, with fictional companies, <code>.example</code> domains and documentation IP ranges. None are real exam items.</li>
           <li>Each check saves a run. A case is passed when your best score reaches the lab's pass mark (80%, or 100% for code).</li>

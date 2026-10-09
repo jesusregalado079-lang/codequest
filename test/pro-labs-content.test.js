@@ -20,6 +20,8 @@ let checks = 0;
 const failures = [];
 const ok = (cond, msg) => { checks += 1; if (!cond) failures.push(msg); };
 const OBJS = new Set(blueprint.domains.flatMap((d) => d.objectives.map((o) => o.id)));
+const { BLUEPRINTS } = await import('../src/pro/exam/blueprints.js');
+const EXAM_OBJS = Object.fromEntries(BLUEPRINTS.map((bp) => [bp.id, new Set(bp.domains.flatMap((d) => d.objectives.map((o) => o.id)))]));
 
 // every string anywhere inside a value, with its path
 function strings(v, path = '', out = []) {
@@ -61,6 +63,13 @@ for (const [name, mod] of Object.entries(files)) {
     lastLevel = c.level;
     ok(typeof c.title === 'string' && c.title.length > 2 && c.title.length <= 70, `${c.id}: title`);
     ok(Array.isArray(c.objs) && c.objs.length >= 1 && c.objs.every((o) => OBJS.has(o)), `${c.id}: objs are SY0-801 objective ids (${c.objs})`);
+    if (c.examObjs !== undefined) {
+      ok(c.examObjs && typeof c.examObjs === 'object' && !Array.isArray(c.examObjs), `${c.id}: examObjs is an object`);
+      for (const [exam, list] of Object.entries(c.examObjs || {})) {
+        ok(EXAM_OBJS[exam] && exam !== 'secplus-801', `${c.id}: examObjs key ${exam} is a non-Security+ exam id`);
+        ok(Array.isArray(list) && list.length >= 1 && list.every((o) => EXAM_OBJS[exam]?.has(o)), `${c.id}: examObjs ${exam} are that exam's objective ids (${list})`);
+      }
+    }
     ok(Array.isArray(c.src) && c.src.length >= 1 && c.src.length <= 4 && c.src.every((k) => sources[k]), `${c.id}: src keys exist`);
     strings(c).forEach(([p, s]) => {
       ok(!/[–—]/.test(s), `${c.id}${p}: no em or en dash`);
@@ -75,7 +84,7 @@ const prose = (id, label, s) => ok(typeof s === 'string' && s.trim().length > 0 
 
 // ---------- firewall ----------
 const fwCases = files.firewall.default;
-ok(fwCases.length === 8, `firewall: 8 cases (has ${fwCases.length})`);
+ok(fwCases.length === 12, `firewall: 12 cases (has ${fwCases.length})`);
 fwCases.forEach((c) => {
   prose(c.id, 'brief', c.brief);
   prose(c.id, 'why', c.why);
@@ -130,7 +139,7 @@ function runLab(userCode, tests) {
   return { passed: res.filter((r) => r.pass).length, res };
 }
 const codeLabs = files.code.default;
-ok(codeLabs.length === 5, `code: 5 labs (has ${codeLabs.length})`);
+ok(codeLabs.length === 7, `code: 7 labs (has ${codeLabs.length})`);
 codeLabs.forEach((c) => {
   prose(c.id, 'why', c.why);
   prose(c.id, 'hint', c.hint);
@@ -148,7 +157,7 @@ codeLabs.forEach((c) => {
 const sets = files.logs.default;
 const LABELS = files.logs.LABELS;
 ok(LABELS && Object.keys(LABELS).length >= 8, 'logs: LABELS exported');
-ok(sets.length === 6, `logs: 6 sets (has ${sets.length})`);
+ok(sets.length === 9, `logs: 9 sets (has ${sets.length})`);
 sets.forEach((s) => {
   ok(s.labels.length >= 6 && s.labels.length <= 8 && new Set(s.labels).size === s.labels.length && s.labels.every((l) => LABELS[l]), `${s.id}: 6 to 8 known labels`);
   ok(s.snippets.length >= 4 && s.snippets.length <= 5, `${s.id}: 4 or 5 snippets`);
@@ -165,7 +174,7 @@ sets.forEach((s) => {
 
 // ---------- terminal troubleshooter ----------
 const cli = files.cli.default;
-ok(cli.length === 8, `cli: 8 cases (has ${cli.length})`);
+ok(cli.length === 12, `cli: 12 cases (has ${cli.length})`);
 const positions = [0, 0, 0, 0];
 let longest = 0;
 cli.forEach((c) => {
@@ -197,8 +206,8 @@ ok(longest <= Math.ceil(cli.length * 2 * 0.3), `cli: the answer is not usually t
 
 // ---------- phish inspector ----------
 const phish = files.phish.default;
-ok(phish.length === 8, `phish: 8 cases (has ${phish.length})`);
-ok(phish.filter((c) => c.verdict === 'phish').length === 5 && phish.filter((c) => c.verdict === 'legit').length === 3, 'phish: 5 phishing + 3 legitimate');
+ok(phish.length === 12, `phish: 12 cases (has ${phish.length})`);
+ok(phish.filter((c) => c.verdict === 'phish').length === 7 && phish.filter((c) => c.verdict === 'legit').length === 5, 'phish: 7 phishing + 5 legitimate');
 ok(phish.some((c) => c.verdict === 'legit' && c.action === 'verify'), 'phish: a legitimate request that still needs verifying');
 const ACTIONS = new Set(G.PHISH_ACTIONS.map((a) => a.id));
 phish.forEach((c) => {

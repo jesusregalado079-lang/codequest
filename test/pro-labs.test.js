@@ -111,7 +111,7 @@ assert.deepEqual(progress.getLabs(), { 'cli/cli-01': [{ t: t0, score: 70, secs: 
 // ---------- achievements ----------
 const TODAY = '2026-10-08';
 const j = journey({ full, milestones, gate, stages, done: {}, doneAt: {}, hoursPerWeek: 21, todayIso: TODAY });
-const ach = (labsCtx) => achievements({ done: {}, doneAt: {}, full, extras, stages, gate, j, ...(labsCtx === undefined ? {} : { labs: labsCtx }) });
+const ach = (labsCtx, kept = {}) => achievements({ done: {}, doneAt: {}, full, extras, stages, gate, j, kept, ...(labsCtx === undefined ? {} : { labs: labsCtx }) });
 const got = (list, id) => list.find((b) => b.id === id);
 const LAB_BADGES = ['lab-first', 'lab-fw', 'lab-logs', 'lab-subnet', 'lab-cli', 'lab-phish', 'lab-code', 'lab-perfect-10', 'lab-all'];
 const order = BADGES.map((b) => b.id);
@@ -159,5 +159,89 @@ if (allIds.size >= 10) {
   assert.equal(got(ach(sumOf(nine)), 'lab-perfect-10').have, 9);
 }
 assert.ok(ach(sumOf(everything)).every((b) => b.have <= b.need), 'progress never shows more than needed');
+
+// b528832 had 39 cases. Passing all of those before the later additions must retain the old completion badges.
+const oldCounts = { fw: 8, logs: 6, subnet: 4, cli: 8, phish: 8, code: 5 };
+const oldIds = Object.entries(oldCounts).flatMap(([labId, count]) => Array.from({ length: count }, (_, i) =>
+  `${labId}/${labId === 'subnet' ? `subnet-${i + 1}` : `${labId}-${String(i + 1).padStart(2, '0')}`}`));
+assert.equal(oldIds.length, 39);
+assert.ok(oldIds.every((id) => allIds.has(id)), 'all 39 frozen ids still exist in the current catalog');
+const oldRuns = Object.fromEntries(oldIds.map((id) => [id, run(id.startsWith('code/') ? 100 : 80)]));
+assert.equal(Object.keys(oldRuns).length < allIds.size, true, 'new cases are absent from the old save');
+reset();
+assert.deepEqual(progress.getBadges(), {}, 'a fresh save has no badges');
+assert.deepEqual(progress.applyLabBadgeMigration(TODAY), { ok: true, ran: false });
+assert.deepEqual(progress.getBadges(), {}, 'a fresh save earns no migrated badges');
+assert.equal(memory.has(KEY), false, 'checking an empty save does not write');
+
+reset({ labs: oldRuns });
+assert.deepEqual(progress.applyLabBadgeMigration(TODAY), { ok: true, ran: true });
+const oldBadges = progress.getBadges();
+const migratedIds = ['lab-first', 'lab-fw', 'lab-logs', 'lab-subnet', 'lab-cli', 'lab-phish', 'lab-code', 'lab-all'];
+assert.deepEqual(Object.keys(oldBadges).sort(), migratedIds.sort(), 'all six old completion badges plus First Lab and Subnet Sprinter are stored');
+assert.ok(Object.values(oldBadges).every((date) => date === TODAY));
+const keptOld = ach(sumOf(oldRuns), oldBadges);
+for (const id of migratedIds) assert.equal(got(keptOld, id).earned, true, `${id} stays earned`);
+assert.equal(got(keptOld, 'lab-fw').have, 8);
+assert.equal(got(keptOld, 'lab-fw').need, 12, 'the progress bar uses the current firewall case count');
+assert.equal(got(keptOld, 'lab-all').have, 39);
+assert.equal(got(keptOld, 'lab-all').need, allIds.size);
+assert.equal(got(keptOld, 'lab-all').date, TODAY, 'stored first-earned date appears on a sticky badge');
+
+// An old tab can overwrite the new save without badges while preserving its migration flag.
+const newReleaseSave = raw();
+const oldReleaseSave = structuredClone(newReleaseSave);
+delete oldReleaseSave.badges;
+reset(oldReleaseSave);
+assert.equal(raw().migrations['lab-badges-v1'], true, 'the old tab kept the migration flag');
+assert.deepEqual(progress.getBadges(), {}, 'the old tab dropped the badge map');
+let writes = 0;
+globalThis.localStorage.setItem = (...args) => { writes += 1; return realSet(...args); };
+assert.deepEqual(progress.applyLabBadgeMigration('2026-10-09'), { ok: true, ran: true });
+assert.deepEqual(progress.getBadges(), Object.fromEntries(migratedIds.map((id) => [id, '2026-10-09'])), 'the next check restores every original-case badge');
+assert.equal(writes, 1, 'restoring missing badges writes once');
+assert.deepEqual(progress.applyLabBadgeMigration('2026-10-10'), { ok: true, ran: false });
+assert.equal(writes, 1, 'a complete badge map causes no further write');
+globalThis.localStorage.setItem = realSet;
+reset(newReleaseSave);
+
+// Migration and re-recording an existing badge must not write or remove anything.
+writes = 0;
+globalThis.localStorage.setItem = (...args) => { writes += 1; return realSet(...args); };
+assert.deepEqual(progress.applyLabBadgeMigration('2026-10-09'), { ok: true, ran: false });
+assert.deepEqual(progress.recordBadges(['lab-fw'], '2026-10-09'), { ok: true });
+assert.deepEqual(progress.recordBadges({ 'lab-fw': '2026-09-20' }), { ok: true });
+assert.equal(writes, 0, 'no storage write for re-read badges');
+assert.deepEqual(progress.recordBadges(['future-badge'], '2026-10-09'), { ok: true });
+assert.equal(writes, 1, 'one new badge causes one write');
+globalThis.localStorage.setItem = realSet;
+assert.equal(progress.getBadges()['lab-fw'], TODAY, 'a later record does not replace the first date');
+assert.equal(progress.getBadges()['future-badge'], '2026-10-09', 'unknown ids are kept');
+assert.equal(progress.saveLabs({}).ok, true);
+assert.deepEqual(progress.applyLabBadgeMigration('2026-10-10'), { ok: true, ran: false });
+assert.equal(progress.getBadges()['lab-all'], TODAY, 'the second migration never removes an old badge');
+const afterRunsRemoved = ach(sumOf({}), progress.getBadges());
+assert.equal(got(afterRunsRemoved, 'lab-all').earned, true, 'a stored badge survives even when all run data is gone');
+assert.equal(got(afterRunsRemoved, 'lab-all').have, 0, 'current progress remains honest');
+
+const badgeFile = progress.exportProgress(new Date('2026-10-09T12:00:00Z'));
+assert.equal(JSON.parse(badgeFile).progress.badges['lab-all'], TODAY, 'exports carry badges');
+reset({ badges: { 'lab-fw': '2026-09-01', 'local-only': '2026-09-02' }, migrations: { 'lab-badges-v1': true } });
+assert.equal(progress.importProgress(badgeFile).ok, true);
+assert.equal(progress.getBadges()['lab-fw'], '2026-09-01', 'merge keeps the earliest badge date');
+assert.equal(progress.getBadges()['lab-all'], TODAY, 'merge adds imported badges');
+assert.equal(progress.getBadges()['local-only'], '2026-09-02', 'merge keeps local unknown ids');
+reset();
+assert.equal(progress.importProgress(badgeFile, 'replace').ok, true);
+assert.deepEqual(progress.getBadges(), JSON.parse(badgeFile).progress.badges, 'replace restores the badge map');
+const legacyFile = JSON.stringify({ format: progress.EXPORT_FORMAT, version: progress.EXPORT_VERSION, progress: { labs: oldRuns, migrations: { 'lab-badges-v1': true } } });
+reset({ migrations: { 'lab-badges-v1': true } });
+assert.equal(progress.importProgress(legacyFile).ok, true);
+assert.deepEqual(Object.keys(progress.getBadges()).sort(), migratedIds.sort(), 'an old-release backup with the flag gets its badges before merge');
+reset({ badges: { good: TODAY, bad: 42, impossible: '2026-02-30', '': TODAY, constructor: TODAY } });
+assert.deepEqual(progress.getBadges(), { good: TODAY }, 'damaged badge entries are dropped individually');
+assert.deepEqual(progress.recordBadges(['x'], 'not-a-day'), { ok: false });
+assert.deepEqual(progress.recordBadges({ x: 'not-a-day' }), { ok: false });
+assert.equal(progress.getBadges().x, undefined);
 
 console.log(`ok — pro labs: catalog (${LABS.length} labs, ${allIds.size} cases), progress save/normalize/export/import/merge, ${LAB_BADGES.length} lab badges`);

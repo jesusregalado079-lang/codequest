@@ -4,6 +4,7 @@ export const sources = {
   private: ['RFC 1918: Address Allocation for Private Internets', 'https://www.rfc-editor.org/rfc/rfc1918'],
   docs: ['RFC 5737: IPv4 Address Blocks Reserved for Documentation', 'https://www.rfc-editor.org/rfc/rfc5737'],
   rfc7766: ['RFC 7766: DNS Transport over TCP', 'https://www.rfc-editor.org/rfc/rfc7766'],
+  ntp: ['RFC 5905: Network Time Protocol Version 4', 'https://www.rfc-editor.org/rfc/rfc5905'],
 };
 
 const H = (id, kind, label, ip, zone, x, y, gw) => ({ id, kind, label, ip, mask: '255.255.255.0', gw, zone, x, y });
@@ -15,7 +16,7 @@ const G = (text, src, dst, proto, port, expect) => ({ text, src, dst, proto, por
 
 export default [
   {
-    id: 'fw-01', level: 1, title: 'Restore the customer site', objs: ['3.2', '4.1'],
+    id: 'fw-01', level: 1, title: 'Restore the customer site', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['4.3'] },
     brief: 'Cedar Harbor customers cannot open its public site. The web server is in a DMZ, while the database is inside. A recent firewall edit appears to have caused the outage.',
     tasks: ['Customers can open the web server using HTTPS.', 'Inside staff can open the same site using HTTPS.', 'Internet visitors cannot connect to the database.'],
     nodes: [I('inet', 'Customer test host', '203.0.113.50', 8, 50), F(), S('sw-in', 'Inside switch', 78), H('web', 'server', 'Web server', '10.10.1.10', 'dmz', 70, 22, '10.10.1.1'), H('db', 'db', 'Database', '10.10.2.20', 'inside', 70, 78, '10.10.2.1'), H('staff', 'pc', 'Staff PC', '10.10.2.50', 'inside', 93, 78, '10.10.2.1')],
@@ -27,7 +28,7 @@ export default [
     src: ['nist', 'iana'],
   },
   {
-    id: 'fw-02', level: 1, title: 'Put the exception first', objs: ['3.2', '4.1'],
+    id: 'fw-02', level: 1, title: 'Put the exception first', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['4.3'] },
     brief: 'Willow Bay publishes a customer portal in its DMZ. A broad block is intended to stop other inbound traffic, but it also blocks the portal.',
     tasks: ['Customers can open the portal using HTTPS.', 'Customers cannot use HTTP on the portal.', 'Customers cannot reach the inside file server.'],
     nodes: [I('inet', 'Outside tester', '198.51.100.24', 8, 50), F(), H('portal', 'server', 'Portal', '10.20.1.10', 'dmz', 70, 22, '10.20.1.1'), H('file', 'server', 'File server', '10.20.2.20', 'inside', 70, 78, '10.20.2.1')],
@@ -39,7 +40,7 @@ export default [
     src: ['nist', 'iana'],
   },
   {
-    id: 'fw-03', level: 2, title: 'Use the secure service', objs: ['3.2', '4.1'],
+    id: 'fw-03', level: 2, title: 'Use the secure service', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['4.3'] },
     brief: 'Aster Works moved its DMZ ordering page to HTTPS only. The firewall still permits the old web service, leaving the page unavailable and the unwanted service reachable.',
     tasks: ['Outside buyers can open the ordering page with HTTPS.', 'Outside buyers cannot use HTTP on that server.', 'Outside buyers cannot reach the inside database.'],
     nodes: [I('buyer', 'Buyer test host', '192.0.2.33', 8, 50), F(), H('orders', 'server', 'Order server', '10.30.1.10', 'dmz', 70, 22, '10.30.1.1'), H('db', 'db', 'Order database', '10.30.2.20', 'inside', 70, 78, '10.30.2.1')],
@@ -51,7 +52,7 @@ export default [
     src: ['iana', 'nist'],
   },
   {
-    id: 'fw-04', level: 2, title: 'Separate web and data tiers', objs: ['3.2', '4.1'],
+    id: 'fw-04', level: 2, title: 'Separate web and data tiers', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['4.3'] },
     brief: 'North Vale put its storefront in a DMZ and its inventory database inside. A temporary database rule lets outside hosts connect directly, while the storefront cannot fetch inventory.',
     tasks: ['Customers can reach the storefront with HTTPS.', 'Only the storefront can reach the database service.', 'Outside hosts cannot connect directly to the database.', 'A second DMZ server cannot connect to the database.'],
     nodes: [I('inet', 'Customer test host', '203.0.113.61', 8, 50), F(), S('sw-dmz', 'DMZ switch', 18), H('web', 'server', 'Storefront', '10.40.1.10', 'dmz', 70, 18, '10.40.1.1'), H('other', 'server', 'DMZ utility', '10.40.1.30', 'dmz', 93, 18, '10.40.1.1'), H('db', 'db', 'Inventory DB', '10.40.2.20', 'inside', 70, 80, '10.40.2.1')],
@@ -63,7 +64,7 @@ export default [
     src: ['nist', 'iana'],
   },
   {
-    id: 'fw-05', level: 2, title: 'Remove the open door', objs: ['3.2', '4.1'],
+    id: 'fw-05', level: 2, title: 'Remove the open door', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['4.3'] },
     brief: 'Elm Ridge left a temporary allow-all rule on its edge firewall. Its published site and an inside update workstation still need their approved paths.',
     tasks: ['Outside customers can use HTTPS on the DMZ site.', 'The update workstation can use HTTPS to the outside update host.', 'Outside hosts cannot reach the inside records server.', 'Outside hosts cannot use SSH on the DMZ site.'],
     nodes: [I('inet', 'Customer test host', '198.51.100.70', 8, 25), I('updates', 'Update host', '192.0.2.80', 8, 75), F(), S('sw-in', 'Inside switch', 80), H('web', 'server', 'Public site', '10.50.1.10', 'dmz', 70, 20, '10.50.1.1'), H('records', 'server', 'Records server', '10.50.2.20', 'inside', 70, 80, '10.50.2.1'), H('pc', 'pc', 'Update PC', '10.50.2.50', 'inside', 93, 80, '10.50.2.1')],
@@ -75,7 +76,31 @@ export default [
     src: ['nist', 'iana'],
   },
   {
-    id: 'fw-06', level: 3, title: 'Restrict outbound DNS', objs: ['3.2', '4.1'],
+    id: 'fw-09', level: 2, title: 'Screen the web and data tiers', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['4.3'] },
+    brief: 'Moss Harbor publishes a site in a screened subnet. The data tier is on a separate inside network. A temporary database rule lets every source connect while the web tier cannot use its required service.',
+    tasks: ['Visitors can use HTTPS on the web tier.', 'The web tier can query the data tier.', 'Visitors cannot query the data tier.', 'A second screened-subnet host cannot query the data tier.'],
+    nodes: [I('visitor', 'Outside visitor', '203.0.113.109', 8, 50), F(), S('dmz-sw', 'Screened subnet switch', 19), H('web', 'server', 'Web tier', '10.90.1.10', 'dmz', 71, 17, '10.90.1.1'), H('cache', 'server', 'Cache host', '10.90.1.30', 'dmz', 93, 17, '10.90.1.1'), H('db', 'db', 'Data tier', '10.90.2.20', 'inside', 71, 80, '10.90.2.1')],
+    links: [['visitor', 'fw'], ['fw', 'dmz-sw'], ['dmz-sw', 'web'], ['dmz-sw', 'cache'], ['fw', 'db']],
+    rules: [R('r1', 'allow', 'any', '10.90.1.10', 'tcp', '443'), R('r2', 'allow', 'any', '10.90.2.20', 'tcp', '3306')],
+    goals: [G('Visitors use HTTPS', '203.0.113.109', '10.90.1.10', 'tcp', 443, 'allow'), G('Web tier queries data tier', '10.90.1.10', '10.90.2.20', 'tcp', 3306, 'allow'), G('Visitors cannot query data tier', '203.0.113.109', '10.90.2.20', 'tcp', 3306, 'deny'), G('Cache host cannot query data tier', '10.90.1.30', '10.90.2.20', 'tcp', 3306, 'deny')],
+    solution: [R('r1', 'allow', 'any', '10.90.1.10', 'tcp', '443'), R('r2', 'allow', '10.90.1.10', '10.90.2.20', 'tcp', '3306')],
+    why: 'The broad database rule exposes the inside tier. Limit its source to the web host and leave other database paths to implicit deny. Network+ calls the isolated public tier a screened subnet and tests which traffic should cross each zone.',
+    src: ['nist', 'iana'],
+  },
+  {
+    id: 'fw-10', level: 2, title: 'Limit printer VLAN traffic', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['4.1', '4.3'], 'aplus-1201': ['2.4'] },
+    brief: 'Birch Vale moved printers to their own VLAN. Staff need the print service, while printer devices must not open file sharing on staff workstations. An old broad rule crosses the VLAN boundary.',
+    tasks: ['Staff can send print jobs to the print server.', 'Staff cannot use file sharing on a printer.', 'Printers cannot use file sharing on staff PCs.', 'Outside hosts cannot print to the server.'],
+    nodes: [I('inet', 'Outside tester', '198.51.100.110', 8, 50), F(), S('staff-sw', 'Staff VLAN switch', 77), S('print-sw', 'Printer VLAN switch', 20), H('staff', 'pc', 'Staff PC', '10.100.2.40', 'staff', 76, 80, '10.100.2.1'), H('print', 'server', 'Print server', '10.100.3.10', 'printer', 70, 18, '10.100.3.1'), H('device', 'server', 'Printer device', '10.100.3.30', 'printer', 93, 18, '10.100.3.1')],
+    links: [['inet', 'fw'], ['fw', 'staff-sw'], ['staff-sw', 'staff'], ['fw', 'print-sw'], ['print-sw', 'print'], ['print-sw', 'device']],
+    rules: [R('r1', 'allow', '10.100.2.0/24', '10.100.3.0/24', 'tcp', '445'), R('r2', 'allow', 'any', '10.100.3.10', 'tcp', '631')],
+    goals: [G('Staff sends IPP print jobs', '10.100.2.40', '10.100.3.10', 'tcp', 631, 'allow'), G('Staff file sharing to printer is blocked', '10.100.2.40', '10.100.3.30', 'tcp', 445, 'deny'), G('Printer file sharing to staff is blocked', '10.100.3.30', '10.100.2.40', 'tcp', 445, 'deny'), G('Outside printing is blocked', '198.51.100.110', '10.100.3.10', 'tcp', 631, 'deny')],
+    solution: [R('r2', 'allow', '10.100.2.0/24', '10.100.3.10', 'tcp', '631')],
+    why: 'The old SMB rule permits an unwanted staff-to-printer path, and the print rule permits every source. Replace both with one staff VLAN to print server rule on TCP 631. Network+ tests segmentation enforcement and ACLs between VLANs.',
+    src: ['nist', 'iana'],
+  },
+  {
+    id: 'fw-06', level: 3, title: 'Restrict outbound DNS', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['4.3'] },
     brief: 'Pine Lantern uses one inside DNS server to query an outside resolver. A workstation was temporarily allowed to send its own DNS queries, and the approved server has no outbound permission.',
     tasks: ['The DNS server can query the outside resolver using UDP DNS.', 'The workstation cannot send UDP DNS directly to that resolver.', 'The outside resolver cannot start a DNS query to the inside server.', 'The DNS server cannot use SSH to the outside resolver.'],
     nodes: [I('resolver', 'Outside resolver', '192.0.2.53', 8, 50), F(), S('sw-in', 'Inside switch', 70), H('dns', 'server', 'DNS server', '10.60.2.53', 'inside', 70, 70, '10.60.2.1'), H('pc', 'pc', 'Workstation', '10.60.2.70', 'inside', 93, 70, '10.60.2.1')],
@@ -87,7 +112,7 @@ export default [
     src: ['nist', 'iana', 'rfc7766'],
   },
   {
-    id: 'fw-07', level: 3, title: 'Lock down administration', objs: ['3.2', '4.1'],
+    id: 'fw-07', level: 3, title: 'Lock down administration', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['3.5', '4.3'] },
     brief: 'Silver Pine administers two DMZ hosts through one inside jump box. An old SSH rule accepts any source, while remote desktop from the jump box is blocked.',
     tasks: ['The jump box can use SSH to administer the Linux host.', 'The jump box can use remote desktop to administer the Windows host.', 'Outside hosts cannot use SSH on the Linux host.', 'A staff PC cannot use SSH on the Linux host.', 'Outside hosts cannot use remote desktop on the Windows host.'],
     nodes: [I('inet', 'Outside tester', '203.0.113.90', 8, 50), F(), S('sw-dmz', 'DMZ switch', 18), S('sw-in', 'Inside switch', 80), H('linux', 'server', 'DMZ Linux host', '10.70.1.10', 'dmz', 70, 18, '10.70.1.1'), H('win', 'server', 'DMZ Windows host', '10.70.1.20', 'dmz', 93, 18, '10.70.1.1'), H('jump', 'admin', 'Jump box', '10.70.2.10', 'inside', 70, 80, '10.70.2.1'), H('staff', 'pc', 'Staff PC', '10.70.2.50', 'inside', 93, 80, '10.70.2.1')],
@@ -99,7 +124,7 @@ export default [
     src: ['nist', 'iana'],
   },
   {
-    id: 'fw-08', level: 3, title: 'Block one source, keep mail flowing', objs: ['3.2', '4.1'],
+    id: 'fw-08', level: 3, title: 'Block one source, keep mail flowing', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['4.3'] },
     brief: 'Harbor Finch has a DMZ customer site and mail relay. A documented abusive outside source must be blocked from the site, but other visitors and inbound mail still need service. An old SMTP rule exposes an inside mail archive.',
     tasks: ['The abusive source cannot open the customer site.', 'Other visitors can open the site with HTTPS.', 'Outside senders can deliver SMTP to the DMZ mail relay.', 'Outside senders cannot deliver SMTP to the inside archive.', 'The abusive source cannot use SSH on the site.'],
     nodes: [I('bad', 'Abusive source', '198.51.100.66', 8, 22), I('good', 'Other visitor', '203.0.113.44', 8, 75), F(), S('sw-dmz', 'DMZ switch', 18), H('web', 'server', 'Customer site', '10.80.1.10', 'dmz', 70, 18, '10.80.1.1'), H('relay', 'server', 'Mail relay', '10.80.1.25', 'dmz', 93, 18, '10.80.1.1'), H('archive', 'server', 'Mail archive', '10.80.2.30', 'inside', 70, 80, '10.80.2.1')],
@@ -109,5 +134,29 @@ export default [
     solution: [R('r4', 'deny', '198.51.100.66', '10.80.1.10', 'tcp', '443'), R('r1', 'allow', 'any', '10.80.1.10', 'tcp', '443'), R('r2', 'allow', 'any', '10.80.1.25', 'tcp', '25')],
     why: 'The source block must appear before the broad HTTPS allow or it will never match. Remove the archive SMTP exposure while keeping port 25 to the DMZ relay. Security+ combines block lists, ordered rules, and segmentation in this scenario. A block-list entry is often written as deny 198.51.100.66 to any, any protocol, at the top; that also passes here and stops the source from reaching the relay too.',
     src: ['nist', 'iana', 'docs'],
+  },
+  {
+    id: 'fw-11', level: 3, title: 'Keep DNS and time on approved paths', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['3.4', '4.3'], 'aplus-1201': ['2.3'] },
+    brief: 'Cairn Field requires clients to use an inside resolver and time server. Only those two servers may contact the outside DNS and NTP peers. A temporary client egress rule bypasses them.',
+    tasks: ['Clients can query the inside resolver.', 'Clients can get time from the inside time server.', 'The resolver can reach the outside DNS peer.', 'The time server can reach the outside NTP peer.', 'Clients cannot query either outside peer directly.'],
+    nodes: [I('dns-out', 'Outside DNS peer', '192.0.2.53', 8, 20), I('ntp-out', 'Outside NTP peer', '198.51.100.123', 8, 78), F(), S('client-sw', 'Client switch', 80), S('svc-sw', 'Services switch', 20), H('client', 'pc', 'Client', '10.110.2.40', 'client', 93, 80, '10.110.2.1'), H('dns', 'server', 'Inside resolver', '10.110.3.53', 'services', 70, 17, '10.110.3.1'), H('ntp', 'server', 'Inside time server', '10.110.3.123', 'services', 93, 17, '10.110.3.1')],
+    links: [['dns-out', 'fw'], ['ntp-out', 'fw'], ['fw', 'client-sw'], ['client-sw', 'client'], ['fw', 'svc-sw'], ['svc-sw', 'dns'], ['svc-sw', 'ntp']],
+    rules: [R('r1', 'allow', '10.110.2.0/24', 'any', 'udp', '53,123'), R('r2', 'allow', '10.110.3.53', '192.0.2.53', 'udp', '53')],
+    goals: [G('Client reaches inside DNS', '10.110.2.40', '10.110.3.53', 'udp', 53, 'allow'), G('Client reaches inside NTP', '10.110.2.40', '10.110.3.123', 'udp', 123, 'allow'), G('Resolver reaches outside DNS', '10.110.3.53', '192.0.2.53', 'udp', 53, 'allow'), G('Time server reaches outside NTP', '10.110.3.123', '198.51.100.123', 'udp', 123, 'allow'), G('Client cannot bypass DNS', '10.110.2.40', '192.0.2.53', 'udp', 53, 'deny'), G('Client cannot bypass NTP', '10.110.2.40', '198.51.100.123', 'udp', 123, 'deny')],
+    solution: [R('r1', 'allow', '10.110.2.0/24', '10.110.3.53', 'udp', '53'), R('r2', 'allow', '10.110.2.0/24', '10.110.3.123', 'udp', '123'), R('r3', 'allow', '10.110.3.53', '192.0.2.53', 'udp', '53'), R('r4', 'allow', '10.110.3.123', '198.51.100.123', 'udp', '123')],
+    why: 'The client rule uses any destination, so it bypasses approved internal services. Limit clients to the inside servers, then allow only those servers to contact outside peers. Network+ tests DNS and NTP paths by source, destination, protocol, and port. Production DNS also needs TCP 53 for responses that require it.',
+    src: ['nist', 'rfc7766', 'ntp'],
+  },
+  {
+    id: 'fw-12', level: 3, title: 'Protect the management plane', objs: ['3.2', '4.1'], examObjs: { 'netplus-009': ['3.5', '4.3'] },
+    brief: 'Juniper Cove manages a router and DMZ host from one jump box. A broad management rule lets staff PCs use SSH on the DMZ host, while SNMP from the jump box is blocked by the rule order.',
+    tasks: ['The jump box can SSH to the DMZ host.', 'The jump box can poll the router with SNMP.', 'Staff PCs cannot use either management service.', 'Outside hosts cannot use either management service.'],
+    nodes: [I('inet', 'Outside tester', '203.0.113.112', 8, 50), F(), S('staff-sw', 'Staff switch', 80), H('jump', 'admin', 'Jump box', '10.120.4.10', 'management', 70, 55, '10.120.4.1'), H('staff', 'pc', 'Staff PC', '10.120.2.50', 'staff', 93, 80, '10.120.2.1'), H('router', 'server', 'Managed router', '10.120.3.1', 'devices', 93, 18, '10.120.3.254'), H('host', 'server', 'DMZ host', '10.120.1.10', 'dmz', 70, 18, '10.120.1.1')],
+    links: [['inet', 'fw'], ['fw', 'staff-sw'], ['staff-sw', 'staff'], ['fw', 'jump'], ['fw', 'router'], ['fw', 'host']],
+    rules: [R('r1', 'allow', '10.120.0.0/16', '10.120.1.10', 'tcp', '22'), R('r2', 'deny', 'any', '10.120.3.1', 'udp', '161'), R('r3', 'allow', '10.120.4.10', '10.120.3.1', 'udp', '161')],
+    goals: [G('Jump box SSH works', '10.120.4.10', '10.120.1.10', 'tcp', 22, 'allow'), G('Jump box SNMP works', '10.120.4.10', '10.120.3.1', 'udp', 161, 'allow'), G('Staff SSH is blocked', '10.120.2.50', '10.120.1.10', 'tcp', 22, 'deny'), G('Staff SNMP is blocked', '10.120.2.50', '10.120.3.1', 'udp', 161, 'deny'), G('Outside SSH is blocked', '203.0.113.112', '10.120.1.10', 'tcp', 22, 'deny'), G('Outside SNMP is blocked', '203.0.113.112', '10.120.3.1', 'udp', 161, 'deny')],
+    solution: [R('r1', 'allow', '10.120.4.10', '10.120.1.10', 'tcp', '22'), R('r3', 'allow', '10.120.4.10', '10.120.3.1', 'udp', '161'), R('r2', 'deny', 'any', '10.120.3.1', 'udp', '161')],
+    why: 'The SSH source subnet includes staff, and the SNMP deny runs before its exception. Narrow SSH to the jump box and move the SNMP exception above the deny. Network+ names this a jump host and tests management-plane access with ordered ACLs.',
+    src: ['nist', 'iana'],
   },
 ];

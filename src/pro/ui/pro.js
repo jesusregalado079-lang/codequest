@@ -1,24 +1,41 @@
 // CodeQuest Pro — whole SPA, hash-routed. Plain DOM, no framework.
-import chapters from '../chapters/index.js';
+// The entry holds the router, the Beginner tier and the career pages. Lesson tiers, the exam pages (each exam's bank is
+// its own chunk) and the labs load on their routes (lazy.js); summaries for the Journey and achievements come from small
+// generated indexes, so no bank or lab content is needed to draw them.
 import beginnerUnits from '../beginner/foundations.js';
-import expertChapters from '../expert/index.js';
 import studies from '../resources.js';
 import careerPath, { milestones, gate, extras } from '../career-path.js';
 import expeditedStages from '../expedited-path.js';
-import { examSummary, leaveExam, showExam } from './exam.js';
-import { labsSummary, leaveLabs, showLabs } from './labs/index.js';
+import { DEFAULT_EXAM, EXAMS, examById } from '../exam/registry.js';
+import { examRoute } from '../exam/routes.js';
+import { examSummaries } from '../exam/summary.js';
+import { labsSummary } from './labs/summary.js';
+import { beginNav, isCurrentNav, lazyPage, retryImport } from './lazy.js';
 import { achievements, gateKey, groupStats as groupStatsOf, heatmap, journey, outKey, passMark, quizKey } from '../career-logic.js';
 import { run } from '../engine/runner.js';
 import { setHue } from './aether.js';
+import { careerHeaderHtml } from './career-nav.js';
 import {
   isComplete, completeLesson, hintsUsed, revealHint,
   totalXp, rank, streakCount, chapterProgress, badgeEarned,
   toggleStudyDone, setStudyDone, studyDoneMap, ensureMigrated, doneDates, getSettings, setHoursPerWeek,
+  applyLabBadgeMigration, getBadges, recordBadges,
   exportProgress, importProgress, requestPersistentStorage,
 } from '../progress.js';
 
 const app = document.getElementById('app');
 const beginner = beginnerUnits[0]; // one Foundations unit for now
+
+// Lazy modules. The lesson tiers fill these lists once loaded; the exam and labs UIs are kept so the router can stop
+// their clocks and listeners on leave without ever importing them eagerly.
+let chapters = [];
+let expertChapters = [];
+const ui = { exam: null, labs: null };
+const loadTier = (tier) => (tier === 'expert'
+  ? retryImport(() => import('../expert/index.js'), (m) => Array.isArray(m.default)).then((m) => { expertChapters = m.default; })
+  : retryImport(() => import('../chapters/index.js'), (m) => Array.isArray(m.default)).then((m) => { chapters = m.default; }));
+const loadExamUi = () => retryImport(() => import('./exam.js'), (m) => typeof m.showExam === 'function').then((m) => { ui.exam = m; return m; });
+const loadLabsUi = () => retryImport(() => import('./labs/index.js'), (m) => typeof m.showLabs === 'function').then((m) => { ui.labs = m; return m; });
 
 // one accent hue per chapter — drives frame gradients, ticks, and lesson accents
 const HUES = [204, 262, 36, 152, 326, 184, 58, 12];
@@ -109,13 +126,26 @@ export function md(src) {
 
 /* ---------- routing ---------- */
 
+// Frames for a lazy page's loading or error line, so the header and tabs are already there while a chunk loads.
+const frame = (head, inner) => { app.innerHTML = `${head}<main class="chapter-page lazy-page">${inner}</main>`; return app; };
+const careerFrame = (active) => (inner) => frame(careerHeader(active), inner);
+const tierFrame = (tier) => (inner) => { tierPage(tier, `<main class="chapter-page lazy-page">${inner}</main>`); return app; };
+const lessonFrame = (inner) => frame('<header class="pro-header"><a class="back" href="#/">← Lessons</a></header>', inner);
+const careerCtx = () => ({ app, header: careerHeader, esc, celebrate: withCelebration, saveWarn: showSaveWarning });
+
 function router() {
+  const token = beginNav(); // a slow chunk from an earlier navigation never renders over this one
+  focusRouteHeading(token);
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   const [seg, li] = parts;
   scrollTo(0, 0);
   document.title = 'CodeQuest Pro';
-  leaveExam(); // stop an exam clock or key listener from the page we are leaving
-  leaveLabs(); // same for a lab runner (sprint clock, key listeners)
+  // career pages (Journey, Exams, Labs, Roadmap, Progress, Extra, Studies) share one layout and one link/focus hue
+  const career = ['resources', 'career-journey', 'exam', 'labs', 'career-path', 'career-progress', 'career-extra'].includes(seg);
+  if (career) document.body.dataset.area = 'career';
+  else delete document.body.dataset.area;
+  if (ui.exam) ui.exam.leaveExam(); // stop an exam clock or key listener from the page we are leaving
+  if (ui.labs) ui.labs.leaveLabs(); // same for a lab runner (sprint clock, key listeners)
 
   // root → land on whichever tier you last used (no separate chooser page)
   if (!seg) {
@@ -152,12 +182,23 @@ function router() {
     return showCareerJourney();
   }
 
-  // Certification exam practice (Security+ SY0-801): #/exam, #/exam/domain/<n>, #/exam/session, #/exam/result/<id>
+  // Certification exam practice: #/exam (all exams), #/exam/<examId>[/domain/<n> | /session | /result/<id>].
+  // Old Security+ links (#/exam/domain/<n>, #/exam/session, #/exam/result/<id>) are replaced by their new address.
   if (seg === 'exam') {
+    const route = examRoute(parts.slice(1));
+    if (route.redirect) { location.replace(`#${route.redirect}`); return; }
+    const exam = route.hub ? null : examById(route.examId);
     document.body.dataset.view = 'chapter';
-    document.title = 'Security+ Exam Practice · CodeQuest Pro';
+    document.title = `${exam ? `${exam.blueprint.short} ` : ''}Exam Practice · CodeQuest Pro`;
     setHue(212);
-    return showExam(parts.slice(1), { app, header: careerHeader, esc, celebrate: withCelebration, saveWarn: showSaveWarning });
+    return lazyPage({
+      key: exam ? `exam:${exam.id}` : 'exam-ui',
+      load: () => Promise.all([loadExamUi(), exam ? exam.load() : null]),
+      render: ([m, bank]) => m.showExam(route, bank, careerCtx()),
+      show: careerFrame('exam'),
+      token,
+      what: exam ? `${exam.blueprint.short} practice` : 'exam practice',
+    });
   }
 
   // Hands-on labs (performance-based practice): #/labs, #/labs/<labId>, #/labs/<labId>/<caseId>
@@ -165,7 +206,7 @@ function router() {
     document.body.dataset.view = 'chapter';
     document.title = 'Hands-on Labs · CodeQuest Pro';
     setHue(176);
-    return showLabs(parts.slice(1), { app, header: careerHeader, esc, celebrate: withCelebration, saveWarn: showSaveWarning });
+    return lazyPage({ key: 'labs-ui', load: loadLabsUi, render: (m) => m.showLabs(parts.slice(1), careerCtx()), show: careerFrame('labs'), token, what: 'the labs' });
   }
 
   // Career Path: staged, sequenced roadmap (separate from the Studies grab-bag); #/career-path/3 opens Phase 3
@@ -197,7 +238,7 @@ function router() {
     rememberTier('expert');
     document.body.dataset.view = 'grid';
     setHue(280);
-    return showExpertGrid();
+    return lazyPage({ key: 'tier:expert', load: () => loadTier('expert'), render: () => showExpertGrid(), show: tierFrame('expert'), token, what: 'the Expert chapters' });
   }
 
   // Intermediate tier: switcher + chapter mosaic
@@ -205,25 +246,52 @@ function router() {
     rememberTier('intermediate');
     document.body.dataset.view = 'grid';
     setHue(204);
-    return showChapters();
+    return lazyPage({ key: 'tier:intermediate', load: () => loadTier('intermediate'), render: () => showChapters(), show: tierFrame('intermediate'), token, what: 'the Intermediate chapters' });
   }
 
-  // Any code chapter / lesson — intermediate (ch1…ch8) or expert (x1…x6)
-  const ch = [...chapters, ...expertChapters].find((c) => c.id === seg);
-  if (ch) {
-    setHue(hueOf(ch));
-    const i = Number(li);
-    if (li !== undefined && li !== '' && ch.lessons[i]) {
-      document.body.dataset.view = 'lesson';
-      return showLesson(ch, i);
-    }
-    document.body.dataset.view = 'chapter';
-    return showChapter(ch);
-  }
-
-  location.hash = ''; // unknown route → home
+  // Any code chapter / lesson — intermediate (ch1…ch8) or expert (x1…x6). Anything else loads both tiers to look.
+  const tiers = /^ch\d+$/.test(seg) ? ['intermediate'] : /^x\d+$/.test(seg) ? ['expert'] : ['intermediate', 'expert'];
+  return lazyPage({
+    key: `tier:${tiers.join('+')}`,
+    load: () => Promise.all(tiers.map(loadTier)),
+    render: () => {
+      const ch = [...chapters, ...expertChapters].find((c) => c.id === seg);
+      if (!ch) { location.hash = ''; return; } // unknown route → home
+      setHue(hueOf(ch));
+      const i = Number(li);
+      if (li !== undefined && li !== '' && ch.lessons[i]) {
+        document.body.dataset.view = 'lesson';
+        return showLesson(ch, i);
+      }
+      document.body.dataset.view = 'chapter';
+      return showChapter(ch);
+    },
+    show: lessonFrame,
+    token,
+    what: 'the lesson',
+  });
+}
+function focusRouteHeading(token) {
+  const observer = new MutationObserver(() => {
+    if (!isCurrentNav(token)) { observer.disconnect(); return; }
+    const heading = app.querySelector('main h1');
+    if (!heading) return; // a lazy page still shows its loading line
+    observer.disconnect();
+    if (app.contains(document.activeElement) && document.activeElement !== app) return;
+    heading.tabIndex = -1;
+    heading.dataset.routeFocus = '';
+    heading.focus({ preventScroll: true });
+  });
+  observer.observe(app, { childList: true });
 }
 window.addEventListener('hashchange', router);
+// A link to the roadmap phase already in the address bar fires no hashchange: scroll to that phase instead.
+app.addEventListener('click', (event) => {
+  const a = event.target.closest && event.target.closest('a[href^="#/career-path/"]');
+  if (!a || a.getAttribute('href') !== location.hash || !app.querySelector('.rm-page')) return;
+  event.preventDefault();
+  showPhase(a.getAttribute('href').split('/').pop());
+});
 // Before anything renders: carry checkmarks saved under old URL keys over to the permanent ids (runs once).
 ensureMigrated();
 requestPersistentStorage();
@@ -250,8 +318,8 @@ function tierPage(active, bodyHtml) {
   app.innerHTML = `
     <header class="pro-header">
       <h1>CodeQuest <span class="pro-mark">Pro</span></h1>
-      <a class="studies-link" href="#/resources">Studies ↗</a>
-      <a class="studies-link" href="#/career-journey">Career Journey ↗</a>
+      <a class="studies-link" href="#/resources">Studies <span aria-hidden="true">↗</span></a>
+      <a class="studies-link" href="#/career-journey">Career Journey <span aria-hidden="true">↗</span></a>
       ${statusBar()}
     </header>
     ${tierSwitcher(active)}
@@ -264,34 +332,66 @@ function tierPage(active, bodyHtml) {
 // ensureMigrated().
 const groupStats = (g, done = studyDoneMap()) => groupStatsOf(g, done);
 
-const checkLabel = (name, done, doneWord = 'studied', notWord = 'not studied') => `Mark ${name} as ${done ? notWord : doneWord}`;
+// Toggle buttons keep one label; aria-pressed says whether it is done.
+const checkLabel = (name, doneWord = 'studied') => `Mark ${name} as ${doneWord}`;
 
-function renderStudyGroups(groups) {
+// A phase's status on the roadmap, from the Journey: done, current ("you are here"), upcoming or an optional lane.
+const PHASE_STATUS = {
+  done: ['is-done', 'Done'],
+  current: ['is-current', 'You are here'],
+  ahead: ['is-upcoming', 'Upcoming'],
+  lane: ['is-lane', 'Side quest · optional'],
+  'active-lane': ['is-lane', 'Side quest · started'],
+};
+const phaseCls = (p) => (p.state === 'done' ? 'is-done' : p.state === 'current' ? 'is-current' : p.lane ? 'is-lane' : '');
+
+function nextUpHtml(n) {
+  const name = n.url
+    ? `<a class="rm-next-name" href="${esc(n.url)}" target="_blank" rel="noopener noreferrer">${esc(n.name)} <span aria-hidden="true">↗</span></a>`
+    : `<span class="rm-next-name">${esc(n.name)}</span>`;
+  return `<p class="rm-next"><span class="c-label">Next up</span>${name}</p>`;
+}
+
+// One card per group (a roadmap phase, or a Studies/Extra group): head with number badge, title, % and count, chips, a
+// progress line, then the resources as checklist rows and the deliverables in their own panel.
+// `road` (Roadmap only) is the Journey: it gives each phase its status and the current phase its "Next up" line.
+function renderStudyGroups(groups, road = null) {
   const done = studyDoneMap();
   return groups
     .map((g, gi) => {
       const st = groupStats(g, done);
-      const meta = [
-        g.lane ? '<span class="study-lane">income lane</span>' : '',
-        g.months ? `<span class="study-meta">months ${esc(g.months)}</span>` : '',
-        g.hours ? `<span class="study-meta">~${g.hours[0]}–${g.hours[1]} hrs</span>` : '',
+      const ph = road && g.n ? road.phases.find((p) => p.n === g.n) : null;
+      const [statusCls, statusLabel] = ph ? PHASE_STATUS[ph.state] || ['', ''] : ['', ''];
+      const chips = [
+        ph ? `<span class="c-chip study-status ${statusCls}">${statusLabel}</span>` : '',
+        g.lane ? '<span class="c-chip is-lane study-lane">income lane</span>' : '',
+        g.months ? `<span class="c-chip study-meta">months ${esc(g.months)}</span>` : '',
+        g.hours ? `<span class="c-chip study-meta">~${g.hours[0]}–${g.hours[1]} hrs</span>` : '',
       ].join('');
+      const next = road && road.next && road.next.phase === g.n ? road.next : null;
       return `
-      <section class="study-group${g.lane ? ' lane' : ''}" data-gi="${gi}">
-        <h2>${esc(g.title)} <span class="study-group-progress">${st.done}/${st.total} done</span></h2>
-        ${meta ? `<div class="study-metarow">${meta}</div>` : ''}
-        <p class="chapter-lead">${esc(g.blurb)}</p>
-        <div class="study-list">
+      <section class="study-group c-card${ph ? ` ${phaseCls(ph)}` : ''}${g.lane ? ' lane' : ''}" data-gi="${gi}">
+        <div class="c-card-top${g.n ? '' : ' no-badge'}">
+          ${g.n ? `<div class="c-badge" aria-hidden="true">${g.n}</div>` : ''}
+          <div class="c-card-title"><h2>${esc(g.title)}</h2></div>
+          <div class="c-card-pct"><strong class="study-group-pct">${st.pct}%</strong><span class="study-group-progress">${st.done}/${st.total} done</span></div>
+        </div>
+        ${chips ? `<div class="c-chips study-metarow">${chips}</div>` : ''}
+        <div class="c-bar" aria-hidden="true"><i style="width:${st.pct}%"></i></div>
+        <div class="c-card-body">
+          ${next ? nextUpHtml(next) : ''}
+          <p class="chapter-lead">${esc(g.blurb)}</p>
+          <div class="study-list">
           ${g.links
             .map((l) => {
               const isDone = done[l.id] === true;
               return `
             <div class="study-card${isDone ? ' done' : ''}">
-              <button type="button" class="study-check" data-key="${esc(l.id)}" data-name="${esc(l.name)}" aria-pressed="${isDone}" aria-label="${esc(checkLabel(l.name, isDone))}">${isDone ? '✓' : ''}</button>
+              <button type="button" class="study-check c-check" data-key="${esc(l.id)}" data-name="${esc(l.name)}" aria-pressed="${isDone}" aria-label="${esc(checkLabel(l.name))}">${isDone ? '✓' : ''}</button>
               <div class="study-col">
                 <a class="study-link" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">
                   <div class="study-by">${esc(l.by)}${l.hours ? ` <span class="study-hrs">~${l.hours}h</span>` : ''}${l.codex ? ' <span class="study-codex">codex addition</span>' : ''}</div>
-                  <div class="study-name">${esc(l.name)} <span class="ext">↗</span></div>
+                  <div class="study-name">${esc(l.name)} <span class="ext" aria-hidden="true">↗</span></div>
                   <div class="study-note">${esc(l.note)}</div>
                 </a>
                 ${l.quiz ? renderMiniQuiz(l.id, l.quiz, done) : ''}
@@ -299,30 +399,33 @@ function renderStudyGroups(groups) {
             </div>`;
             })
             .join('')}
+          </div>
+          ${
+            g.outputs && g.outputs.length
+              ? `<div class="study-deliver c-panel is-done">
+            <h3 class="study-outputs-h">Output you can point at</h3>
+            <div class="study-list study-outputs">
+            ${g.outputs
+              .map((o) => {
+                const k = outKey(o);
+                const isDone = done[k] === true;
+                return `
+              <div class="study-card output${isDone ? ' done' : ''}">
+                <button type="button" class="study-check c-check" data-key="${esc(k)}" data-name="${esc(o.name)}" aria-pressed="${isDone}" aria-label="${esc(checkLabel(o.name, 'done'))}">${isDone ? '✓' : ''}</button>
+                <div class="study-link study-static"><div class="study-name">${esc(o.name)}</div></div>
+              </div>`;
+              })
+              .join('')}
+            </div>
+          </div>`
+              : ''
+          }
+          ${
+            g.source
+              ? `<p class="study-source">Source: <a href="${esc(g.source.url)}" target="_blank" rel="noopener noreferrer">${esc(g.source.label)}</a></p>`
+              : ''
+          }
         </div>
-        ${
-          g.outputs && g.outputs.length
-            ? `<h3 class="study-outputs-h">Output you can point at</h3>
-        <div class="study-list study-outputs">
-          ${g.outputs
-            .map((o) => {
-              const k = outKey(o);
-              const isDone = done[k] === true;
-              return `
-            <div class="study-card output${isDone ? ' done' : ''}">
-              <button type="button" class="study-check" data-key="${esc(k)}" data-name="${esc(o.name)}" data-words="done|not done" aria-pressed="${isDone}" aria-label="${esc(checkLabel(o.name, isDone, 'done', 'not done'))}">${isDone ? '✓' : ''}</button>
-              <div class="study-link study-static"><div class="study-name">${esc(o.name)}</div></div>
-            </div>`;
-            })
-            .join('')}
-        </div>`
-            : ''
-        }
-        ${
-          g.source
-            ? `<p class="study-source">Source: <a href="${esc(g.source.url)}" target="_blank" rel="noopener noreferrer">${esc(g.source.label)}</a></p>`
-            : ''
-        }
       </section>`;
     })
     .join('');
@@ -441,19 +544,19 @@ function showSaveWarning() {
 }
 
 // Checkmarks on Studies, Roadmap and Extra update in place: the page is not redrawn, so keyboard focus, scroll
-// position and any open quiz stay exactly where they were.
-function wireStudyChecks(groups) {
+// position and any open quiz stay exactly where they were. `after(done)` lets a page refresh its own summaries
+// (the Roadmap's phase status and rail); if that moves anything above the box, the page scrolls with it.
+function wireStudyChecks(groups, after = null) {
   app.querySelectorAll('.study-check').forEach((btn) => {
     btn.addEventListener('click', () => {
       const key = btn.dataset.key;
+      const top = btn.getBoundingClientRect().top;
       const res = withCelebration(() => toggleStudyDone(key));
       if (!res.ok) showSaveWarning();
       const done = studyDoneMap();
       app.querySelectorAll(`.study-check[data-key="${CSS.escape(key)}"]`).forEach((b) => {
         const isDone = done[key] === true;
-        const [yes, no] = (b.dataset.words || 'studied|not studied').split('|');
         b.setAttribute('aria-pressed', String(isDone));
-        b.setAttribute('aria-label', checkLabel(b.dataset.name || '', isDone, yes, no));
         b.textContent = isDone ? '✓' : '';
         b.closest('.study-card').classList.toggle('done', isDone);
       });
@@ -463,7 +566,14 @@ function wireStudyChecks(groups) {
         const st = groupStats(g, done);
         const label = section.querySelector('.study-group-progress');
         if (label) label.textContent = `${st.done}/${st.total} done`;
+        const pct = section.querySelector('.study-group-pct');
+        if (pct) pct.textContent = `${st.pct}%`;
+        const fill = section.querySelector(':scope > .c-bar > i');
+        if (fill) fill.style.width = `${st.pct}%`;
       });
+      if (after) after(done);
+      const moved = btn.getBoundingClientRect().top - top;
+      if (Math.abs(moved) > 0.5) window.scrollBy(0, moved);
     });
   });
 }
@@ -479,11 +589,13 @@ function refocus(key) {
 function showResources() {
   app.innerHTML = `
     ${careerHeader('resources')}
-    <main class="chapter-page" style="--hue:48">
-      <div class="tier-tag">Studies</div>
-      <h1>Extra Studies</h1>
-      <p class="chapter-lead">Hand-picked resources to study alongside the course. External links open in a new tab. Check one off once you've done it — that's saved on this device.</p>
-      ${renderStudyGroups(studies)}
+    <main class="chapter-page c-page">
+      <div class="c-intro">
+        <div class="tier-tag c-kicker">Studies</div>
+        <h1 tabindex="-1">Extra Studies</h1>
+        <p class="chapter-lead">Hand-picked resources to study alongside the course. External links open in a new tab. Check one off once you've done it — that's saved on this device.</p>
+      </div>
+      <div class="c-groups">${renderStudyGroups(studies)}</div>
     </main>`;
 
   wireStudyChecks(studies);
@@ -492,37 +604,29 @@ function showResources() {
 
 /* ---------- Career Path (staged, sequenced roadmap) ---------- */
 
-const CAREER_TABS = [
-  ['career-journey', 'Journey'],
-  ['exam', 'Sec+ Exam'],
-  ['labs', 'Labs'],
-  ['career-path', 'Roadmap'],
-  ['career-progress', 'Progress'],
-  ['career-extra', 'Extra'],
-  ['resources', 'Studies'],
-];
-function careerHeader(active) {
-  return `
-    <header class="pro-header career-head">
-      <a class="back" href="#/">← Lessons</a>
-      <nav class="career-nav" aria-label="Career">
-        ${CAREER_TABS.map(([id, label]) => `<a href="#/${id}"${id === active ? ' class="on" aria-current="page"' : ''}>${label}</a>`).join('')}
-        <a class="exp-link" href="./expedited.html">⚡ Expedited</a>
-      </nav>
-    </header>`;
-}
+const careerHeader = (active) => careerHeaderHtml(active);
 
 // What the career pages share: the checkmark map, its dates, the pace, today, and everything computed from them.
 const todayIso = () => new Date().toLocaleDateString('en-CA');
 function careerState() {
+  if (!applyLabBadgeMigration().ok) showSaveWarning();
   const done = studyDoneMap();
   const doneAt = doneDates();
   const { hoursPerWeek } = getSettings();
   const j = journey({ full: careerPath, milestones, gate, stages: expeditedStages, done, doneAt, hoursPerWeek, todayIso: todayIso() });
-  const exam = examSummary();
+  const exams = examSummaries(); // every exam, from the generated index (no bank loaded)
+  const exam = exams[DEFAULT_EXAM]; // the original exam badges stay Security+
   const labs = labsSummary();
-  const badges = achievements({ done, doneAt, full: careerPath, extras, stages: expeditedStages, gate, j, exam, labs });
-  return { done, doneAt, j, badges, exam, labs };
+  const kept = getBadges();
+  const ctx = { done, doneAt, full: careerPath, extras, stages: expeditedStages, gate, j, exam, exams, labs, kept };
+  let badges = achievements(ctx);
+  const newlyEarned = badges.filter((b) => b.earned && !Object.hasOwn(kept, b.id));
+  if (newlyEarned.length) {
+    const earnedToday = todayIso();
+    if (!recordBadges(Object.fromEntries(newlyEarned.map((b) => [b.id, b.date || earnedToday]))).ok) showSaveWarning();
+    else badges = achievements({ ...ctx, kept: getBadges() });
+  }
+  return { done, doneAt, j, badges, exam, exams, labs };
 }
 
 // ---------- celebrations ----------
@@ -567,12 +671,14 @@ function celebrate(newBadges) {
   });
   confetti();
 }
-const earnedIds = (badges) => new Set(badges.filter((b) => b.earned).map((b) => b.id));
 // Run a change, then celebrate whatever it unlocked.
 function withCelebration(change) {
-  const before = earnedIds(careerState().badges);
+  careerState(); // persist any badges already earned before this action
+  const before = new Set(Object.keys(getBadges()));
   const result = change();
-  const after = careerState().badges.filter((b) => b.earned && !before.has(b.id));
+  const badges = careerState().badges;
+  const kept = getBadges();
+  const after = badges.filter((b) => b.earned && !before.has(b.id) && Object.hasOwn(kept, b.id));
   celebrate(after);
   return result;
 }
@@ -586,7 +692,7 @@ function ringSvg(pct, size = 132, stroke = 12) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   return `<svg class="jr-ring" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
-    <defs><linearGradient id="jrGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#42d6a4"/><stop offset="1" stop-color="#5aa9ff"/></linearGradient></defs>
+    <defs><linearGradient id="jrGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#42d6a4"/><stop offset="1" stop-color="#78e8c0"/></linearGradient></defs>
     <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="${stroke}"/>
     <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="url(#jrGrad)" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${(c * pct) / 100} ${c}" transform="rotate(-90 ${size / 2} ${size / 2})"/>
   </svg>`;
@@ -626,7 +732,7 @@ function trailNode(p, j) {
 }
 
 function showCareerJourney() {
-  const { j, badges, exam, labs } = careerState();
+  const { j, badges, exams, labs } = careerState();
   const earned = badges.filter((b) => b.earned);
   const nextBadges = badges.filter((b) => !b.earned).sort((a, b) => (b.have / b.need) - (a.have / a.need)).slice(0, 3);
   const r = j.rank;
@@ -639,9 +745,9 @@ function showCareerJourney() {
         <h2>${esc(j.next.name)}</h2>
         <p>${j.next.kind === 'link' ? `${esc(j.next.by)}${j.next.hours ? ` · about ${j.next.hours} h` : ''}` : 'Deliverable: something you can point at'}</p>
         <div class="jr-next-actions">
-          ${j.next.url ? `<a class="jr-btn" href="${esc(j.next.url)}" target="_blank" rel="noopener noreferrer">Open it ↗</a>` : ''}
-          <button type="button" class="jr-btn primary" data-journey-done="${esc(j.next.id)}">Mark done ✓</button>
-          <a class="jr-btn ghost" href="#/career-path/${j.next.phase}">See the phase</a>
+          ${j.next.url ? `<a class="jr-btn c-btn" href="${esc(j.next.url)}" target="_blank" rel="noopener noreferrer">Open it <span aria-hidden="true">↗</span></a>` : ''}
+          <button type="button" class="jr-btn c-btn primary" data-journey-done="${esc(j.next.id)}">Mark done <span aria-hidden="true">✓</span></button>
+          <a class="jr-btn c-btn ghost" href="#/career-path/${j.next.phase}">See the phase</a>
         </div>
       </section>` : `
       <section class="jr-next done"><h2>Every core phase is complete.</h2><p>You walked the whole road. Pick a side quest or go deeper in Phase 8.</p></section>`;
@@ -654,7 +760,7 @@ function showCareerJourney() {
           ${rankEmblem(r.level)}
           <div>
             <div class="jr-kicker">Rank ${r.level} of 9</div>
-            <h1>${esc(r.title)}</h1>
+            <h1 tabindex="-1">${esc(r.title)}</h1>
             ${r.next ? `<div class="jr-rankbar" role="img" aria-label="${r.pct}% of the way to ${esc(r.next.title)}"><i style="width:${Math.max(3, r.pct)}%"></i></div><p class="jr-sub">${r.toNext} study hours to <strong>${esc(r.next.title)}</strong></p>` : '<p class="jr-sub">Top rank reached.</p>'}
           </div>
         </div>
@@ -663,10 +769,10 @@ function showCareerJourney() {
           <div class="jr-ring-label"><b>${j.pct}%</b><span>of the core path</span></div>
         </div>
         <div class="jr-stats">
-          <div><b>${j.allHoursDone}<small> h</small></b><span>studied</span></div>
-          <div><b>${j.streak}<small> ${j.streak === 1 ? 'day' : 'days'}</small></b><span>streak${j.bestStreak > j.streak ? ` · best ${j.bestStreak}` : ''}</span></div>
-          <div><b>${earned.length}<small>/${badges.length}</small></b><span>achievements</span></div>
-          <div><b>${fmtDate(j.finishIso)}</b><span>core path done at your pace</span></div>
+          <div class="c-stat"><b>${j.allHoursDone}<small> h</small></b><span>studied</span></div>
+          <div class="c-stat"><b>${j.streak}<small> ${j.streak === 1 ? 'day' : 'days'}</small></b><span>streak${j.bestStreak > j.streak ? ` · best ${j.bestStreak}` : ''}</span></div>
+          <div class="c-stat"><b>${earned.length}<small>/${badges.length}</small></b><span>achievements</span></div>
+          <div class="c-stat"><b>${fmtDate(j.finishIso)}</b><span>core path done at your pace</span></div>
         </div>
       </section>
 
@@ -676,22 +782,29 @@ function showCareerJourney() {
         <span id="jr-pace-help" class="jr-pace-help">About ${days} h a day. ${j.weeksLeft} weeks of core study left${firstJob && !firstJob.reached ? `. First technical role: around <strong>${fmtDate(firstJob.etaIso)}</strong>` : ''}.</span>
       </section>
 
-      <a class="jr-exam${exam.ready ? ' ready' : ''}" href="#/exam">
-        <div class="jr-exam-tag">${esc(exam.name)} · exam readiness</div>
-        <div class="jr-exam-row">
-          <b>${exam.avg3 === null ? 'No mock yet' : `${exam.avg3}%`}</b>
-          <span class="jr-exam-bar" aria-hidden="true"><i style="width:${exam.avg3 ?? 0}%"></i><em style="left:${exam.target}%"></em></span>
-          <span class="jr-exam-go">Open exam practice →</span>
-        </div>
-        <small>${exam.avg3 === null ? 'Take a full mock to see where you stand.' : `Average of your last ${Math.min(3, exam.mocks)} mock${exam.mocks === 1 ? '' : 's'}; ready = 3 in a row at ${exam.target}%+.`} ${exam.due} due in review · ${exam.seen}/${exam.total} questions seen.</small>
-      </a>
+      <section class="jr-exam" aria-label="Exam readiness">
+        <div class="jr-exam-tag">Exam readiness <a class="jr-exam-all" href="#/exam">All exams <span aria-hidden="true">→</span></a></div>
+        <ul class="jr-exam-list">
+          ${EXAMS.map((e) => {
+    const x = exams[e.id];
+    return `<li><a class="jr-exam-line${x.ready ? ' ready' : ''}" href="#/exam/${esc(e.id)}">
+            <span class="jr-exam-name"><strong>${esc(e.blueprint.short)}</strong><small>${esc(e.blueprint.code)}</small></span>
+            <b>${x.avg3 === null ? 'No mock yet' : `${x.avg3}%`}</b>
+            <span class="jr-exam-bar" aria-hidden="true"><i style="width:${x.avg3 ?? 0}%"></i><em style="left:${x.target}%"></em></span>
+            <small class="jr-exam-meta">${x.due} due · ${x.seen}/${x.total} seen</small>
+            <span class="jr-exam-go" aria-hidden="true">→</span>
+          </a></li>`;
+  }).join('')}
+        </ul>
+        <small>Readiness is the average of your last 3 full mocks; ready = 3 in a row at ${exams[DEFAULT_EXAM].target}%+.</small>
+      </section>
 
       <a class="jr-labs${labs.total && labs.passed === labs.total ? ' done' : ''}" href="#/labs">
         <div class="jr-labs-tag">Hands-on Labs · performance-based practice</div>
         <div class="jr-labs-row">
           <b>${labs.passed}<small> of ${labs.total}</small></b>
           <span>cases passed${labs.perfect ? ` · ${labs.perfect} perfect` : ''}</span>
-          <span class="jr-labs-go">Open the labs →</span>
+          <span class="jr-labs-go">Open the labs <span aria-hidden="true">→</span></span>
         </div>
         <div class="jr-labs-chips">${labs.perLab.map((l) => `<span class="jr-lab-chip${l.total && l.passed === l.total ? ' done' : l.attempted ? ' going' : ''}" title="${esc(l.name)}"><i aria-hidden="true">${l.icon}</i><span class="visually-hidden">${esc(l.name)}:</span> ${l.passed}/${l.total}</span>`).join('')}</div>
       </a>
@@ -699,14 +812,14 @@ function showCareerJourney() {
       ${nextCard}
 
       <section class="jr-map" aria-label="Your road">
-        <h2 class="jr-h2">Your road</h2>
+        <h2 class="jr-h2 c-h2">Your road</h2>
         <ol class="jr-trail">
           ${j.phases.map((p) => trailNode(p, j)).join('')}
         </ol>
       </section>
 
       <section class="jr-exp" aria-label="Expedited track">
-        <h2 class="jr-h2">Expedited track <a href="./expedited.html">open ↗</a></h2>
+        <h2 class="jr-h2 c-h2">Expedited track <a href="./expedited.html">open <span aria-hidden="true">→</span></a></h2>
         <div class="jr-exp-row">
           ${j.expedited.map((st) => {
             const [tag, name] = st.title.split(' — ');
@@ -717,7 +830,7 @@ function showCareerJourney() {
       </section>
 
       <section class="jr-badges" aria-label="Achievements">
-        <h2 class="jr-h2">Achievements <span>${earned.length} of ${badges.length}</span></h2>
+        <h2 class="jr-h2 c-h2">Achievements <span>${earned.length} of ${badges.length}</span></h2>
         ${nextBadges.length ? `<div class="jr-closest">${nextBadges.map((b) => `<div class="jr-close"><span aria-hidden="true">${b.icon}</span><div><strong>${esc(b.name)}</strong><small>${esc(b.how)}</small><span class="jr-bar"><i style="width:${Math.round((b.have / b.need) * 100)}%"></i></span></div><em>${b.have}/${b.need}</em></div>`).join('')}</div>` : ''}
         <ul class="jr-badge-grid">
           ${badges.map((b) => `<li class="jr-badge${b.earned ? ' earned' : ''}" title="${esc(b.how)}"><span class="jb-icon" aria-hidden="true">${b.earned ? b.icon : '🔒'}</span><strong>${esc(b.name)}</strong><small>${b.earned ? (b.date ? fmtDay(b.date) : 'Unlocked') : `${b.have}/${b.need}`}</small></li>`).join('')}
@@ -725,7 +838,7 @@ function showCareerJourney() {
       </section>
 
       <section class="jr-heat" aria-label="Study days, last 12 weeks">
-        <h2 class="jr-h2">Last 12 weeks</h2>
+        <h2 class="jr-h2 c-h2">Last 12 weeks</h2>
         <div class="jr-heat-grid">
           ${heat.map((col) => `<div class="jr-heat-col">${col.map((d) => `<i class="h${d.future ? 'f' : Math.min(4, d.count)}" title="${d.iso}: ${d.count} ticked"></i>`).join('')}</div>`).join('')}
         </div>
@@ -751,25 +864,108 @@ function showCareerJourney() {
   }
 }
 
+// Roadmap rail: overall %, "you are here" and every phase with its %. A side column at 1200px and wider, a block above
+// the phases on smaller screens.
+function roadRail(j) {
+  return `
+      <div class="rm-rail-card c-card">
+        <div class="rm-overall">
+          <div class="c-ring sm" style="--p:${j.pct}"><strong>${j.pct}%</strong><span>core path</span></div>
+          <div class="rm-overall-meta">
+            <b>${j.coreDone}/${j.coreItems}</b><span>core items done</span>
+            <b>${j.coreHoursDone}/${j.coreHoursTotal} h</b><span>core study hours</span>
+          </div>
+        </div>
+        ${j.current
+    ? `<a class="rm-here" href="#/career-path/${j.current.n}"><span class="c-label">You are here · Phase ${j.current.n}</span><strong>${esc(j.current.short)}</strong></a>`
+    : '<p class="rm-here"><span class="c-label">Every core phase is complete</span></p>'}
+        <nav aria-label="Phases">
+          <ol class="rm-toc">
+            ${j.phases.map((p) => `<li><a href="#/career-path/${p.n}" class="${phaseCls(p)}"${j.current && j.current.n === p.n ? ' aria-current="step"' : ''}><span class="c-badge sm" aria-hidden="true">${p.state === 'done' ? '✓' : p.n}</span><span class="rm-toc-name">Phase ${p.n} · ${esc(p.short)}</span><span class="rm-toc-pct">${p.pct}%</span><span class="c-bar" aria-hidden="true"><i style="width:${p.pct}%"></i></span></a></li>`).join('')}
+          </ol>
+        </nav>
+      </div>`;
+}
+
+function roadEnd(j) {
+  return `
+      <section class="rm-end c-card" aria-labelledby="rm-end-h">
+        <div class="c-kicker">End of the roadmap</div>
+        <h2 id="rm-end-h">${j.current ? `Your next step: Phase ${j.current.n}, ${esc(j.current.short)}` : 'You walked the whole road.'}</h2>
+        <p>${j.current ? `${j.current.pct}% of Phase ${j.current.n} is done. The Progress page shows every phase, the milestones and the paid-cert gate in one view.` : 'Every core phase is complete. Pick a side quest, or go deeper in Phase 8.'}</p>
+        <div class="c-actions">
+          ${j.current ? `<a class="c-btn primary" href="#/career-path/${j.current.n}">Go to Phase ${j.current.n} <span aria-hidden="true">→</span></a>` : ''}
+          <a class="c-btn" href="#/career-progress">See your progress</a>
+          <a class="c-btn" href="#/career-journey">Open your Journey</a>
+          <button type="button" class="c-btn ghost" data-top>Back to top <span aria-hidden="true">↑</span></button>
+        </div>
+      </section>`;
+}
+
+// Bring a phase into view and put focus on it (used by #/career-path/<n>, and by links to the phase already shown).
+function showPhase(n) {
+  const target = app.querySelector(`#phase-${CSS.escape(String(n))}`);
+  if (target) { target.scrollIntoView({ block: 'start' }); target.focus({ preventScroll: true }); }
+}
+
 function showCareerPath(phase) {
+  const { j } = careerState();
   app.innerHTML = `
     ${careerHeader('career-path')}
-    <main class="chapter-page" style="--hue:152">
-      <div class="tier-tag">Career Path</div>
-      <h1>Operator to Engineer</h1>
-      <p class="chapter-lead">Eight phases from zero cybersecurity background to a security-engineer title, designed by Codex from every resource researched, with your AI-agent skill as the operating layer of every phase. Every resource links to where it lives. Check off resources and deliverables as you go — the <a href="#/career-progress">Progress page</a> reads the same checkmarks.</p>
-      <p class="chapter-lead"><strong>The one rule above everything:</strong> never outsource understanding. Every AI-generated artifact must be explainable line by line.</p>
-      ${renderStudyGroups(careerPath)}
+    <main class="chapter-page c-page rm-page">
+      <div class="c-intro">
+        <div class="tier-tag c-kicker">Career Path</div>
+        <h1 tabindex="-1">Operator to Engineer</h1>
+        <p class="chapter-lead">Eight phases from zero cybersecurity background to a security-engineer title, designed by Codex from every resource researched, with your AI-agent skill as the operating layer of every phase. Every resource links to where it lives. Check off resources and deliverables as you go — the <a href="#/career-progress">Progress page</a> reads the same checkmarks.</p>
+        <p class="chapter-lead"><strong>The one rule above everything:</strong> never outsource understanding. Every AI-generated artifact must be explainable line by line.</p>
+      </div>
+      <div class="rm-layout">
+        <aside class="rm-rail" aria-label="Roadmap overview">${roadRail(j)}</aside>
+        <div class="rm-phases">
+          ${renderStudyGroups(careerPath, j)}
+          ${roadEnd(j)}
+        </div>
+      </div>
     </main>`;
 
   app.querySelectorAll('.study-group[data-gi]').forEach((section) => {
     const g = careerPath[Number(section.dataset.gi)];
     if (g) { section.id = `phase-${g.n}`; section.tabIndex = -1; }
   });
-  wireStudyChecks(careerPath);
+  // after a tick: phase status, the "Next up" line and the rail follow the new checkmarks
+  wireStudyChecks(careerPath, () => {
+    const now = careerState().j;
+    app.querySelectorAll('.study-group[data-gi]').forEach((section) => {
+      const g = careerPath[Number(section.dataset.gi)];
+      const ph = g && now.phases.find((p) => p.n === g.n);
+      if (!ph) return;
+      const [cls, label] = PHASE_STATUS[ph.state] || ['', ''];
+      section.classList.remove('is-done', 'is-current', 'is-lane');
+      if (phaseCls(ph)) section.classList.add(phaseCls(ph));
+      const chip = section.querySelector('.study-status');
+      if (chip) { chip.className = `c-chip study-status ${cls}`; chip.textContent = label; }
+      const line = section.querySelector('.rm-next');
+      const wants = now.next && now.next.phase === g.n;
+      if (line && !wants) line.remove();
+      if (wants) {
+        const html = nextUpHtml(now.next);
+        if (line) line.outerHTML = html;
+        else section.querySelector('.c-card-body').insertAdjacentHTML('afterbegin', html);
+      }
+    });
+    const rail = app.querySelector('.rm-rail');
+    if (rail) rail.innerHTML = roadRail(now);
+    const end = app.querySelector('.rm-end');
+    if (end) { end.outerHTML = roadEnd(now); wireRoadEnd(); }
+  });
   wireMiniQuizzes(careerPath);
-  const target = phase && app.querySelector(`#phase-${CSS.escape(String(phase))}`);
-  if (target) { target.scrollIntoView({ block: 'start' }); target.focus({ preventScroll: true }); }
+  wireRoadEnd();
+  if (phase) showPhase(phase);
+}
+
+function wireRoadEnd() {
+  const top = app.querySelector('[data-top]');
+  if (top) top.addEventListener('click', () => { scrollTo(0, 0); app.querySelector('main h1').focus({ preventScroll: true }); });
 }
 
 /* ---------- Career Path · Extra (optional, off-path side content) ---------- */
@@ -777,11 +973,13 @@ function showCareerPath(phase) {
 function showCareerExtra() {
   app.innerHTML = `
     ${careerHeader('career-extra')}
-    <main class="chapter-page" style="--hue:152">
-      <div class="tier-tag">Career Path · Extra</div>
-      <h1>Extra Curriculum</h1>
-      <p class="chapter-lead">Side content only — none of this is part of the cybersecurity-engineer roadmap, none of it counts toward any phase, milestone, or the paid-cert gate. Do it only if you want a change of pace or the subject itself interests you.</p>
-      ${renderStudyGroups(extras)}
+    <main class="chapter-page c-page">
+      <div class="c-intro">
+        <div class="tier-tag c-kicker">Career Path · Extra</div>
+        <h1 tabindex="-1">Extra Curriculum</h1>
+        <p class="chapter-lead">Side content only — none of this is part of the cybersecurity-engineer roadmap, none of it counts toward any phase, milestone, or the paid-cert gate. Do it only if you want a change of pace or the subject itself interests you.</p>
+      </div>
+      <div class="c-groups">${renderStudyGroups(extras)}</div>
     </main>`;
 
   wireStudyChecks(extras);
@@ -802,11 +1000,11 @@ function lastExportText() {
 
 function backupHtml(status) {
   return `
-      <h2 class="prog-h2" id="backup">Back up your progress</h2>
+      <h2 class="prog-h2 c-h2" id="backup">Back up your progress</h2>
       <p class="chapter-lead">Every checkmark is saved only in this browser on this device. Clearing browser data or switching devices would lose it, so export a backup file now and then. Import it to bring everything back, here or on another device.</p>
       <div class="backup-row">
-        <button type="button" class="backup-btn" data-backup="export">Export backup file</button>
-        <label class="backup-btn">Import a backup file<input type="file" accept="application/json,.json" data-backup="import" class="visually-hidden"></label>
+        <button type="button" class="backup-btn c-btn" data-backup="export">Export backup file</button>
+        <label class="backup-btn c-btn">Import a backup file<input type="file" accept="application/json,.json" data-backup="import" class="visually-hidden"></label>
       </div>
       <label class="backup-mode"><input type="checkbox" data-backup="replace"> Replace everything here with the file (otherwise the file is added to what is already here)</label>
       <p class="backup-status" role="status" aria-live="polite">${esc(status || lastExportText())}</p>`;
@@ -844,6 +1042,9 @@ function wireBackup() {
   }
 }
 
+const LOCK_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 0 1 7 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="7" width="10" height="7.5" rx="2" fill="currentColor"/></svg>';
+const SEAL_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.2 8.4 6.5 11.6 12.8 4.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 function showCareerProgress(backupStatus) {
   const doneMap = studyDoneMap();
   const stats = careerPath.map((p) => ({ p, ...groupStats(p, doneMap) }));
@@ -857,32 +1058,39 @@ function showCareerProgress(backupStatus) {
   const current = j.current ? stats.find((x) => x.p.n === j.current.n) : null;
   const etaFor = new Map(j.milestones.map((m) => [m.label, m]));
   const complete = (n) => stats.find((x) => x.p.n === n)?.pct === 100;
+  const shortTitle = (p) => p.title.replace(/^Phase \d+ — /, '');
 
   const phaseRows = stats
-    .map(
-      (x) => `
-      <a class="prog-row${x.p.lane ? ' lane' : ''}${current && current.p.n === x.p.n ? ' current' : ''}${x.pct === 100 ? ' complete' : ''}" href="#/career-path/${x.p.n}">
-        <div class="prog-n">${x.p.n}</div>
+    .map((x) => {
+      const here = current && current.p.n === x.p.n;
+      const cls = x.pct === 100 ? 'is-done' : here ? 'is-current' : x.p.lane ? 'is-lane' : '';
+      return `
+      <a class="prog-row${x.p.lane ? ' lane' : ''}${here ? ' current' : ''}${x.pct === 100 ? ' complete' : ''}" href="#/career-path/${x.p.n}">
+        <div class="prog-n c-badge ${cls}" aria-hidden="true">${x.pct === 100 ? '✓' : x.p.n}</div>
         <div class="prog-body">
-          <div class="prog-title">${esc(x.p.title.replace(/^Phase \d+ — /, ''))}${x.p.lane ? ' <span class="study-lane">income lane</span>' : ''}${current && current.p.n === x.p.n ? ' <span class="prog-here">you are here</span>' : ''}</div>
+          <div class="prog-title"><span class="visually-hidden">Phase ${x.p.n}: </span>${esc(shortTitle(x.p))}${x.p.lane ? ' <span class="c-chip is-lane study-lane">income lane</span>' : ''}${here ? ' <span class="c-chip is-current prog-here">You are here</span>' : ''}</div>
           <div class="prog-meta">months ${esc(x.p.months)} · ${x.done}/${x.total} done · ${x.hoursDone}/${x.hoursTotal} study hrs</div>
-          <div class="prog-bar"><div class="prog-fill" style="width:${x.pct}%"></div></div>
+          <div class="prog-bar c-bar round" aria-hidden="true"><i class="prog-fill" style="width:${x.pct}%"></i></div>
         </div>
         <div class="prog-pct">${x.pct}%</div>
-      </a>`,
-    )
+      </a>`;
+    })
     .join('');
 
   const milestoneRows = milestones
     .map((m) => {
       const reached = m.requires.every(complete);
+      const eta = !reached && etaFor.get(m.label)?.etaIso ? ` · your pace: ${fmtDate(etaFor.get(m.label).etaIso)}` : '';
       return `
       <div class="ms-row${reached ? ' reached' : ''}${m.big ? ' big' : ''}">
-        <div class="ms-check">${reached ? '✓' : ''}</div>
+        <span class="c-seal${reached ? ' is-done' : ''}">${reached ? SEAL_SVG : LOCK_SVG}</span>
         <div class="ms-body">
-          <div class="ms-when">${esc(m.when)}${!reached && etaFor.get(m.label)?.etaIso ? ` · your pace: ${fmtDate(etaFor.get(m.label).etaIso)}` : ''}</div>
-          <div class="ms-label">${esc(m.label)}</div>
-          <div class="ms-ev">${esc(m.evidence)} · needs phase${m.requires.length > 1 ? 's' : ''} ${m.requires.join(', ')} complete</div>
+          <div class="ms-when">${esc(m.when)}${eta}</div>
+          <div class="ms-label">${esc(m.label)}<span class="visually-hidden">${reached ? ' (reached)' : ' (not reached yet)'}</span></div>
+          <div class="ms-ev">${esc(m.evidence)}</div>
+          <div class="c-chips ms-req"><span class="visually-hidden">Needs:</span>
+            ${m.requires.map((n) => `<span class="c-chip${complete(n) ? ' is-done' : ''}">Phase ${n}${complete(n) ? ' <span aria-hidden="true">✓</span><span class="visually-hidden">complete</span>' : ''}</span>`).join('')}
+          </div>
         </div>
       </div>`;
     })
@@ -896,53 +1104,73 @@ function showCareerProgress(backupStatus) {
       const done = doneMap[k] === true;
       return `
       <div class="study-card output${done ? ' done' : ''}">
-        <button type="button" class="study-check" data-key="${esc(k)}" aria-pressed="${done}" aria-label="Mark gate condition ${esc(c.name)} as ${done ? 'not met' : 'met'}">${done ? '✓' : ''}</button>
+        <button type="button" class="study-check c-check" data-key="${esc(k)}" aria-pressed="${done}" aria-label="Mark gate condition ${esc(c.name)} as met">${done ? '✓' : ''}</button>
         <div class="study-link study-static"><div class="study-name">${esc(c.name)}</div></div>
       </div>`;
     })
     .join('');
 
+  const firstPhase = careerPath[0];
+  const empty = doneItems === 0 ? `
+      <section class="prog-empty c-panel is-current" aria-labelledby="prog-empty-h">
+        <div>
+          <div class="c-kicker">Nothing ticked yet</div>
+          <h2 id="prog-empty-h">Start with Phase ${firstPhase.n}: ${esc(shortTitle(firstPhase))}</h2>
+          <p>Tick a resource on the roadmap when you finish it, and this page fills in: phases, milestones and your finish date.</p>
+        </div>
+        <div class="c-actions"><a class="c-btn primary" href="#/career-path/${firstPhase.n}">Start Phase ${firstPhase.n} <span aria-hidden="true">→</span></a><a class="c-btn" href="#/career-journey">Open your Journey</a></div>
+      </section>` : '';
+
   app.innerHTML = `
     ${careerHeader('career-progress')}
-    <main class="chapter-page prog-page" style="--hue:152">
-      <div class="tier-tag">Career Path · Progress</div>
-      <h1>Where you are</h1>
-      <p class="chapter-lead">Computed from the same checkmarks as the <a href="#/career-path">roadmap</a>. Saved on this device only.</p>
-
-      <section class="prog-overall">
-        <div class="prog-big">
+    <main class="chapter-page c-page prog-page">
+      <div class="c-intro">
+        <div class="tier-tag c-kicker">Career Path · Progress</div>
+        <h1 tabindex="-1">Where you are</h1>
+        <p class="chapter-lead">Computed from the same checkmarks as the <a href="#/career-path">roadmap</a>. Saved on this device only.</p>
+      </div>
+      ${empty}
+      <section class="prog-overall c-stats" aria-label="Totals">
+        <div class="prog-big c-stat is-total">
           <b>${pct}%</b><span>${doneItems} of ${totalItems} items done</span>
         </div>
-        <div class="prog-big">
+        <div class="prog-big c-stat">
           <b>${hoursDone}<small>/${hoursTotal}</small></b><span>study hours done</span>
         </div>
-        <div class="prog-big">
+        <div class="prog-big c-stat">
           <b>${j.weeksLeft}<small> wks</small></b><span>core route left at ${j.hoursPerWeek} h/week · <a href="#/career-journey">change pace</a></span>
         </div>
-        <div class="prog-big">
-          <b>${current ? `Phase ${current.p.n}` : 'Done'}</b><span>${current ? esc(current.p.title.replace(/^Phase \d+ — /, '')) : 'every phase complete'}</span>
+        <div class="prog-big c-stat${current ? ' is-current' : ''}">
+          <b>${current ? `Phase ${current.p.n}` : 'Done'}</b><span>${current ? `You are here: ${esc(shortTitle(current.p))}` : 'every phase complete'}</span>
         </div>
       </section>
-      <div class="prog-bar big"><div class="prog-fill" style="width:${pct}%"></div></div>
+      <div class="prog-bar big c-bar round" aria-hidden="true"><i class="prog-fill" style="width:${pct}%"></i></div>
 
-      <h2 class="prog-h2">Phases</h2>
-      <div class="prog-list">${phaseRows}</div>
+      <div class="prog-cols">
+        <section aria-labelledby="prog-phases-h">
+          <h2 class="prog-h2 c-h2" id="prog-phases-h">Phases</h2>
+          <div class="prog-list">${phaseRows}</div>
+        </section>
+        <section aria-labelledby="prog-ms-h">
+          <h2 class="prog-h2 c-h2" id="prog-ms-h">Milestones <span class="study-group-progress">plan windows at 14 h/week · dates at your ${j.hoursPerWeek} h/week</span></h2>
+          <div class="ms-list">${milestoneRows}</div>
+        </section>
+      </div>
 
-      <h2 class="prog-h2">Milestones <span class="study-group-progress">plan windows at 14 h/week · dates at your ${j.hoursPerWeek} h/week</span></h2>
-      <div class="ms-list">${milestoneRows}</div>
-
-      <h2 class="prog-h2">Paid-cert gate <span class="study-group-progress">${gateDone}/${gate.conditions.length} conditions · ${gateOpen ? 'OPEN' : 'closed'}</span></h2>
+      <h2 class="prog-h2 c-h2">Paid-cert gate <span class="study-group-progress">${gateDone}/${gate.conditions.length} conditions · ${gateOpen ? 'OPEN' : 'closed'}</span></h2>
       <p class="chapter-lead">Nothing paid until all four are true. Tick them yourself — none can be read from study progress.</p>
-      <div class="study-list study-outputs">${gateRows}</div>
-      <div class="gate-panel${gateOpen ? ' open' : ''}">
-        <div class="gate-first">First paid cert: <a href="${esc(gate.firstUrl)}" target="_blank" rel="noopener noreferrer">${esc(gate.first)} ↗</a></div>
-        <p class="study-note">${esc(gate.why)}</p>
-        <p class="study-note"><strong>Buy it when the portfolio is complete and any one of these is true:</strong></p>
-        <ul class="gate-ul">${gate.triggers.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
-        <p class="study-note"><strong>Possible second cert — one only, by the branch you're actually on:</strong></p>
-        <ul class="gate-ul">${gate.second.map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.name)} ↗</a> <span class="study-by">${esc(s.by)}</span> — ${esc(s.note)}</li>`).join('')}</ul>
-        <p class="study-note"><strong>Ratings Codex overruled:</strong></p>
-        <ul class="gate-ul">${gate.overruled.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>
+      <div class="gate-card c-card${gateOpen ? ' is-done' : ''}">
+        <div class="study-list study-outputs">${gateRows}</div>
+        <div class="gate-panel c-panel${gateOpen ? ' open is-done' : ''}">
+          <div class="gate-first">First paid cert: <a href="${esc(gate.firstUrl)}" target="_blank" rel="noopener noreferrer">${esc(gate.first)} <span aria-hidden="true">↗</span></a></div>
+          <p class="study-note">${esc(gate.why)}</p>
+          <p class="study-note"><strong>Buy it when the portfolio is complete and any one of these is true:</strong></p>
+          <ul class="gate-ul">${gate.triggers.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+          <p class="study-note"><strong>Possible second cert — one only, by the branch you're actually on:</strong></p>
+          <ul class="gate-ul">${gate.second.map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.name)} <span aria-hidden="true">↗</span></a> <span class="study-by">${esc(s.by)}</span> — ${esc(s.note)}</li>`).join('')}</ul>
+          <p class="study-note"><strong>Ratings Codex overruled:</strong></p>
+          <ul class="gate-ul">${gate.overruled.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>
+        </div>
       </div>
       ${backupHtml(backupStatus)}
     </main>`;
@@ -963,6 +1191,7 @@ function showCareerProgress(backupStatus) {
 function showBeginnerList() {
   const body = `
     <main class="chapter-page" style="--hue:150">
+      <h1 class="visually-hidden">Beginner lessons</h1>
       <p class="chapter-lead">${esc(beginner.tagline)}</p>
       <ol class="lesson-list">
         ${beginner.lessons
@@ -1086,6 +1315,7 @@ function chapterGrid(list, unitWord) {
   for (let k = 0; k < list.length; k += 3) rows.push(list.slice(k, k + 3));
   return `
     <main class="chapter-grid">
+      <h1 class="visually-hidden">${unitWord === 'Ch' ? 'Intermediate' : 'Expert'} chapters</h1>
       ${rows
         .map(
           (row) =>

@@ -7,7 +7,7 @@ export const sources = {
   impersonation: ['MITRE ATT&CK T1656: Impersonation', 'https://attack.mitre.org/techniques/T1656/'],
 };
 export default [
-  { id: 'phish-01', level: 1, title: 'Mailbox deadline', objs: ['2.3','2.5','5.6'], verdict: 'phish', action: 'report',
+  { id: 'phish-01', level: 1, title: 'Mailbox deadline', objs: ['2.3','2.5','5.6'], examObjs: { 'netplus-009': ['4.2'], 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'phish', action: 'report',
     mail: { from: { name: 'Northwind IT Desk', addr: 'desk@northwind-help.example' }, to: 'learner@northwind-freight.example', date: 'Wed, 14 Oct 2026 09:12', subject: 'Mailbox closes in two hours',
       auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
         ['Your mailbox will close today unless you ', { spot: 'link-1', text: 'confirm your password', href: 'https://login.northwind-help.example/verify' }, '.'],
@@ -15,7 +15,7 @@ export default [
       ], attachments: [] },
     spots: { from: { bad: true, why: 'The sender uses northwind-help.example, not the stated organization domain northwind-freight.example.' }, subject: { bad: true, why: 'The deadline pressures a rushed decision.' }, auth: { bad: false, why: 'All three checks pass for the sender domain. Passing authentication does not establish that the lookalike domain is trusted.' }, 'link-1': { bad: true, why: 'The href goes to northwind-help.example and asks for a password.' }, urgent: { bad: true, why: 'A two-hour threat reinforces the credential request.' } },
     why: 'A pass result authenticates a domain, not the sender claim. The different domain and password request prove the lure. Exams often pair urgent language with a lookalike sign-in link.', src: ['spf','dmarc','links'] },
-  { id: 'phish-02', level: 1, title: 'Invoice that runs', objs: ['2.3','2.5','5.6'], verdict: 'phish', action: 'report',
+  { id: 'phish-02', level: 1, title: 'Invoice that runs', objs: ['2.3','2.5','5.6'], examObjs: { 'netplus-009': ['4.2'], 'aplus-1201': ['2.4'], 'aplus-1202': ['2.4','2.5'] }, verdict: 'phish', action: 'report',
     mail: { from: { name: 'Billing Desk', addr: 'billing@harbor-invoices.example' }, to: 'learner@northwind-freight.example', date: 'Wed, 14 Oct 2026 10:08', subject: 'Invoice 8812 attached',
       auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
         ['Please review the invoice in the attachment.'],
@@ -23,7 +23,7 @@ export default [
       ], attachments: [{ name: 'Invoice_8812.pdf.exe', size: '412 KB' }] },
     spots: { from: { bad: false, why: 'The sender domain is authenticated, but that alone does not make the attachment safe.' }, subject: { bad: false, why: 'An invoice subject is ordinary by itself.' }, auth: { bad: false, why: 'SPF, DKIM, and DMARC pass for harbor-invoices.example; those checks do not inspect file behavior.' }, 'open-now': { bad: true, why: 'The pressure to open an unsolicited file increases the risk.' }, 'att-0': { bad: true, why: 'The final extension is .exe. The .pdf portion is camouflage, not the file type.' } },
     why: 'Read the last file extension. A double extension ending in .exe is an executable attachment even when mail authentication passes. Exams test file type and social pressure together.', src: ['spf','dmarc','files'] },
-  { id: 'phish-03', level: 1, title: 'Routine internal notice', objs: ['2.3','2.5','5.6'], verdict: 'legit', action: 'proceed',
+  { id: 'phish-03', level: 1, title: 'Routine internal notice', objs: ['2.3','2.5','5.6'], examObjs: { 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'legit', action: 'proceed',
     mail: { from: { name: 'Facilities Desk', addr: 'facilities@northwind-freight.example' }, to: 'learner@northwind-freight.example', date: 'Wed, 14 Oct 2026 11:00', subject: 'Elevator maintenance on Friday',
       auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
         ['The west elevator will be unavailable Friday from 09:00 to 11:00. Use the east elevator during that time.'],
@@ -31,7 +31,7 @@ export default [
       ], attachments: [] },
     spots: { from: { bad: false, why: 'The address is in the organization domain.' }, subject: { bad: false, why: 'The subject matches a routine facilities notice.' }, auth: { bad: false, why: 'SPF and DKIM pass, and DMARC passes, so at least one of them aligns with the From domain northwind-freight.example.' } },
     why: 'Domain alignment, routine content, and no request for secrets or payment support a legitimate notice. Exams require recognizing normal mail as well as attacks.', src: ['spf','dkim','dmarc'] },
-  { id: 'phish-04', level: 2, title: 'Payroll account switch', objs: ['2.3','2.5','5.6'], verdict: 'phish', action: 'report',
+  { id: 'phish-04', level: 2, title: 'Payroll account switch', objs: ['2.3','2.5','5.6'], examObjs: { 'netplus-009': ['4.2'], 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'phish', action: 'report',
     mail: { from: { name: 'Payroll Team', addr: 'payroll@northwind-freight-pay.example' }, returnPath: 'bounce@northwind-freight-pay.example', to: 'learner@northwind-freight.example', date: 'Wed, 14 Oct 2026 12:20', subject: 'Action required today: new deposit account before payroll cutoff',
       auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
         ['Payroll needs your deposit details moved to a new account today.'],
@@ -39,7 +39,7 @@ export default [
       ], attachments: [] },
     spots: { from: { bad: true, why: 'northwind-freight-pay.example is a separate lookalike domain from northwind-freight.example.' }, subject: { bad: true, why: 'Same-day pressure on a pay change is a classic BEC cue.' }, auth: { bad: false, why: 'The checks pass for the lookalike domain, not the organization domain.' }, return: { bad: false, why: 'The Return-Path matches the From domain, which is normal; the problem is the lookalike domain itself, already flagged in From.' }, 'link-1': { bad: true, why: 'The href is on the lookalike domain and asks for banking details and a password.' } },
     why: 'A financial change plus a password request and a separate lookalike domain make this phishing. Authentication can pass for an attacker-controlled domain. Exams ask for independent identity checks before money changes.', src: ['spf','dmarc','links'] },
-  { id: 'phish-05', level: 2, title: 'Scan the code', objs: ['2.3','2.5','5.6'], verdict: 'phish', action: 'report',
+  { id: 'phish-05', level: 2, title: 'Scan the code', objs: ['2.3','2.5','5.6'], examObjs: { 'netplus-009': ['4.2'], 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'phish', action: 'report',
     mail: { from: { name: 'Account Support', addr: 'support@access-northwind.example' }, to: 'learner@northwind-freight.example', date: 'Wed, 14 Oct 2026 13:15', subject: 'Scan to keep your account active',
       auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
         ['Your access review is pending. ', { spot: 'qr', text: '[QR code: opens https://access-northwind.example/signin]', href: 'https://access-northwind.example/signin' }],
@@ -47,7 +47,7 @@ export default [
       ], attachments: [] },
     spots: { from: { bad: true, why: 'The sender is access-northwind.example, not northwind-freight.example.' }, subject: { bad: true, why: 'An account suspension threat pushes a rushed response.' }, auth: { bad: false, why: 'Pass results validate the separate sender domain only.' }, qr: { bad: true, why: 'The QR destination is an outside sign-in site. A QR code is still a link.' }, instruction: { bad: true, why: 'It asks for a work password on the outside site.' } },
     why: 'Treat a QR code as a URL. The shown destination and password request reveal credential harvesting. Exams may replace a clickable link with a scannable code. Security+ calls this quishing.', src: ['spf','dmarc','links'] },
-  { id: 'phish-06', level: 2, title: 'Real vendor, sensitive change', objs: ['2.3','2.5','5.6'], verdict: 'legit', action: 'verify',
+  { id: 'phish-06', level: 2, title: 'Real vendor, sensitive change', objs: ['2.3','2.5','5.6'], examObjs: { 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'legit', action: 'verify',
     mail: { from: { name: 'Pine Ledger Billing', addr: 'billing@pine-ledger.example' }, to: 'learner@northwind-freight.example', date: 'Wed, 14 Oct 2026 14:00', subject: 'Bank details for future invoices',
       auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
         ['Our bank details for future invoices have changed. Please call your existing billing contact using the number already on file before updating records.'],
@@ -55,7 +55,7 @@ export default [
       ], attachments: [] },
     spots: { from: { bad: false, why: 'The sender matches the established vendor domain in the scenario.' }, subject: { bad: false, why: 'The subject accurately describes a sensitive change but is not deception by itself.' }, auth: { bad: false, why: 'SPF, DKIM, and DMARC pass for the vendor domain.' } },
     why: 'This is a legitimate request that explicitly directs verification through a known contact. Still choose verify before changing bank details: authentication does not authorize a payment change. Exams test safe action, not only phish detection.', src: ['spf','dkim','dmarc'] },
-  { id: 'phish-07', level: 3, title: 'Executive reply trap', objs: ['2.3','2.5','5.6'], verdict: 'phish', action: 'report',
+  { id: 'phish-07', level: 3, title: 'Executive reply trap', objs: ['2.3','2.5','5.6'], examObjs: { 'netplus-009': ['4.2'], 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'phish', action: 'report',
     mail: { from: { name: 'Executive Office', addr: 'office@northwind-freight.example' }, replyTo: 'private-office@priority-gifts.example', returnPath: 'mailer@priority-gifts.example', to: 'learner@northwind-freight.example', date: 'Wed, 14 Oct 2026 15:12', subject: 'Quiet purchase for staff awards',
       auth: { spf: 'fail', dkim: 'fail', dmarc: 'fail' }, body: [
         ['I need gift cards for a private staff recognition today. ', { spot: 'secret', text: 'Keep this between us until the awards are announced.' }],
@@ -63,7 +63,7 @@ export default [
       ], attachments: [] },
     spots: { from: { bad: true, why: 'The From claims the internal domain, but authentication fails: it is spoofed.' }, subject: { bad: true, why: 'A quiet purchase request is a social engineering cue.' }, auth: { bad: true, why: 'All three checks fail, so the visible internal domain is not authenticated.' }, reply: { bad: true, why: 'Replies go to priority-gifts.example, outside the organization.' }, return: { bad: true, why: 'The return path is another outside address, supporting the mismatch.' }, secret: { bad: true, why: 'Secrecy discourages normal purchase approval.' } },
     why: 'A displayed From address can be forged. Failed authentication, outside Reply-To and return path, and gift card secrecy support BEC. Exams often hide the decisive clue in Reply-To.', src: ['spf','dmarc','impersonation'] },
-  { id: 'phish-08', level: 3, title: 'Password expiry without a link', objs: ['2.3','2.5','5.6'], verdict: 'legit', action: 'proceed',
+  { id: 'phish-08', level: 3, title: 'Password expiry without a link', objs: ['2.3','2.5','5.6'], examObjs: { 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'legit', action: 'proceed',
     mail: { from: { name: 'IT Service Desk', addr: 'it@northwind-freight.example' }, to: 'learner@northwind-freight.example', date: 'Wed, 14 Oct 2026 16:00', subject: 'Password expires next week',
       auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
         ['Your work password expires next week. Open the company portal using your own saved bookmark and follow its password change instructions.'],
@@ -71,4 +71,36 @@ export default [
       ], attachments: [] },
     spots: { from: { bad: false, why: 'The address uses the organization domain.' }, subject: { bad: false, why: 'A future expiry reminder is consistent with the content and does not impose an immediate threat.' }, auth: { bad: false, why: 'SPF, DKIM, and DMARC pass for the organization domain.' } },
     why: 'The message directs the user to a known portal independently and requests no reply, link click, or secret in mail. Exams can present a legitimate security notice; evaluate action and destination together.', src: ['spf','dkim','dmarc'] },
+  { id: 'phish-09', level: 3, title: 'False MFA reset', objs: ['2.3','2.5','5.6'], examObjs: { 'netplus-009': ['4.2'], 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'phish', action: 'report',
+    mail: { from: { name: 'Northwind Identity Team', addr: 'identity@northwind-access.example' }, to: 'learner@northwind-freight.example', date: 'Thu, 15 Oct 2026 09:04', subject: 'MFA reset required before noon',
+      auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
+        ['Your authenticator must be re-enrolled before noon. Use ', { spot: 'link-1', text: 'the reset page', href: 'https://signin.northwind-access.example/mfa-reset' }, ' and enter your work password.'],
+        [{ spot: 'code', text: 'After signing in, enter the current six-digit MFA code to complete the transfer.' }],
+      ], attachments: [] },
+    spots: { from: { bad: true, why: 'northwind-access.example is separate from the stated organization domain northwind-freight.example.' }, subject: { bad: true, why: 'The noon deadline pressures a rushed MFA change.' }, auth: { bad: false, why: 'DMARC pass says a sender-controlled domain aligns with the visible From domain. It does not make this lookalike domain trusted.' }, 'link-1': { bad: true, why: 'The sign-in link goes to the lookalike domain and asks for a work password.' }, code: { bad: true, why: 'Requesting a live MFA code on an untrusted page would give an attacker a second factor.' } },
+    why: 'A real-looking MFA notice can authenticate its own lookalike domain. Compare the visible and linked domains with the organization domain before entering a password or code. Security+ often tests this combination of urgency, credential request, and domain mismatch.', src: ['dmarc','links'] },
+  { id: 'phish-10', level: 3, title: 'Scheduled IT change notice', objs: ['2.3','2.5','5.6'], examObjs: { 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'legit', action: 'proceed',
+    mail: { from: { name: 'IT Service Desk', addr: 'it@northwind-freight.example' }, returnPath: 'bounces@northwind-freight.example', to: 'learner@northwind-freight.example', date: 'Thu, 15 Oct 2026 10:00', subject: 'Approved VPN maintenance at 20:00',
+      auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
+        ['The approved VPN change window starts at 20:00 and may interrupt connections for 15 minutes. Save work before then.'],
+        ['No password, MFA code, payment, download, or reply is requested. For status, use your existing IT portal bookmark.'],
+      ], attachments: [] },
+    spots: { from: { bad: false, why: 'The sender address uses the organization domain.' }, subject: { bad: false, why: 'The subject describes a scheduled service window without an immediate account threat.' }, auth: { bad: false, why: 'DMARC passes for the From domain; SPF and DKIM also pass.' }, return: { bad: false, why: 'The Return-Path uses the same organization domain as From, which is normal for this notice.' } },
+    why: 'This authenticated notice reports a planned interruption and asks for no secret or new destination. Proceed with the routine preparation. On exams, normal change notices should not be flagged solely because they mention IT or a deadline.', src: ['spf','dkim','dmarc'] },
+  { id: 'phish-11', level: 3, title: 'Shared document impersonation', objs: ['2.3','2.5','5.6'], examObjs: { 'netplus-009': ['4.2'], 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'phish', action: 'report',
+    mail: { from: { name: 'Northwind Documents', addr: 'share@northwind-docs.example' }, replyTo: 'help@northwind-docs.example', to: 'learner@northwind-freight.example', date: 'Thu, 15 Oct 2026 11:12', subject: 'Jordan shared the staffing plan with you',
+      auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
+        ['Jordan shared a staffing plan. ', { spot: 'link-1', text: 'Open the shared document', href: 'https://files.northwind-docs.example/open/plan-17' }, '.'],
+        [{ spot: 'login', text: 'Sign in with your work password to view it.' }],
+      ], attachments: [] },
+    spots: { from: { bad: true, why: 'northwind-docs.example is a separate domain from northwind-freight.example, despite the display name.' }, subject: { bad: false, why: 'A document share subject is ordinary by itself; the destination and password request make this unsafe.' }, auth: { bad: false, why: 'Passing DMARC aligns authentication to the lookalike sender domain only.' }, reply: { bad: false, why: 'Reply-To matches the sender domain, so it adds no separate mismatch.' }, 'link-1': { bad: true, why: 'The link opens a site on the lookalike domain, not the organization domain.' }, login: { bad: true, why: 'The message asks for a work password at that outside site.' } },
+    why: 'A shared-file lure can use a plausible subject and pass mail authentication for an attacker-controlled domain. Check the actual destination and use the known document portal independently. Exams often hide the credential request after a routine collaboration pretext.', src: ['dmarc','links'] },
+  { id: 'phish-12', level: 3, title: 'Real supplier, new payment instructions', objs: ['2.3','2.5','5.6'], examObjs: { 'aplus-1201': ['2.4'], 'aplus-1202': ['2.5'] }, verdict: 'legit', action: 'verify',
+    mail: { from: { name: 'Birch Vale Accounts', addr: 'accounts@birch-vale.example' }, to: 'learner@northwind-freight.example', date: 'Thu, 15 Oct 2026 13:30', subject: 'Remittance account change for next invoice',
+      auth: { spf: 'pass', dkim: 'pass', dmarc: 'pass' }, body: [
+        ['Our remittance account for the next invoice has changed. Before changing your records, call our accounts team using the number in your existing supplier file.'],
+        ['This email does not include new phone details. Do not send account credentials by reply.'],
+      ], attachments: [] },
+    spots: { from: { bad: false, why: 'The From uses birch-vale.example with no lookalike spelling, and DMARC passes for it.' }, subject: { bad: false, why: 'The subject describes the sensitive change accurately; sensitivity alone is not evidence of phishing.' }, auth: { bad: false, why: 'SPF and DKIM pass, and DMARC validates alignment with the visible supplier domain.' } },
+    why: 'The message can be legitimate and still require a control before a bank-record change. Verify by calling the supplier number already on file; an authenticated mailbox does not authorize payment changes by itself. Exams test the safe next action as well as the verdict.', src: ['spf','dkim','dmarc'] },
 ];

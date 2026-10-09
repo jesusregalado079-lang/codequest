@@ -5,7 +5,8 @@
 // learner can export his progress to a file and import it back (the only copy otherwise lives in this browser).
 import { LEGACY_KEYS_V1 } from './legacy-keys.js';
 import { emptyExamState, mergeExamState, normalizeExamState, normalizeExams } from './exam/exam-logic.js';
-import { mergeLabs, normalizeLabs } from './labs/lab-logic.js';
+import { isPassed, mergeLabs, normalizeLabs } from './labs/lab-logic.js';
+import LAB_INDEX from './ui/labs/catalog-index.js';
 
 const KEY = 'codequest-pro-v1';
 export const EXPORT_FORMAT = 'codequest-pro-progress';
@@ -22,11 +23,16 @@ const RANKS = [
 ];
 
 export const DEFAULT_HOURS_PER_WEEK = 21; // 3 hours a day
-const empty = () => ({ completed: {}, hintsUsed: {}, streak: { count: 0, last: null }, studyDone: {}, doneAt: {}, settings: { hoursPerWeek: DEFAULT_HOURS_PER_WEEK }, migrations: {}, exams: {}, labs: {} });
+const empty = () => ({ completed: {}, hintsUsed: {}, streak: { count: 0, last: null }, studyDone: {}, doneAt: {}, badges: {}, settings: { hoursPerWeek: DEFAULT_HOURS_PER_WEEK }, migrations: {}, exams: {}, labs: {} });
 
 const plain = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 const okKey = (k) => typeof k === 'string' && k.length > 0 && k.length <= 400 && k !== '__proto__' && k !== 'constructor' && k !== 'prototype';
 const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const badgeDay = (v) => {
+  if (!isDay(v)) return false;
+  const date = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === v;
+};
 
 // A clean state from anything: wrong types are dropped one field at a time, valid parts are kept.
 export function normalizeState(raw) {
@@ -44,6 +50,7 @@ export function normalizeState(raw) {
   out.streak = { count: Number.isInteger(st.count) && st.count >= 0 ? st.count : 0, last: isDay(st.last) ? st.last : null };
   Object.keys(plain(o.studyDone)).forEach((k) => { if (okKey(k) && o.studyDone[k] === true) out.studyDone[k] = true; });
   Object.keys(plain(o.migrations)).forEach((k) => { if (okKey(k) && o.migrations[k] === true) out.migrations[k] = true; });
+  Object.keys(plain(o.badges)).forEach((k) => { if (okKey(k) && badgeDay(o.badges[k])) out.badges[k] = o.badges[k]; });
   // the day each checkmark was made (only for checkmarks that are still set; older ones have no date)
   Object.keys(plain(o.doneAt)).forEach((k) => { if (out.studyDone[k] && isDay(o.doneAt[k])) out.doneAt[k] = o.doneAt[k]; });
   const hpw = plain(o.settings).hoursPerWeek;
@@ -171,9 +178,14 @@ export function setHoursPerWeek(hours) {
   return { ok: save(s) };
 }
 
-// Certification practice for one exam ('secplus-801'): { hist, attempts, session }.
+// Certification practice for one exam ('secplus-801', 'netplus-009', 'aplus-1201', 'aplus-1202'): { hist, attempts,
+// session }. Each exam keeps its own state under its id; ids this version does not know are kept untouched.
 export function getExamState(examId) {
   return load().exams[examId] || emptyExamState();
+}
+// Every exam's state at once ({ [examId]: state }), for summaries that read them all (one storage read).
+export function getAllExamStates() {
+  return load().exams;
 }
 export function saveExamState(examId, state) {
   const s = load();
@@ -189,6 +201,59 @@ export function saveLabs(labs) {
   const s = load();
   s.labs = normalizeLabs(labs);
   return { ok: save(s) };
+}
+
+// Earned achievement ids and their first-earned local calendar dates. Unknown ids survive future catalog changes.
+export function getBadges() {
+  return { ...load().badges };
+}
+// Accept an id-to-date map, or legacy ids with one shared date.
+export function recordBadges(ids, todayIso = today()) {
+  if (!badgeDay(todayIso)) return { ok: false };
+  const entries = Array.isArray(ids) ? ids.map((id) => [id, todayIso]) : Object.entries(plain(ids));
+  if (entries.some(([, date]) => !badgeDay(date))) return { ok: false };
+  const s = load();
+  let added = false;
+  for (const [id, date] of entries) {
+    if (okKey(id) && !Object.hasOwn(s.badges, id)) { s.badges[id] = date; added = true; }
+  }
+  return { ok: added ? save(s) : true };
+}
+
+// Case ids from b528832, before the labs grew. Keep this snapshot fixed even as catalog content changes.
+const ORIGINAL_LAB_CASES = Object.freeze({
+  fw: Object.freeze(['fw-01', 'fw-02', 'fw-03', 'fw-04', 'fw-05', 'fw-06', 'fw-07', 'fw-08']),
+  logs: Object.freeze(['logs-01', 'logs-02', 'logs-03', 'logs-04', 'logs-05', 'logs-06']),
+  subnet: Object.freeze(['subnet-1', 'subnet-2', 'subnet-3', 'subnet-4']),
+  cli: Object.freeze(['cli-01', 'cli-02', 'cli-03', 'cli-04', 'cli-05', 'cli-06', 'cli-07', 'cli-08']),
+  phish: Object.freeze(['phish-01', 'phish-02', 'phish-03', 'phish-04', 'phish-05', 'phish-06', 'phish-07', 'phish-08']),
+  code: Object.freeze(['code-01', 'code-02', 'code-03', 'code-04', 'code-05']),
+});
+const LAB_BADGE_MIGRATION = 'lab-badges-v1';
+function migrateLabBadges(state, todayIso) {
+  const passed = Object.entries(ORIGINAL_LAB_CASES).map(([labId, caseIds]) => {
+    const pass = LAB_INDEX.find((lab) => lab.id === labId).pass;
+    return [labId, caseIds.map((caseId) => isPassed(state.labs, `${labId}/${caseId}`, pass))];
+  });
+  let added = false;
+  const add = (id) => {
+    if (Object.hasOwn(state.badges, id)) return;
+    state.badges[id] = todayIso;
+    added = true;
+  };
+  if (passed.some(([, cases]) => cases.some(Boolean))) add('lab-first');
+  for (const [labId, cases] of passed) {
+    if (cases.every(Boolean)) add(`lab-${labId}`);
+  }
+  if (passed.every(([, cases]) => cases.every(Boolean))) add('lab-all');
+  if (added) state.migrations[LAB_BADGE_MIGRATION] = true;
+  return added;
+}
+export function applyLabBadgeMigration(todayIso = today()) {
+  if (!badgeDay(todayIso)) return { ok: false, ran: false };
+  const s = load();
+  if (!migrateLabBadges(s, todayIso)) return { ok: true, ran: false };
+  return { ok: save(s), ran: true };
 }
 
 // One-time move of checkmarks saved under old keys to the permanent ids. Runs once per name, never undoes anything,
@@ -222,20 +287,25 @@ export function importProgress(text, mode = 'merge') {
   const o = plain(parsed);
   if (o.format !== EXPORT_FORMAT || !Number.isInteger(o.version) || o.version < 1) return { ok: false, error: 'That file is not a CodeQuest Pro backup.' };
   if (o.version > EXPORT_VERSION) return { ok: false, error: 'That backup was made by a newer version of the app.' };
+  const todayIso = today();
   const incoming = normalizeState(o.progress);
+  migrateLabBadges(incoming, todayIso);
   let next;
   if (mode === 'replace') next = incoming;
   else {
     const here = load();
+    migrateLabBadges(here, todayIso);
     next = normalizeState(here);
     Object.keys(incoming.studyDone).forEach((k) => { next.studyDone[k] = true; });
     Object.keys(incoming.completed).forEach((k) => { next.completed[k] = Math.max(next.completed[k] ?? 0, incoming.completed[k]); });
     Object.keys(incoming.hintsUsed).forEach((k) => { next.hintsUsed[k] = Math.max(next.hintsUsed[k] ?? 0, incoming.hintsUsed[k]); });
     Object.keys(incoming.migrations).forEach((k) => { next.migrations[k] = true; });
+    Object.keys(incoming.badges).forEach((k) => { if (!next.badges[k] || incoming.badges[k] < next.badges[k]) next.badges[k] = incoming.badges[k]; });
     Object.keys(incoming.doneAt).forEach((k) => { if (!next.doneAt[k] || incoming.doneAt[k] < next.doneAt[k]) next.doneAt[k] = incoming.doneAt[k]; });
     if (incoming.streak.last && (!next.streak.last || incoming.streak.last > next.streak.last)) next.streak = incoming.streak;
     Object.keys(incoming.exams).forEach((k) => { next.exams[k] = mergeExamState(next.exams[k], incoming.exams[k]); });
     next.labs = mergeLabs(next.labs, incoming.labs);
+    migrateLabBadges(next, todayIso);
   }
   if (!save(next)) return { ok: false, error: 'This browser could not save the imported progress (storage is full or blocked).' };
   return { ok: true, items: Object.keys(next.studyDone).length };

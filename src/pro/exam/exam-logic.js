@@ -316,9 +316,12 @@ export function studyFirst(questions, state, blueprint, n = 3) {
   })).filter((x) => x.wrong > 0).sort((a, b) => b.score - a.score || a.id.localeCompare(b.id)).slice(0, n);
 }
 
+// Only scored mocks with the blueprint's full question count qualify for readiness and Ready badges.
+export const fullMocks = (state, total) => state.attempts.filter((a) => a.kind === 'mock' && a.removed === 0 && a.total === total);
+
 // Readiness from full mocks only. `ready` = his last three mocks all at or above the target.
-export function readiness(state, questions, target) {
-  const mocks = state.attempts.filter((a) => a.kind === 'mock' && a.removed === 0);
+export function readiness(state, questions, target, mockQuestions) {
+  const mocks = fullMocks(state, mockQuestions);
   const last3 = mocks.slice(-3);
   const avg = (list) => (list.length ? Math.round(list.reduce((s, a) => s + a.percent, 0) / list.length) : null);
   const seenIds = new Set(Object.keys(state.hist));

@@ -8,7 +8,9 @@ import codeLabs, { sources as codeSources } from './content/code-labs.js';
 import { LEVELS } from './subnet.js';
 
 const SUBNET_OBJS = ['3.1', '4.1']; // logical segmentation (3.1), segmentation as a mitigation (4.1)
-const subnetCases = LEVELS.map((lv, i) => ({ ...lv, title: lv.name, level: i + 1, objs: SUBNET_OBJS }));
+// Network+ 1.7 (IPv4 addressing, subnetting) and A+ Core 1 2.6 (addressing and subnet masks on a SOHO network)
+const SUBNET_EXAM_OBJS = { 'netplus-009': ['1.7'], 'aplus-1201': ['2.6'] };
+const subnetCases = LEVELS.map((lv, i) => ({ ...lv, title: lv.name, level: i + 1, objs: SUBNET_OBJS, examObjs: SUBNET_EXAM_OBJS }));
 
 const DEFS = [
   { id: 'fw', icon: '🧱', name: 'Firewall & Network Diagram', kind: 'firewall', pass: 80, source: firewallCases,
@@ -26,15 +28,44 @@ const DEFS = [
 ];
 
 const list = (v) => (Array.isArray(v) ? v : []);
-const casesOf = (src) => list(src).filter((c) => c && typeof c.id === 'string')
-  .map((c) => ({ id: c.id, title: String(c.title || c.id), level: Number(c.level) || 1, objs: list(c.objs).map(String) }));
 const byObjId = (a, b) => a.split('.').map(Number).reduce((d, n, i) => d || n - Number(b.split('.')[i] || 0), 0);
+const okExamId = (k) => /^[a-z0-9-]{1,40}$/.test(k);
+// Optional per-case `examObjs: { '<examId>': ['5.3', ...] }`: the objectives a case practices on the other exams.
+// Security+ stays on `objs`. Junk keys or values are dropped.
+export function normalizeExamObjs(raw) {
+  const out = {};
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  Object.keys(o).forEach((k) => {
+    const objs = [...new Set(list(o[k]).map(String).filter((x) => /^\d+\.\d+$/.test(x)))].sort(byObjId);
+    if (okExamId(k) && objs.length) out[k] = objs;
+  });
+  return out;
+}
+const casesOf = (src) => list(src).filter((c) => c && typeof c.id === 'string')
+  .map((c) => ({ id: c.id, title: String(c.title || c.id), level: Number(c.level) || 1, objs: list(c.objs).map(String), examObjs: normalizeExamObjs(c.examObjs) }));
+
+// The union over a lab's cases, per exam: { '<examId>': [objective ids, sorted] }.
+function unionExamObjs(cases) {
+  const out = {};
+  cases.forEach((c) => Object.entries(c.examObjs).forEach(([k, objs]) => { out[k] = [...new Set([...(out[k] || []), ...objs])].sort(byObjId); }));
+  return out;
+}
 
 export const LABS = Object.freeze(DEFS.map(({ source, ...lab }) => {
   const cases = casesOf(source);
   const objs = [...new Set(cases.flatMap((c) => c.objs))].sort(byObjId);
-  return Object.freeze({ ...lab, objs, cases });
+  return Object.freeze({ ...lab, objs, examObjs: unionExamObjs(cases), cases });
 }));
+
+export const SECPLUS = 'secplus-801';
+// The objective ids a lab (or one case) practices on one exam: Security+ reads `objs`, the others `examObjs`.
+export const objsFor = (labOrCase, examId = SECPLUS) => (examId === SECPLUS ? labOrCase.objs : (labOrCase.examObjs || {})[examId] || []);
+
+// Labs whose cases practice any of these objective ids on that exam (for the exam domain pages).
+export function labsForObjectives(objIds, examId = SECPLUS) {
+  const want = new Set(list(objIds).map(String));
+  return LABS.filter((l) => objsFor(l, examId).some((o) => want.has(o)));
+}
 
 const SOURCES = Object.fromEntries(DEFS.map((d) => [d.id, d.source]));
 

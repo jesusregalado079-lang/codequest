@@ -1,5 +1,6 @@
 import stages, { summary } from './expedited-path.js';
 import { ensureMigrated, isStudyDone, requestPersistentStorage, toggleStudyDone } from './progress.js';
+import { careerHeaderHtml } from './ui/career-nav.js';
 
 const app = document.getElementById('expedited-app');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -35,23 +36,17 @@ function overallStats() {
 
 function render() {
   const overall = overallStats();
+  const current = stages.find((st) => stageStats(st).pct < 100) || null; // "you are here": the first stage not finished
   app.innerHTML = `
-    <header class="exp-header">
-      <div>
-        <div class="eyebrow">CODEQUEST PRO · EMPLOYMENT-FIRST TRACK</div>
-        <h1>${esc(summary.title)}</h1>
-        <p>${esc(summary.subtitle)}</p>
-      </div>
-      <nav class="exp-nav" aria-label="Roadmap navigation">
-        <a href="./pro.html#/career-journey">★ My Journey</a>
-        <a class="active" href="./expedited.html" aria-current="page">Expedited Roadmap</a>
-        <a href="./pro.html#/career-path">Full Roadmap</a>
-        <a href="./pro.html#/career-progress">Full Progress</a>
-        <a href="./pro.html">CodeQuest Pro</a>
-      </nav>
-    </header>
+    ${careerHeaderHtml('expedited', './pro.html', 'exp-header')}
 
-    <main class="exp-main">
+    <main class="exp-main c-page">
+      <div class="c-intro">
+        <div class="eyebrow c-kicker">CodeQuest Pro · Employment-first track</div>
+        <h1>${esc(summary.title)}</h1>
+        <p class="chapter-lead">${esc(summary.subtitle)}</p>
+      </div>
+
       <section class="hero-card">
         <div class="hero-copy">
           <span class="pill">PRIMARY TRACK</span>
@@ -60,7 +55,7 @@ function render() {
           <p class="cost-note">${esc(summary.costNote)}</p>
         </div>
         <div class="overall">
-          <div class="ring" style="--p:${overall.pct}"><strong>${overall.pct}%</strong><span>complete</span></div>
+          <div class="ring c-ring" style="--p:${overall.pct}"><strong>${overall.pct}%</strong><span>complete</span></div>
           <div class="overall-meta">
             <b>${overall.done}/${overall.total}</b><span>checkpoints</span>
             <b>${overall.hoursDone}/${overall.hours}h</b><span>planned practice</span>
@@ -68,16 +63,16 @@ function render() {
         </div>
       </section>
 
-      <section class="budget-card">
-        <div><span>A+ Core 1</span><strong>$274</strong></div>
-        <div><span>A+ Core 2</span><strong>$274</strong></div>
-        <div><span>Network+</span><strong>$399</strong></div>
-        <div><span>Security+</span><strong>$439</strong></div>
-        <div class="budget-total"><span>All CompTIA exams</span><strong>$1,386</strong></div>
+      <section class="budget-card c-stats" aria-label="Exam budget">
+        <div class="c-stat"><span>A+ Core 1</span><strong>$274</strong></div>
+        <div class="c-stat"><span>A+ Core 2</span><strong>$274</strong></div>
+        <div class="c-stat"><span>Network+</span><strong>$399</strong></div>
+        <div class="c-stat"><span>Security+</span><strong>$439</strong></div>
+        <div class="c-stat is-total budget-total"><span>All CompTIA exams</span><strong>$1,386</strong></div>
       </section>
 
       <div class="stage-list">
-        ${stages.map(renderStage).join('')}
+        ${stages.map((st) => renderStage(st, st === current)).join('')}
       </div>
 
       <p class="footnote">Prices are planning figures, not a promise of checkout price. Look for employer funding, student discounts, voucher bundles, promotions, and approved discounts before buying. The original CodeQuest Career Path remains unchanged and is your deeper backup curriculum.</p>
@@ -102,31 +97,32 @@ function showSaveWarning() {
     bar = document.createElement('div');
     bar.id = 'exp-save-warning';
     bar.setAttribute('role', 'alert');
-    bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:60;padding:12px 16px;border-radius:12px;background:#5a1f17;color:#fff;font:600 15px/1.4 system-ui,sans-serif';
-    bar.innerHTML = 'Your last change was not saved. This browser’s storage is full or blocked. <a style="color:#ffd9cf" href="./pro.html#/career-progress">Back up your progress</a> before closing this page.';
+    bar.className = 'save-warning';
+    bar.innerHTML = '<strong>Your last change was not saved.</strong> This browser’s storage is full or blocked. <a href="./pro.html#/career-progress">Back up your progress</a> before closing this page.';
     document.body.appendChild(bar);
   }
 }
 
-function renderStage(stage) {
+function renderStage(stage, isCurrent) {
   const st = stageStats(stage);
+  const state = st.pct === 100 ? ' complete is-done' : isCurrent ? ' is-current' : '';
   return `
-    <section class="stage-card${st.pct === 100 ? ' complete' : ''}">
-      <div class="stage-top">
-        <div class="stage-number">${stage.n}</div>
-        <div class="stage-title">
+    <section class="stage-card c-card${state}">
+      <div class="stage-top c-card-top">
+        <div class="stage-number c-badge" aria-hidden="true">${stage.n}</div>
+        <div class="stage-title c-card-title">
           <h2>${esc(stage.title)}</h2>
           <p>${esc(stage.blurb)}</p>
         </div>
-        <div class="stage-progress"><strong>${st.pct}%</strong><span>${st.done}/${st.total} done</span></div>
+        <div class="stage-progress c-card-pct"><strong>${st.pct}%</strong><span>${st.done}/${st.total} done</span></div>
       </div>
-      <div class="stage-meta">
-        <span>⏱ ${esc(stage.timing)}</span>
-        <span>🗓 ${esc(stage.months)}</span>
-        <span>💵 ${esc(stage.cost)}</span>
-        <span>📚 ~${stage.hours[0]}–${stage.hours[1]} hrs</span>
+      <div class="stage-meta c-chips">
+        <span class="c-chip"><span aria-hidden="true">⏱</span> ${esc(stage.timing)}</span>
+        <span class="c-chip"><span aria-hidden="true">🗓</span> ${esc(stage.months)}</span>
+        <span class="c-chip"><span aria-hidden="true">💵</span> ${esc(stage.cost)}</span>
+        <span class="c-chip"><span aria-hidden="true">📚</span> ~${stage.hours[0]}–${stage.hours[1]} hrs</span>
       </div>
-      <div class="stage-bar"><i style="width:${st.pct}%"></i></div>
+      <div class="stage-bar c-bar" aria-hidden="true"><i style="width:${st.pct}%"></i></div>
       <div class="check-list">
         ${(stage.items || []).map(renderItem).join('')}
       </div>
@@ -139,9 +135,10 @@ function renderItem(item) {
   const name = item.url
     ? `<a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">${esc(item.name)} <span aria-hidden="true">↗</span></a>`
     : `<span>${esc(item.name)}</span>`;
+  // one label; aria-pressed says whether it is done
   return `
     <div class="check-row${done ? ' done' : ''}">
-      <button type="button" class="checkbox" data-check="${esc(key)}" aria-pressed="${done}" aria-label="Mark ${esc(item.name)} ${done ? 'not complete' : 'complete'}">${done ? '✓' : ''}</button>
+      <button type="button" class="checkbox c-check" data-check="${esc(key)}" aria-pressed="${done}" aria-label="Mark ${esc(item.name)} complete">${done ? '✓' : ''}</button>
       <div class="check-copy">${name}${item.hours ? `<small>~${item.hours}h</small>` : '<small>milestone / exam</small>'}</div>
     </div>`;
 }

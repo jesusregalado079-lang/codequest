@@ -151,13 +151,24 @@ assert.equal(L.reviewDue([qa], st([[true, 9], [false, 8], [true, 2]]), now).leng
 assert.equal(L.reviewDue([held], L.emptyExamState(), now).length, 0, 'never answered is not in review');
 
 // ---------- readiness and study first ----------
-const withMocks = (pcts) => L.normalizeExamState({ attempts: pcts.map((p, i) => ({ id: `m${i}`, kind: 'mock', ids: ['x'], answers: {}, startedAt: 1e12 + i, finishedAt: 1e12 + i + 1, seconds: 10, correct: 0, total: 1, percent: p, byDomain: {} })) });
-assert.equal(L.readiness(withMocks([90, 88, 86]), fixture, 85).ready, true);
-assert.equal(L.readiness(withMocks([90, 84, 86]), fixture, 85).ready, false);
-assert.equal(L.readiness(withMocks([70, 90, 88, 86]), fixture, 85).ready, true, 'only the last three count');
-assert.equal(L.readiness(withMocks([88, 86]), fixture, 85).ready, false, 'three mocks needed');
-assert.equal(L.readiness(withMocks([80, 90, 85]), fixture, 85).avg3, 85);
-assert.equal(L.readiness(L.emptyExamState(), fixture, 85).avg3, null);
+const withMocks = (scores) => L.normalizeExamState({ attempts: scores.map((score, i) => {
+  const { percent, total = bp.questions, removed = 0 } = typeof score === 'number' ? { percent: score } : score;
+  return { id: `m${i}`, kind: 'mock', ids: Array.from({ length: total + removed }, (_, n) => `q${n}`), answers: {}, startedAt: 1e12 + i, finishedAt: 1e12 + i + 1, seconds: 10, correct: Math.round(percent * total / 100), total, percent, byDomain: {}, removed };
+}) });
+const ready = (scores) => L.readiness(withMocks(scores), fixture, bp.target, bp.questions);
+assert.equal(ready([90, 88, 86]).ready, true);
+assert.equal(ready([90, 84, 86]).ready, false);
+assert.equal(ready([70, 90, 88, 86]).ready, true, 'only the last three full mocks count');
+assert.equal(ready([88, 86]).ready, false, 'three full mocks needed');
+assert.equal(ready([80, 90, 85]).avg3, 85);
+assert.equal(L.readiness(L.emptyExamState(), fixture, bp.target, bp.questions).avg3, null);
+const shortOnly = ready(Array.from({ length: 3 }, () => ({ percent: 100, total: 8 })));
+assert.deepEqual([shortOnly.mocks, shortOnly.avg3, shortOnly.ready], [0, null, false], 'perfect 8-question mocks do not affect readiness');
+assert.equal(withMocks(Array.from({ length: 3 }, () => ({ percent: 100, total: 8 }))).attempts.length, 3, 'short mocks remain saved as attempts');
+const mixed = ready([90, { percent: 100, total: 8 }, 88, 86]);
+assert.deepEqual([mixed.mocks, mixed.last, mixed.previous, mixed.avg3, mixed.ready], [3, 86, 88, 88, true], 'short mock is skipped without breaking full-mock order');
+assert.deepEqual([ready([85, 90, 100]).mocks, ready([85, 90, 100]).ready], [3, true]);
+assert.equal(ready([85, 90, { percent: 100, removed: 1 }]).ready, false, 'retired questions disqualify a mock');
 const missedState = L.addEntries(empty, fixture.filter((q) => q.obj === '4.8').slice(0, 3).map((q) => [q.id, { t: 1, c: (q.answer + 1) % 4, ok: false, m: 'p' }])
   .concat(fixture.filter((q) => q.obj === '5.6').slice(0, 3).map((q) => [q.id, { t: 1, c: (q.answer + 1) % 4, ok: false, m: 'p' }])));
 const first = L.studyFirst(fixture, missedState, bp);
