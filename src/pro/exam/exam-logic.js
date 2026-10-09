@@ -182,8 +182,8 @@ function lastShownInExam(state) {
   return at;
 }
 
-// A fresh draw: per domain its quota, spread evenly over the domain's objectives; within an objective, questions never
-// shown in a mock or check first, then ones missed on the latest answer, then the least recently shown; ties random.
+// A fresh draw: per domain its quota, take never-shown questions across objectives first (with a spread cap),
+// then fill from each objective's remaining questions: missed latest, then least recently shown; ties random.
 // Every question order and every choice order is shuffled. Returns { ids, orders }.
 export function drawExam({ questions, domains, state, total, onlyDomain = null, rng = defaultRng() }) {
   const shown = lastShownInExam(state);
@@ -198,6 +198,20 @@ export function drawExam({ questions, domains, state, total, onlyDomain = null, 
     Object.values(byObj).forEach((list) => list.sort((a, b) => rank(a) - rank(b) || (shown[a.id] || 0) - (shown[b.id] || 0)));
     const lanes = shuffle(Object.values(byObj), rng);
     let need = Math.min(quota, inDomain.length);
+    const cap = lanes.length ? Math.ceil(quota / lanes.length) + 1 : 0;
+    const freshTaken = new Map(lanes.map((lane) => [lane, 0]));
+    while (need > 0) {
+      let took = false;
+      for (const lane of lanes) {
+        if (need > 0 && freshTaken.get(lane) < cap && lane.length && rank(lane[0]) === 0) {
+          picked.push(lane.shift());
+          freshTaken.set(lane, freshTaken.get(lane) + 1);
+          need -= 1;
+          took = true;
+        }
+      }
+      if (!took) break;
+    }
     while (need > 0) {
       let took = false;
       for (const lane of lanes) {

@@ -164,7 +164,7 @@ export function journey({ full, milestones, gate, stages = [], done, doneAt = {}
 
 // ---------- achievements ----------
 // Each badge: id, icon, name, how (what earns it), and test(ctx) -> { earned, progress: [have, need] }.
-// ctx: { done, doneAt, full, extras, stages, gate, j (journey) }.
+// ctx: { done, doneAt, full, extras, stages, gate, j (journey), exam?, labs? }.
 const countDone = (ctx, keys) => keys.filter((k) => ctx.done[k] === true).length;
 const latestDate = (ctx, keys) => keys.map((k) => ctx.doneAt[k]).filter(Boolean).sort().pop() || null;
 const linkIds = (ctx) => ctx.full.flatMap((p) => p.links.map((l) => l.id));
@@ -183,6 +183,16 @@ const examBadge = (id, icon, name, how, have, need) => ({ id, icon, name, how, g
   const n = typeof need === 'function' ? (e ? need(e) : 1) : need;
   return { have: e ? have(e) : 0, need: Math.max(1, n), noDate: true };
 } });
+// Hands-on lab badges read ctx.labs (labSummary from labs/lab-logic.js: { total, passed, perfect, perLab }); no lab data
+// means no progress, never a crash. need() may depend on the catalog (a lab's case count grows with its content).
+const labOne = (l, id) => (l && Array.isArray(l.perLab) ? l.perLab.find((x) => x && x.id === id) : null) || null;
+const labBadge = (id, icon, name, how, have, need) => ({ id, icon, name, how, group: 'Labs', test: (ctx) => {
+  const l = ctx.labs && typeof ctx.labs === 'object' ? ctx.labs : null;
+  const n = typeof need === 'function' ? (l ? need(l) : 1) : need;
+  const h = l ? have(l) : 0;
+  return { have: Number.isFinite(h) ? h : 0, need: Math.max(1, Number.isFinite(n) ? n : 1), noDate: true };
+} });
+const labCases = (labId) => [(l) => (labOne(l, labId) || {}).passed || 0, (l) => (labOne(l, labId) || {}).total || 1];
 const streakBadge = (id, icon, name, need) => ({ id, icon, name, how: `Tick something ${need} days in a row`, group: 'Consistency', test: (ctx) => ({ have: ctx.j.bestStreak, need, noDate: true }) });
 
 export const BADGES = Object.freeze([
@@ -219,6 +229,15 @@ export const BADGES = Object.freeze([
   examBadge('exam-ready', '🛡️', 'Exam Ready', 'Three full mocks in a row at 85% or more', (e) => e.runAtTarget, 3),
   examBadge('exam-seen-100', '📚', 'Hundred Questions', 'Answer 100 different exam questions', (e) => e.seen, 100),
   examBadge('exam-seen-all', '🗺️', 'Seen It All', 'Answer every question in the Security+ bank', (e) => e.seen, (e) => e.total),
+  labBadge('lab-first', '🧪', 'First Lab', 'Pass any hands-on lab case', (l) => l.passed || 0, 1),
+  labBadge('lab-fw', '🧱', 'Firewall Fixer', 'Pass every Firewall & Network Diagram case', ...labCases('fw')),
+  labBadge('lab-logs', '🔎', 'Log Detective', 'Pass every Log Detective set', ...labCases('logs')),
+  labBadge('lab-subnet', '🧮', 'Subnet Sprinter', 'Pass all four Subnet Sprint levels', ...labCases('subnet')),
+  labBadge('lab-cli', '💻', 'Terminal Medic', 'Pass every Terminal Troubleshooter case', ...labCases('cli')),
+  labBadge('lab-phish', '🎣', 'Phish Spotter', 'Pass every Phish Inspector case', ...labCases('phish')),
+  labBadge('lab-code', '🛠️', 'Detection Coder', 'Pass every Detection Coder lab', ...labCases('code')),
+  labBadge('lab-perfect-10', '💯', 'Ten Perfect', 'Score 100% on 10 lab cases', (l) => l.perfect || 0, 10),
+  labBadge('lab-all', '🏅', 'Hands-On Hero', 'Pass every case of every lab', (l) => l.passed || 0, (l) => l.total || 1),
   { id: 'gate-open', icon: '🔓', name: 'Gate Open', how: 'Meet all four paid-cert gate conditions', group: 'Milestones', test: (ctx) => { const keys = (ctx.gate.conditions || []).map(gateKey); return { have: countDone(ctx, keys), need: Math.max(1, keys.length), keys }; } },
 ]);
 

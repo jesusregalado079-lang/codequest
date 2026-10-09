@@ -5,6 +5,7 @@
 // learner can export his progress to a file and import it back (the only copy otherwise lives in this browser).
 import { LEGACY_KEYS_V1 } from './legacy-keys.js';
 import { emptyExamState, mergeExamState, normalizeExamState, normalizeExams } from './exam/exam-logic.js';
+import { mergeLabs, normalizeLabs } from './labs/lab-logic.js';
 
 const KEY = 'codequest-pro-v1';
 export const EXPORT_FORMAT = 'codequest-pro-progress';
@@ -21,7 +22,7 @@ const RANKS = [
 ];
 
 export const DEFAULT_HOURS_PER_WEEK = 21; // 3 hours a day
-const empty = () => ({ completed: {}, hintsUsed: {}, streak: { count: 0, last: null }, studyDone: {}, doneAt: {}, settings: { hoursPerWeek: DEFAULT_HOURS_PER_WEEK }, migrations: {}, exams: {} });
+const empty = () => ({ completed: {}, hintsUsed: {}, streak: { count: 0, last: null }, studyDone: {}, doneAt: {}, settings: { hoursPerWeek: DEFAULT_HOURS_PER_WEEK }, migrations: {}, exams: {}, labs: {} });
 
 const plain = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 const okKey = (k) => typeof k === 'string' && k.length > 0 && k.length <= 400 && k !== '__proto__' && k !== 'constructor' && k !== 'prototype';
@@ -48,6 +49,7 @@ export function normalizeState(raw) {
   const hpw = plain(o.settings).hoursPerWeek;
   out.settings.hoursPerWeek = Number.isInteger(hpw) && hpw >= 1 && hpw <= 100 ? hpw : DEFAULT_HOURS_PER_WEEK;
   out.exams = normalizeExams(o.exams); // certification practice: answers, mocks, the open session (exam/exam-logic.js)
+  out.labs = normalizeLabs(o.labs); // hands-on labs: { 'fw/fw-01': [{ t, score, secs }] } (labs/lab-logic.js)
   return out;
 }
 
@@ -179,6 +181,16 @@ export function saveExamState(examId, state) {
   return { ok: save(s) };
 }
 
+// Hands-on labs: every graded attempt per item ({ [labId/caseId]: [{ t, score, secs }] }, last 10 kept).
+export function getLabs() {
+  return load().labs;
+}
+export function saveLabs(labs) {
+  const s = load();
+  s.labs = normalizeLabs(labs);
+  return { ok: save(s) };
+}
+
 // One-time move of checkmarks saved under old keys to the permanent ids. Runs once per name, never undoes anything,
 // and leaves the old keys in place (harmless, and a way back if ever needed).
 export function applyKeyMigration(name, pairs) {
@@ -223,6 +235,7 @@ export function importProgress(text, mode = 'merge') {
     Object.keys(incoming.doneAt).forEach((k) => { if (!next.doneAt[k] || incoming.doneAt[k] < next.doneAt[k]) next.doneAt[k] = incoming.doneAt[k]; });
     if (incoming.streak.last && (!next.streak.last || incoming.streak.last > next.streak.last)) next.streak = incoming.streak;
     Object.keys(incoming.exams).forEach((k) => { next.exams[k] = mergeExamState(next.exams[k], incoming.exams[k]); });
+    next.labs = mergeLabs(next.labs, incoming.labs);
   }
   if (!save(next)) return { ok: false, error: 'This browser could not save the imported progress (storage is full or blocked).' };
   return { ok: true, items: Object.keys(next.studyDone).length };

@@ -9,6 +9,7 @@ import {
   practiceOrder, practiceSet, readiness, reviewDue, studyFirst, visibleInPractice, addEntries,
 } from '../exam/exam-logic.js';
 import { getExamState, saveExamState } from '../progress.js';
+import { labsForObjectives, labsSummary } from './labs/index.js';
 
 const { blueprint: bp, questions, sources, byId } = exam;
 const EXAM = bp.id;
@@ -25,8 +26,12 @@ let pendingStart = null; // a start that needs "replace the unfinished session?"
 
 // Closing, reloading or switching away mid-mock keeps the time already spent.
 if (typeof window !== 'undefined') {
-  window.addEventListener('pagehide', () => flushTimer(true));
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushTimer(true); });
+  window.addEventListener('pagehide', () => { flushTimer(true); if (timer) timer.visible = false; });
+  document.addEventListener('visibilitychange', () => {
+    if (!timer) return;
+    if (document.visibilityState === 'hidden') { flushTimer(true); timer.visible = false; }
+    else { timer.since = Date.now(); timer.visible = true; }
+  });
 }
 
 // Called by the router before every page: no timer or key listener outlives its page.
@@ -76,7 +81,7 @@ function sessionLabel(s) {
 // Start a new session (or ask first when one is open). spec: { kind, title, ids, orders, limitMs, domain }
 function start(spec) {
   const state = load();
-  if (state.session && !pendingStart) {
+  if (state.session) {
     pendingStart = spec;
     showHub();
     const bar = ctx.app.querySelector('.ex-replace');
@@ -177,7 +182,7 @@ function showHub() {
 
       ${pendingStart ? `
       <section class="ex-replace" tabindex="-1" role="alertdialog" aria-label="Replace the unfinished session?">
-        <p><strong>Replace your unfinished session?</strong> ${esc(sessionLabel(s))}. ${s.kind === 'mock' || s.kind === 'check' ? 'Its answers are not scored or saved.' : 'Answers you already gave are saved.'}</p>
+        <p><strong>Replace your unfinished session with ${esc(pendingStart.title)}?</strong> ${esc(sessionLabel(s))}. ${s.kind === 'mock' || s.kind === 'check' ? 'Its answers are not scored or saved.' : 'Answers you already gave are saved.'}</p>
         <div class="ex-actions"><button type="button" class="ex-btn primary" data-replace>Replace it and start</button><button type="button" class="ex-btn ghost" data-keep>Keep it</button></div>
       </section>` : ''}
 
@@ -228,6 +233,8 @@ function showHub() {
         </div>
       </section>
 
+      ${labsHub()}
+
       ${mocks.length ? `
       <section>
         <h2 class="ex-h2">Mock history <span>${mocks.length}</span></h2>
@@ -239,7 +246,7 @@ function showHub() {
         <h2 class="ex-h2">What this is, honestly</h2>
         <ul>
           <li>Every question is original and checked against official sources (NIST, CISA, OWASP, MITRE, vendor docs). None are real exam questions.</li>
-          <li>The real exam also has hands-on simulations (a firewall, a network diagram, a terminal). Those labs come next; meanwhile try <a href="${esc(bp.links.demo)}" target="_blank" rel="noopener noreferrer">CompTIA's own demo simulation</a>.</li>
+          <li>The real exam also has hands-on simulations (a firewall, a network diagram, a terminal). Practice those in the <a href="#/labs">Hands-on Labs</a>, and try <a href="${esc(bp.links.demo)}" target="_blank" rel="noopener noreferrer">CompTIA's own demo simulation</a>.</li>
           <li>CompTIA's pass mark is a scaled 750 of 900, not a fixed percentage. ${bp.target}% here is a stricter bar on purpose, the way 80% got you through the pest-control exam.</li>
           <li>Some questions are held out: they only show up in mocks and domain checks, so a mock is never just a repeat of practice.</li>
         </ul>
@@ -254,8 +261,34 @@ function showHub() {
   on('[data-dpractice]', (el) => startPractice(questions.filter((q) => String(q.d) === el.dataset.dpractice), `Domain ${el.dataset.dpractice} practice`, 10));
   on('[data-check]', (el) => startCheck(Number(el.dataset.check)));
   on('[data-discard]', () => { const st = load(); st.session = null; store(st); pendingStart = null; showHub(); });
-  on('[data-replace]', () => { const spec = pendingStart; const st = load(); st.session = null; store(st); pendingStart = null; start(spec); });
+  on('[data-replace]', () => { const spec = pendingStart; const st = load(); if (!spec.ids.length) return; st.session = newSession({ ...spec }); pendingStart = null; if (store(st)) location.hash = '/exam/session'; });
   on('[data-keep]', () => { pendingStart = null; showHub(); });
+}
+
+// Hands-on practice: the labs are the exam's performance-based questions (PBQs), practiced.
+function labsHub() {
+  const l = labsSummary();
+  return `
+      <section class="ex-labs" aria-label="Hands-on practice">
+        <h2 class="ex-h2">Hands-on practice <span>${l.passed} of ${l.total} lab cases passed</span></h2>
+        <a class="ex-labs-card" href="#/labs">
+          <span class="ex-labs-icons" aria-hidden="true">${l.perLab.map((x) => x.icon).join('')}</span>
+          <span><strong>CompTIA's exam includes performance-based questions.</strong> A firewall to fix, a terminal, logs, an inbox. Practice them in the Hands-on Labs: passed ${l.passed} of ${l.total}.</span>
+          <span class="ex-labs-go">Open the labs →</span>
+        </a>
+      </section>`;
+}
+
+function domainLabs(d) {
+  const labs = labsForObjectives(d.objectives.map((o) => o.id));
+  if (!labs.length) return '';
+  const { esc } = ctx;
+  const mine = new Set(d.objectives.map((o) => o.id));
+  return `
+      <section class="ex-labs" aria-label="Hands-on labs for this domain">
+        <h2 class="ex-h2">Hands-on labs for this domain</h2>
+        <ul class="ex-domain-labs">${labs.map((lab) => `<li><a href="#/labs/${esc(lab.id)}"><span aria-hidden="true">${lab.icon}</span><strong>${esc(lab.name)}</strong><small>${lab.objs.filter((o) => mine.has(o)).map((o) => `Sec+ ${esc(o)}`).join(' · ')}</small></a></li>`).join('')}</ul>
+      </section>`;
 }
 
 /* ---------------- one domain ---------------- */
@@ -279,6 +312,7 @@ function showDomain(n) {
     return `<li><span class="ex-obj">${esc(o.id)}</span><div><strong>${esc(o.label)}</strong>${pctBar(os.accuracy, os.accuracy === null ? '' : os.accuracy >= bp.target ? 'good' : os.accuracy >= 70 ? 'mid' : 'low')}<small>${os.seen}/${os.total} seen${os.accuracy === null ? '' : ` · ${os.accuracy}% right`}${os.wrong ? ` · ${os.wrong} to fix` : ''}</small></div><button type="button" class="ex-btn small" data-obj="${esc(o.id)}">Practice</button></li>`;
   }).join('')}
       </ul>
+      ${domainLabs(d)}
     </main>`;
   ctx.app.querySelector('[data-dpractice]').addEventListener('click', () => startPractice(questions.filter((q) => q.d === n), `Domain ${n} practice`, 10));
   ctx.app.querySelector('[data-check]').addEventListener('click', () => startCheck(n));
@@ -290,11 +324,11 @@ function showDomain(n) {
 function flushTimer(force = false) {
   if (!timer) return;
   const now = Date.now();
-  if (document.visibilityState === 'visible') timer.pending += now - timer.since;
+  if (timer.visible) timer.pending += now - timer.since;
   timer.since = now;
   if (timer.pending >= 1000 || (force && timer.pending > 0)) {
     const st = load();
-    if (st.session && st.session.id === timer.sid) { st.session.elapsedMs += timer.pending; store(st); }
+    if (st.session && st.session.id === timer.sid) { st.session.elapsedMs += timer.pending; timer.session.elapsedMs = st.session.elapsedMs; store(st); }
     timer.pending = 0;
   }
 }
@@ -404,11 +438,11 @@ function showSession() {
   click('[data-finish]', () => finishPractice());
 
   if (isTimed) {
-    timer = { id: 0, sid: s.id, since: Date.now(), pending: 0 };
+    timer = { id: 0, sid: s.id, session: s, since: Date.now(), pending: 0, visible: document.visibilityState === 'visible' };
     const tick = () => {
       if (!timer) return;
       const now = Date.now();
-      if (document.visibilityState === 'visible') timer.pending += now - timer.since;
+      if (timer.visible) timer.pending += now - timer.since;
       timer.since = now;
       const left = s.limitMs - s.elapsedMs - timer.pending;
       const clock = document.getElementById('ex-clock');
@@ -497,7 +531,7 @@ function showResult(attemptId) {
       </section>
       <section>
         <h2 class="ex-h2">By domain</h2>
-        <ul class="ex-bydomain">${Object.entries(a.byDomain).map(([d, [c, t]]) => { const p = t ? Math.round((c / t) * 100) : 0; return `<li><span>${d}.0 ${esc(domainOf(d).name)}</span>${pctBar(p, p >= bp.target ? 'good' : p >= 70 ? 'mid' : 'low')}<b>${c}/${t}</b></li>`; }).join('')}</ul>
+        <ul class="ex-bydomain">${Object.entries(a.byDomain).filter(([d]) => domainOf(d)).map(([d, [c, t]]) => { const p = t ? Math.round((c / t) * 100) : 0; return `<li><span>${d}.0 ${esc(domainOf(d).name)}</span>${pctBar(p, p >= bp.target ? 'good' : p >= 70 ? 'mid' : 'low')}<b>${c}/${t}</b></li>`; }).join('')}</ul>
       </section>
       ${missed.length ? `
       <section>
@@ -510,7 +544,7 @@ function showResult(attemptId) {
             <ul class="ex-miss-choices">${q.choices.map((c, ci) => `<li class="${ci === q.answer ? 'right' : ci === chose ? 'wrong' : ''}">${ci === q.answer ? '✓' : ci === chose ? '✗' : '·'} ${esc(c)}</li>`).join('')}</ul>
             ${feedbackHtml(q, chose)}</details>`;
   }).join('')}</div>
-      </section>` : '<p class="ex-muted">Nothing missed. Clean sheet.</p>'}
+      </section>` : `<p class="ex-muted">${a.correct === a.total ? 'Nothing missed. Clean sheet.' : 'The questions you missed have since been retired from the bank.'}</p>`}
     </main>`;
   const b = ctx.app.querySelector('[data-misses]');
   if (b) b.addEventListener('click', () => startMisses(missed));
@@ -521,7 +555,7 @@ export function examSummary() {
   const state = load();
   const r = readiness(state, questions, bp.target);
   let run = 0;
-  const mocks = state.attempts.filter((a) => a.kind === 'mock');
+  const mocks = state.attempts.filter((a) => a.kind === 'mock' && a.removed === 0);
   for (let i = mocks.length - 1; i >= 0 && mocks[i].percent >= bp.target && run < 3; i -= 1) run += 1;
   return { ...r, due: reviewDue(questions, state).length, total: questions.length, target: bp.target, name: `${bp.name} ${bp.code}`, runAtTarget: run };
 }

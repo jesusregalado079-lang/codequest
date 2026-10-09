@@ -53,6 +53,23 @@ assert.ok(draw.ids.every((id) => [0, 1, 2, 3].every((i) => draw.orders[id].inclu
 assert.deepEqual(L.drawExam({ questions: fixture, domains: bp.domains, state: empty, total: 90, rng: seeded(7) }), draw, 'same seed, same draw');
 assert.notDeepEqual(L.drawExam({ questions: fixture, domains: bp.domains, state: empty, total: 90, rng: seeded(8) }).ids, draw.ids, 'a new draw differs');
 
+// a depleted objective cannot spend its lane on repeats while another is still below its fresh cap
+const uneven = [
+  ...Array.from({ length: 10 }, (_, i) => ({ id: `uneven-a-${i}`, obj: 'A', d: 1, answer: 0 })),
+  ...Array.from({ length: 12 }, (_, i) => ({ id: `uneven-b-${i}`, obj: 'B', d: 1, answer: 0 })),
+];
+const shownA = uneven.filter((q) => q.obj === 'A').slice(2).map((q) => q.id);
+const unevenState = L.normalizeExamState({ attempts: [{
+  id: 'uneven-prior', kind: 'mock', ids: shownA, answers: {}, startedAt: 1_800_000_000_000,
+  finishedAt: 1_800_000_000_001, seconds: 0, correct: 0, total: shownA.length, percent: 0, byDomain: {},
+}] });
+const unevenDraw = L.drawExam({ questions: uneven, domains: [{ n: 1, weight: 100 }], state: unevenState, total: 8, rng: seeded(7) });
+const unevenFresh = unevenDraw.ids.filter((id) => !shownA.includes(id));
+assert.equal(unevenDraw.ids.length, 8);
+assert.ok(unevenFresh.length >= 7, 'fresh phase takes A:2 and B:5 before any repeats');
+assert.equal(unevenFresh.filter((id) => id.startsWith('uneven-a-')).length, 2);
+assert.ok(unevenDraw.ids.filter((id) => id.startsWith('uneven-b-')).length <= 6, 'B gets at most cap 5 plus one rest-phase slot');
+
 // after a finished mock, the next one prefers questions never shown
 let state = L.emptyExamState();
 state.session = L.newSession({ kind: 'mock', ids: draw.ids, orders: draw.orders, title: 'mock', now: 1_800_000_000_000, limitMs: 90 * 60000, rng: seeded(1) });
@@ -80,6 +97,26 @@ const seenInDraw2 = draw2.ids.filter((id) => draw.ids.includes(id));
 if (seenInDraw2.length) {
   const missedFirst = seenInDraw2.filter((id) => !state.hist[id][0].ok).length;
   assert.ok(missedFirst >= Math.min(seenInDraw2.length, 1), 'missed questions are preferred among repeats');
+}
+
+// three finished real-bank mocks: every domain exhausts fresh questions up to each objective's cap first
+const realById = Object.fromEntries(bank.map((q) => [q.id, q]));
+let realState = L.emptyExamState();
+for (let mock = 0; mock < 3; mock += 1) {
+  const shownBefore = new Set(realState.attempts.flatMap((a) => a.ids));
+  const realDraw = L.drawExam({ questions: bank, domains: bp.domains, state: realState, total: 90, rng: seeded(2 + mock) });
+  for (const d of bp.domains) {
+    const domainBank = bank.filter((q) => q.d === d.n && !q.offOutline);
+    const objectives = [...new Set(domainBank.map((q) => q.obj))];
+    const cap = Math.ceil(q90[d.n] / objectives.length) + 1;
+    const freshAvailableWithinCaps = objectives.reduce((sum, obj) => sum + Math.min(cap, domainBank.filter((q) => q.obj === obj && !shownBefore.has(q.id)).length), 0);
+    const pickedInDomain = realDraw.ids.filter((id) => realById[id].d === d.n);
+    const freshPicked = pickedInDomain.filter((id) => !shownBefore.has(id)).length;
+    assert.equal(pickedInDomain.length, q90[d.n], `mock ${mock + 1}, domain ${d.n}: quota`);
+    assert.equal(freshPicked, Math.min(q90[d.n], freshAvailableWithinCaps), `mock ${mock + 1}, domain ${d.n}: fresh before repeats within objective caps`);
+  }
+  realState.session = L.newSession({ kind: 'mock', ids: realDraw.ids, orders: realDraw.orders, title: 'mock', now: 1_800_001_000_000 + mock * 200_000, rng: seeded(200 + mock) });
+  realState = L.finishExamSession(realState, realById, 1_800_001_100_000 + mock * 200_000).state;
 }
 
 // a domain check: only that domain

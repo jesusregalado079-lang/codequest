@@ -6,7 +6,7 @@ export const summary = {
   title: 'Expedited Cybersecurity Roadmap',
   subtitle: 'Zero IT experience → first technical role → security role',
   target: 'Start IT applications around months 2–3; become security-competitive around months 6–9 while continuing the full roadmap as backup training.',
-  costNote: 'Training can be mostly free. Current planning budget for all three CompTIA exams at US retail: A+ $548 total ($274 × 2), Network+ $399, Security+ $439 = $1,386 before discounts, taxes, retakes, or bundles. Verify pricing before purchase. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026; SY0-701 stays bookable until CompTIA retires it, so study for whichever version you will actually sit.',
+  costNote: 'Training can be mostly free. Current planning budget for all three CompTIA exams at US retail: A+ $548 total ($274 × 2), Network+ $399, Security+ $439 = $1,386 before discounts, taxes, retakes, or bundles. Verify pricing before purchase. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026, and the English SY0-701 retires June 11, 2027. V8 weights the domains differently (Security Operations 27%, Threats 24%, Architecture 19%, General Concepts 16%, Program Management 14%), so study for the version you will actually sit; the Sec+ Exam tab practices SY0-801.',
 };
 
 const E = (n, title, opts) => ({ n, title, ...opts });
@@ -79,14 +79,14 @@ export default [
     months: 'months 4–6',
     cost: '$0 learning / $439 Security+ exam',
     hours: [55, 80],
-    blurb: 'Build the broad security vocabulary employers expect, but pair it with actual Windows/Linux evidence. Take Security+ when you understand the material and can afford the exam without creating financial strain. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026; SY0-701 stays bookable until CompTIA retires it, so study for whichever version you will actually sit.',
+    blurb: 'Build the broad security vocabulary employers expect, but pair it with actual Windows/Linux evidence. Take Security+ when you understand the material and can afford the exam without creating financial strain. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026, and the English SY0-701 retires June 11, 2027. V8 weights the domains differently (Security Operations 27%, Threats 24%, Architecture 19%, General Concepts 16%, Program Management 14%), so study for the version you will actually sit; the Sec+ Exam tab practices SY0-801.',
     items: [
       { key: 'p2-comptia-security-sy0-701-foundations-checkpoint', was: 'https://www.professormesser.com/security-plus/sy0-701/sy0-701-video/sy0-701-comptia-security-plus-course/', name: 'Professor Messer Security+ SY0-701 course + notes/practice', hours: 35, url: 'https://www.professormesser.com/security-plus/sy0-701/sy0-701-video/sy0-701-comptia-security-plus-course/' },
       { key: 'exp4-windowslogs', name: 'Windows security lab: local users/groups, failed/successful logins, Event Viewer filtering and exported evidence', hours: 8, url: 'https://learn.microsoft.com/en-us/shows/inside/event-viewer' },
       { key: 'exp4-linux', name: 'Linux practice: complete Bandit through at least level 15 before SOC lab; continue the full game on the backup roadmap', hours: 8, url: 'https://overthewire.org/wargames/bandit/' },
       { key: 'exp4-incident', name: 'Write one mini incident report separating detection, containment, eradication, recovery and lessons learned', hours: 3 },
       { key: 'exp4-practice', name: 'Security+ readiness gate: stable 80–85%+ practice scores plus ability to explain threat/vulnerability/risk, authn/authz, hashing/encryption and incident response', hours: 5 },
-      { key: 'exp4-secexam', name: 'Pass Security+ SY0-701, current planning price $439 retail', hours: 0 },
+      { key: 'exp4-secexam', name: 'Pass Security+ (SY0-801 from Nov 17, 2026, or SY0-701 until June 11, 2027), current planning price $439 retail', hours: 0 },
     ],
   }),
 
@@ -95,7 +95,7 @@ export default [
     months: 'months 5–7',
     cost: '$0–$50 typical lab budget',
     hours: [45, 70],
-    blurb: 'Turn certifications into evidence. Build a small Windows/Linux defensive lab, generate known activity, collect logs, write a detection and explain a false positive. This is the expedited version of your deeper Phase 3 Defensive Engineering Lab. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026; SY0-701 stays bookable until CompTIA retires it, so study for whichever version you will actually sit.',
+    blurb: 'Turn certifications into evidence. Build a small Windows/Linux defensive lab, generate known activity, collect logs, write a detection and explain a false positive. This is the expedited version of your deeper Phase 3 Defensive Engineering Lab. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026, and the English SY0-701 retires June 11, 2027. V8 weights the domains differently (Security Operations 27%, Threats 24%, Architecture 19%, General Concepts 16%, Program Management 14%), so study for the version you will actually sit; the Sec+ Exam tab practices SY0-801.',
     items: [
       { key: 'exp5-lab', name: 'Build Windows + Linux VM lab and one simple network diagram. On an Apple M1 Mac, use UTM or Parallels with Windows 11 on ARM, or a cloud VM; check Sysmon and Wazuh agent support on Windows ARM', hours: 10 },
       { key: 'exp5-sysmon', name: 'Install/configure Sysmon and identify useful process/network/login telemetry', hours: 7, url: 'https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon' },

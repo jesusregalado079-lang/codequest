@@ -69,7 +69,7 @@ export default [
         name: 'Security+',
         by: 'CompTIA',
         url: 'https://www.comptia.org/certifications/security',
-        note: '~50-60hrs, the industry-standard vendor-neutral baseline. Widely recognized by employers; approved under DoDM 8140.03. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026; SY0-701 stays bookable until CompTIA retires it, so study for whichever version you will actually sit.',
+        note: '~50-60hrs, the industry-standard vendor-neutral baseline. Widely recognized by employers; approved under DoDM 8140.03. CompTIA launches Security+ V8 (SY0-801) on November 17, 2026, and the English SY0-701 retires June 11, 2027. V8 weights the domains differently (Security Operations 27%, Threats 24%, Architecture 19%, General Concepts 16%, Program Management 14%), so study for the version you will actually sit; the Sec+ Exam tab practices SY0-801.',
       },
       {
         id: 's2-google-cybersecurity-certificate',
