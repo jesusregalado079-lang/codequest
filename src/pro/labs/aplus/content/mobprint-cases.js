@@ -482,11 +482,16 @@ const mobprint03 = {
 };
 
 // mobprint-04: lost company phone, Find Hub, follow the policy order.
-const IT_DESK = '555\\D?0142';
+const IT_DESK = '^\\s*(?:\\+?1[ .-]?)?(?:\\(206\\)|206)[ .-]?555[ .-]?0142\\s*$';
 const LOST_PHONE = '555\\D?0187';
 // The finder message must ask the finder to get in touch (call, phone, text, ring, dial, contact, reach; whole words, so
-// "Recall" does not count) AND name the IT desk or its number (policy step 2).
-const CALLBACK_MSG = '(?=.*(?:\\b(?:[Cc]all|CALL|[Cc]ontact|CONTACT|[Rr]each|REACH|[Rr]ing|RING|[Dd]ial|DIAL|[Tt]ext|TEXT)|\\b(?:[Pp]hone|PHONE) (?:[Uu]s|US|[Tt]he|THE|[Oo]ur|OUR|IT|\\(?\\d)))(?=.*(?:\\bIT\\b|[Ii][Tt] [Dd]esk|555\\D?0142)).{10,}';
+// "Recall" does not count) AND name the IT desk or its number (policy step 2). A bare "IT" must be capitals, so the
+// pronoun in "call 911 and report it" does not count as the IT desk.
+const CALLBACK_ACTION = String.raw`(?:[Cc][Aa][Ll][Ll]|[Tt][Ee][Ll][Ee][Pp][Hh][Oo][Nn][Ee]|[Tt][Ee][Xx][Tt]|[Rr][Ii][Nn][Gg]|[Dd][Ii][Aa][Ll]|[Cc][Oo][Nn][Tt][Aa][Cc][Tt]|[Rr][Ee][Aa][Cc][Hh])`;
+const CALLBACK_PHONE = String.raw`[Pp][Hh][Oo][Nn][Ee]`;
+const CALLBACK_VERB = String.raw`(?:${CALLBACK_ACTION}|${CALLBACK_PHONE})`;
+const CALLBACK_TARGET = String.raw`(?:\bIT\b|\b[Ii][Tt]\s+[Dd][Ee][Ss][Kk]\b|\(?206\)?[ .-]*555[ .-]*0142\b)`;
+const CALLBACK_MSG = String.raw`^(?!.*\b(?:[Dd][Oo]\s+[Nn][Oo][Tt]|[Dd][Oo][Nn]['’][Tt]|[Nn][Ee][Vv][Ee][Rr]|[Nn][Oo][Tt])\s+${CALLBACK_VERB}\b)(?=.*\b(?:${CALLBACK_ACTION}\b[^.!?;,]{0,80}|${CALLBACK_PHONE}\s+(?:[Tt][Hh][Ee]\s+)?)${CALLBACK_TARGET}).{10,}$`;
 const mobprint04 = {
   id: 'mobprint-04', title: 'Lost company phone on a bus', level: 3, minutes: 9,
   scenario: 'Marisol Vega, a home care nurse at Brightwater Home Care, left her company Pixel 9 (number 206-555-0187) on a city bus an hour ago. She is at the IT desk and has signed in to Find Hub as a guest on the IT desk phone. The bus company says its lost and found is at the North Depot. Follow the company lost-device policy shown in Find Hub notes. The IT desk number is 206-555-0142.',
@@ -548,7 +553,7 @@ const mobprint04 = {
       src: ['findHub'] },
     { id: 'message', text: 'Show a lock-screen message for the finder', check: { all: [{ key: 'lost.on', op: 'eq', value: true }, { key: 'lost.message', op: 'matches', value: CALLBACK_MSG }] },
       why: 'A short message (for example: This phone belongs to Brightwater Home Care, please call the IT desk) turns an honest finder into a returned phone. It shows on the lock screen without unlocking anything.',
-      expect: 'The lock-screen message asks the finder to call or contact the IT desk at 206-555-0142.',
+      expect: 'The lock-screen message asks the finder to call the IT desk, and Contact info shows 206-555-0142.',
       hints: ['Mark as lost can show text on the lock screen.', 'Type a message asking the finder to call the IT desk, then mark the phone as lost.', 'Message: Brightwater Home Care phone. Please call the IT desk at 206-555-0142. Then tap Mark as lost.'],
       src: ['findHub'] },
   ],
@@ -766,13 +771,31 @@ const mobprint06 = {
       { id: 'inside', type: 'list', label: 'Parts', rows: [
         { id: 'fuser', cells: ['Fuser (door C)', '{{kit.status}}'], actions: [
           { id: 'reseat-hot', label: 'Remove and reinsert the fuser', visibleIf: { all: [ON, { key: 'kit.installed', op: 'falsy' }] }, action: { msg: 'Stop: the printer is on and the fuser may be hot. Turn it off, unplug it, and let it cool first.' } },
-          { id: 'reseat', label: 'Remove and reinsert the fuser', visibleIf: { all: [{ key: 'power', op: 'eq', value: 'Off' }, { key: 'kit.installed', op: 'falsy' }] },
+          { id: 'reseat', label: 'Remove and reinsert the fuser', visibleIf: { all: [
+            { key: 'power', op: 'eq', value: 'Off' }, { key: 'kit.installed', op: 'falsy' },
+            { used: 'screen:size-type' }, { key: 'tray1.type', op: 'eq', value: 'Plain' },
+          ] },
             action: { set: { 'fuser.reseated': true }, msg: 'Door C: you unlocked the fuser, removed it, inserted it again until it clicked into place, and locked it. Turn the printer on and print the quality test pages again.' } },
+          { id: 'reseat-not-ready', label: 'Remove and reinsert the fuser', visibleIf: { all: [
+            { key: 'power', op: 'eq', value: 'Off' }, { key: 'kit.installed', op: 'falsy' },
+            { not: { all: [{ used: 'screen:size-type' }, { key: 'tray1.type', op: 'eq', value: 'Plain' }] } },
+          ] }, action: { msg: 'Check that Tray 1 paper type matches the loaded paper before reseating the fuser.' } },
         ] },
         { id: 'kit', cells: ['Fuser maintenance kit: fuser, transfer roller, pick roller assembly, separator assembly', '{{kit.status}}'], actions: [
           { id: 'install-hot', label: 'Install the maintenance kit', visibleIf: { all: [ON, { key: 'kit.installed', op: 'falsy' }] }, action: { msg: 'Stop: the printer is on and the fuser may be hot. Turn it off, unplug it, and let it cool first.' } },
-          { id: 'install', label: 'Install the maintenance kit', visibleIf: { all: [{ key: 'power', op: 'eq', value: 'Off' }, { key: 'kit.installed', op: 'falsy' }] },
+          { id: 'install', label: 'Install the maintenance kit', visibleIf: { all: [
+            { key: 'power', op: 'eq', value: 'Off' }, { key: 'kit.installed', op: 'falsy' },
+            { used: 'screen:size-type' }, { key: 'tray1.type', op: 'eq', value: 'Plain' },
+            { used: 'action:device-stats' }, { key: 'fuser.retested', op: 'eq', value: true },
+          ] },
             action: { set: { 'kit.installed': true, 'kit.status': 'New parts installed' }, msg: 'Door C: you unlocked and removed the used fuser, inserted the new one until it clicked, and locked it. You also replaced the transfer roller, pick roller and separator from the kit, following the kit instructions.' } },
+          { id: 'install-not-ready', label: 'Install the maintenance kit', visibleIf: { all: [
+            { key: 'power', op: 'eq', value: 'Off' }, { key: 'kit.installed', op: 'falsy' },
+            { not: { all: [
+              { used: 'screen:size-type' }, { key: 'tray1.type', op: 'eq', value: 'Plain' },
+              { used: 'action:device-stats' }, { key: 'fuser.retested', op: 'eq', value: true },
+            ] } },
+          ] }, action: { msg: 'Check the paper type and supply report, then reseat the fuser and retest before replacing the kit.' } },
         ] },
         { id: 'iu', cells: ['Imaging unit (door A)', '{{iu.status}}'], actions: [
           { id: 'replace', label: 'Replace the imaging unit', visibleIf: { key: 'iu.new', op: 'falsy' }, action: { set: { 'iu.new': true, 'iu.status': 'New' }, msg: 'You replaced the imaging unit, which was still OK.' } },
@@ -781,17 +804,17 @@ const mobprint06 = {
     ] },
   ],
   goals: [
-    { id: 'paper-type', text: 'Confirm the Tray 1 paper type matches the paper', check: { all: [{ used: 'screen:size-type' }, { key: 'tray1.type', op: 'eq', value: 'Plain' }] },
+    { id: 'paper-type', weight: 2, text: 'Confirm the Tray 1 paper type matches the paper', check: { all: [{ used: 'screen:size-type' }, { key: 'tray1.type', op: 'eq', value: 'Plain' }] },
       why: 'The fuser temperature follows the paper type setting. A type that does not match the paper is the first thing Lexmark checks when toner rubs off, and it costs nothing to rule out. Here it already says Plain for plain paper, so the fuser itself is next.',
       expect: 'Settings > Paper > Tray Configuration > Paper Size/Type shows Tray 1 as Plain, matching the 20 lb plain paper.',
       hints: ['Before replacing parts, check the setting that controls how hot the fuser runs.', 'Open the Tray 1 paper size and type setting and compare it with the paper that is loaded.', 'Settings > Paper > Tray Configuration > Paper Size/Type: Tray 1 = Plain.'],
       src: ['lexmarkMs82x', 'brotherQuality'] },
-    { id: 'statistics', text: 'Check supply status on the Device Statistics page', check: { used: 'action:device-stats' },
+    { id: 'statistics', weight: 2, text: 'Check supply status on the Device Statistics page', check: { used: 'action:device-stats' },
       why: 'The supply report shows which part is at the end of its life. Here the maintenance kit (which contains the fuser) is very low while the cartridge and imaging unit are fine, which matches toner that is not fused to the page.',
       expect: 'You printed Settings > Reports > Device > Device Statistics and read Maintenance kit: Very low.',
       hints: ['The printer can print a report with the status of every supply and part.', 'Print the Device Statistics report and read its Supply Information section.', 'Settings > Reports > Device > Device Statistics.'],
       src: ['lexmarkMs82x', 'lexmarkMs631'] },
-    { id: 'reseat', text: 'Reseat the fuser and print the quality test pages again', check: { all: [{ key: 'fuser.reseated', op: 'eq', value: true }, { key: 'fuser.retested', op: 'eq', value: true }] },
+    { id: 'reseat', weight: 2, text: 'Reseat the fuser and print the quality test pages again', check: { all: [{ key: 'fuser.reseated', op: 'eq', value: true }, { key: 'fuser.retested', op: 'eq', value: true }] },
       why: 'With a genuine cartridge and a matching paper type ruled out, Lexmark\'s next step for toner that rubs off is to remove and reinsert the fuser, then print again. It costs nothing, and a fuser that is not fully seated can cause the same symptom. Retest so you know whether reseating fixed it before you replace parts.',
       expect: 'With the printer off and cool, the fuser was removed and reinserted (door C), and the Print Quality Test Pages were printed again before the kit was installed.',
       hints: ['Before replacing the part that melts toner into the paper, try the free step: make sure it is seated properly.', 'Turn the printer off, unplug it and let it cool, then remove and reinsert the fuser. Turn it back on and print the quality test pages again.', 'Home: Turn off the printer and unplug it > Open the printer doors > Fuser: Remove and reinsert the fuser > Home: Plug in and turn on > Settings > Troubleshooting > Print Quality Test Pages.'],
@@ -947,7 +970,7 @@ const mobprint07 = {
       src: ['brotherRollers', 'brotherDrum'] },
     { id: 'factory-reset', check: { key: 'factory.reset', op: 'eq', value: true },
       message: 'You ran Factory Reset. It restores all printer settings to factory defaults, wiping every setting the office had chosen, and it cannot fix overfilled paper or dusty rollers.',
-      why: 'Factory Reset restores printer settings, including command settings, to defaults. It cannot clear overfilled paper or dirty pickup parts, so repair the paper path and the one mismatched tray setting.',
+      why: 'Factory Reset restores printer settings, including command settings, to defaults. It cannot fix overfilled paper or dusty pick-up rollers and separator pad, so repair the paper path and the one mismatched tray setting.',
       src: ['brotherSettings'] },
   ],
   solution: [

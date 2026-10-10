@@ -122,6 +122,27 @@ assert.equal(evalWith({ cpu: 'cpu-1851-20c-f', board: 'board-1851-atx', gpu: nul
   assert.match(result.warnings[0].message, /board, memory, storage, psu, case, cooler/);
   assert.equal(evaluateBuild({ slots: ['memory'] }, { memory: ['ram-d5-16'] }).facts.complete, true, 'only editable slots are required');
 }
+{
+  const caseDef = buildCases.find((entry) => entry.id === 'build-05');
+  let picks = startPicks(caseDef);
+  for (const step of caseDef.solution) {
+    const outcome = applyStep(caseDef, picks, step.do);
+    assert.equal(outcome.ok, true, outcome.msg);
+    picks = outcome.picks;
+  }
+  const reference = evaluateBuild(caseDef, picks);
+  assert.equal(reference.score, 100, 'build-05 reference still scores 100');
+  assert.equal(reference.facts.complete, true);
+  for (const [slot, value] of [['cpu', null], ['board', null], ['cpu', 'cpu-1851-14c-g'], ['board', 'board-1851-itx']]) {
+    const result = evaluateBuild(caseDef, { ...picks, [slot]: value });
+    assert.equal(result.facts.complete, false, `changed locked ${slot} is incomplete`);
+    assert.ok(result.score < 80, `changed locked ${slot} scores below 80: ${result.score}`);
+    assert.ok(result.warnings.some((warning) => warning.rule === 'incomplete' && warning.parts.includes(slot)));
+  }
+  assert.equal(evaluateBuild({ ...bare, picks: { cpu: 'cpu-am5-6c-g' } }, good).score, 100, 'a case without slots has no locked parts');
+  const emptyLockedStorage = { picks: { cpu: 'cpu-am5-6c-g' }, slots: ['memory'] };
+  assert.equal(evaluateBuild(emptyLockedStorage, { ...startPicks(emptyLockedStorage), memory: ['ram-d5-16'] }).facts.complete, true, 'normalized empty locked storage stays unchanged');
+}
 
 // Goal predicates and trap scoring.
 {

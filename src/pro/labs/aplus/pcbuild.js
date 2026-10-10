@@ -174,8 +174,16 @@ function videoRules({ cpu, gpu }) {
 }
 
 function completenessWarnings(caseDef, picks) {
-  const missing = editableSlots(caseDef).filter((slot) => slot !== 'gpu' && asList(picks?.[slot]).length === 0);
-  return missing.length ? [issue('incomplete', [], `Still to choose: ${missing.join(', ')}.`, 'A working PC needs every core part installed.')] : [];
+  const editable = editableSlots(caseDef);
+  const missing = editable.filter((slot) => slot !== 'gpu' && asList(picks?.[slot]).length === 0);
+  const fixedPicks = startPicks(caseDef);
+  const selectedPicks = startPicks({ picks });
+  const changedLocked = SLOTS.filter((slot) => !editable.includes(slot)
+    && JSON.stringify(selectedPicks[slot]) !== JSON.stringify(fixedPicks[slot]));
+  return [
+    ...(missing.length ? [issue('incomplete', [], `Still to choose: ${missing.join(', ')}.`, 'A working PC needs every core part installed.')] : []),
+    ...(changedLocked.length ? [issue('incomplete', changedLocked, `Fixed parts changed: ${changedLocked.join(', ')}.`, 'Restore the fixed parts named in the ticket.')] : []),
+  ];
 }
 
 function factsOf(build, errors, load, picks, caseDef) {

@@ -22,7 +22,7 @@ export const sources = {
   intelTurbo: ['Intel Core Ultra 7 Processor 265KF Specifications, Intel', 'https://www.intel.com/content/www/us/en/products/sku/241062/intel-core-ultra-7-processor-265kf-30m-cache-up-to-5-50-ghz/specifications.html'],
   asusGpuPower: ['[Graphics card] Troubleshooting of power detection LED turns red or flashes, ASUS ROG', 'https://rog.asus.com/au/support/faq/1049767/'],
   kingstonSodimm: ['Memory Module Specifications KF556S40IB-32 (32 GB DDR5-5600 SO-DIMM), Kingston', 'https://www.kingston.com/datasheets/KF556S40IB-32.pdf'],
-  intelRam: ['How to Choose RAM for a Gaming PC, Intel', 'https://www.intel.com/content/www/us/en/gaming/resources/how-much-ram-gaming.html'],
+  kingstonPopulation: ['DDR4 and DDR5 Memory Population Rules based on Chipset and Processor Pairs, Kingston', 'https://www.kingston.com/en/memory/memory-population-rules'],
 };
 
 // Primer section `body`: a string, or an array of paragraph strings and tables
@@ -97,7 +97,7 @@ export const primer = {
     },
     { h: 'Blank screen on a new build', body: 'Fans spin but the monitor says No signal: before blaming the monitor or the board, check the video path. Is the cable in the graphics card when there is one? Does the CPU have integrated graphics when the cable is in the motherboard port? Then check memory: a module of the wrong shape or generation will not seat, and a system with no working memory cannot finish its power-on self-test.' },
   ],
-  src: ['amdAm5', 'amdAm4', 'intel1851', 'intelF', 'dellMemory', 'ddr5Notch', 'crucialSpeeds', 'crucialInstall', 'dellM2', 'atxGuide', 'psuSizing', 'boardSizes', 'psuForms', 'gpuCaseFit', 'coolerFit', 'intelRaid', 'intelRaidLevels', 'dellRaid', 'dellVirtualConsole', 'intelTurbo', 'intelRam', 'intelBuild'],
+  src: ['amdAm5', 'amdAm4', 'intel1851', 'intelF', 'dellMemory', 'ddr5Notch', 'crucialSpeeds', 'crucialInstall', 'dellM2', 'atxGuide', 'psuSizing', 'boardSizes', 'psuForms', 'gpuCaseFit', 'coolerFit', 'intelRaid', 'intelRaidLevels', 'dellRaid', 'dellVirtualConsole', 'intelTurbo', 'kingstonPopulation', 'intelBuild'],
 };
 
 export const terms = {

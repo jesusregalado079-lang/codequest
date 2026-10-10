@@ -540,6 +540,18 @@ const fixture = {
   assert.deepEqual(pass(), [false, false, false]);
 }
 
+// Repeated password chunks are rejected even when the repeated half changes case.
+{
+  const sim = createSim({
+    skin: 'router', state: { password: 'winter2026Winter2026' },
+    screens: [{ id: 'home', controls: [{ id: 'password', type: 'password', key: 'password' }] }],
+    goals: [{ id: 'unique', check: { not: { key: 'password', op: 'repeatedFold' } } }],
+  });
+  assert.equal(sim.check().goals[0].pass, false, 'case-varied repetition fails');
+  ok(sim.set('password', 'quiet-pylon-ferns-sail-9'));
+  assert.equal(sim.check().goals[0].pass, true, 'normal passphrase passes');
+}
+
 // router-01: passwords built from the business or network name, or near copies of each other, are weak.
 {
   const caseDef = routerCases.find((item) => item.id === 'router-01');

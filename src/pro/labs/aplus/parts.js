@@ -103,9 +103,9 @@ const psus = [
   { id: 'psu-1200-atx31', name: '1200 W ATX 3.1 power supply', watts: 1200, formFactor: 'ATX', atx31: true, native12v2x6: 2, pcie8pin: 4, modular: 'full', efficiency: '80 PLUS Platinum' },
 ];
 
-// Storage. M.2 2280 = 22 mm wide, 80 mm long. NVMe drives are M-keyed; SATA
-// M.2 drives are B+M keyed so they physically fit M slots, but still need a
-// slot that carries SATA (Dell KB 000144170).
+// Storage. M.2 2280 = 22 mm wide, 80 mm long. The NVMe drives in this catalog
+// are M-keyed; SATA M.2 drives are B+M keyed so they physically fit M slots,
+// but still need a slot that carries SATA (Dell KB 000144170).
 // - https://www.dell.com/support/kbdoc/en-us/000144170/how-to-distinguish-the-differences-between-m-2-cards
 const storage = [
   { id: 'ssd-nvme4-500', name: '500 GB PCIe 4.0 NVMe M.2 2280 SSD', kind: 'nvme', capacityGB: 500, key: 'M', size: 2280, pcieGen: 4 },

@@ -34,7 +34,7 @@ export const sources = {
 export const primer = {
   title: 'SOHO router setup and hardening refresher',
   sections: [
-    { h: 'Two different passwords', body: 'The router password (admin login) protects the settings pages. The Wi-Fi password protects who can join the wireless network. Change both from the defaults; default admin logins are published online or printed on the router label. CISA guidance for strong passwords: at least 16 characters, random, and a different password for each account. A passphrase of 4 to 7 unrelated random words, or a password-manager-generated value, works. Length alone is not enough: sixteen repeated characters or a common word like password are still easy to guess, and these labs reject them.' },
+    { h: 'Two different passwords', body: 'The router password (admin login) protects the settings pages. The Wi-Fi password protects who can join the wireless network. Change both from the defaults; default admin logins are published online or printed on the router label. CISA guidance for strong passwords: at least 16 characters, random, and a different password for each account. A passphrase of 5 to 7 unrelated random words, or a password-manager-generated value, works. Length alone is not enough: sixteen repeated characters or a common word like password are still easy to guess, and these labs reject them.' },
     { h: 'Pick the wireless security mode', body: [
       'On one network name (SSID), choose the strongest mode every device on that network supports. When WPA2-only devices must stay, a separate WPA2 SSID with a different password is stronger than sharing one transitional SSID, if the router supports it.',
       [
@@ -117,7 +117,11 @@ const caseless = (word) => [...word].map((ch) => (/[a-z]/i.test(ch) ? `[${ch.toU
 const RUNS = ['123456', '654321', '987654', 'abc123', 'abcdef', 'zyxwvu', 'qwerty', 'asdfgh', 'zxcvbn', 'qazwsx', '1q2w3e'];
 const COMMON = ['password', 'passw0rd', 'letmein', 'iloveyou', 'admin', 'welcome', 'football', 'monkey', 'dragon', 'sunshine', 'trustno1'];
 const NOT_GUESSABLE = `^(?=[\\s\\S]*\\S)(?![\\s\\S]*(.)\\1{3})(?![\\s\\S]*(.{2,6})\\2\\2)(?!([\\s\\S]+)\\3+$)(?![\\s\\S]*(?:${RUNS.map(caseless).join('|')}))(?!(?:[\\W\\d_]*(?:${COMMON.map(caseless).join('|')}))+[\\W\\d_]*$)`;
-const strongPassword = (key) => [{ key, op: 'matches', value: LONG }, { key, op: 'matches', value: NOT_GUESSABLE }];
+const strongPassword = (key) => [
+  { key, op: 'matches', value: LONG },
+  { key, op: 'matches', value: NOT_GUESSABLE },
+  { not: { key, op: 'repeatedFold' } },
+];
 // Typed a new password that fails the length or not-guessable test, or any extra case-specific test
 // (empty and unchanged values do not count).
 const weakNewPassword = (key, original, extra = []) => ({ all: [{ key, op: 'ne', value: original }, { key, op: 'ne', value: '' }, { not: { all: [...strongPassword(key), ...extra] } }] });
@@ -171,7 +175,7 @@ const router01 = {
     { id: 'admin-password', text: 'Replace the default router password', check: { all: [...strongPassword('admin.password'), ...HARBOR_ADMIN_EXTRA, { key: 'admin.password', op: 'ne', value: 'admin' }, differentFrom('admin.password', 'wifi.password')] },
       why: 'Default router logins are published online and printed on the device label. Anyone who joins the network could log in with admin/admin and change every setting, including turning security off.',
       expect: 'The router password is no longer admin; it is a new password of 16 or more characters that does not contain the business or network name and is not the Wi-Fi password or a near copy of it. Choose unrelated random words or a password-manager-generated value, and do not reuse it.',
-      hints: ['The router has its own login, separate from the Wi-Fi password, and it is still the factory default.', 'Open Administration and change the router password.', 'Administration > Router password: type a new passphrase of 16 or more characters that is not the Wi-Fi password, for example four unrelated random words with a number.'],
+      hints: ['The router has its own login, separate from the Wi-Fi password, and it is still the factory default.', 'Open Administration and change the router password.', 'Administration > Router password: type a new passphrase of 16 or more characters that is not the Wi-Fi password, for example five unrelated random words with a number.'],
       src: ['cisaHome', 'cisaPasswords', 'ftcWifi'] },
     { id: 'security-mode', text: 'Choose the strongest mode that keeps every device connected on this single SSID', check: { key: 'wifi.security', op: 'eq', value: 'WPA2/WPA3 Transitional' },
       why: 'WPA3 Personal is strongest, but the label printers support only WPA2 and would drop off. WPA2/WPA3 Transitional lets WPA3 devices use WPA3 while the printers fall back to WPA2. A separate WPA2 SSID with a different password and limited access to the WPA3 network is stronger when the router supports it; this case configures one SSID.',
@@ -198,7 +202,7 @@ const router01 = {
       why: 'Turn off router features nobody needs, especially ones that expose the admin login to the internet.',
       src: ['ftcWifi', 'cisaHome'] },
     { id: 'weak-password', check: { any: [weakNewPassword('admin.password', 'admin', HARBOR_ADMIN_EXTRA), weakNewPassword('wifi.password', 'harbor2019', HARBOR_WIFI_EXTRA)] },
-      message: 'That new password is too short or easy to guess: it is under 16 characters, repeats a character or a short chunk, contains a keyboard or number run such as qwerty or 123456, is made only of common passwords such as password or admin plus numbers and symbols, contains the business or network name (Harbor Dental, HarborDental), or is the other password with only a few characters changed. CISA says to use at least 16 characters, random, and never reused. Type a passphrase of 4 to 7 unrelated random words, or a password-manager-generated value, and give each password its own.',
+      message: 'That new password is too short or easy to guess: it is under 16 characters, repeats a character or a short chunk, contains a keyboard or number run such as qwerty or 123456, is made only of common passwords such as password or admin plus numbers and symbols, contains the business or network name (Harbor Dental, HarborDental), or is the other password with only a few characters changed. CISA says to use at least 16 characters, random, and never reused. Type a passphrase of 5 to 7 unrelated random words, or a password-manager-generated value, and give each password its own.',
       why: 'Length alone is not strength: a long run of one character, a common word, or the name of the business or its network is guessed first, and a near copy of one password falls with the other. Use 16 or more characters of unrelated random words or generated text for each password.',
       src: ['cisaPasswords'] },
     { id: 'equal-password', check: samePassword('admin.password', 'wifi.password'),
@@ -261,10 +265,10 @@ const router02 = {
     ] },
   ],
   goals: [
-    { id: 'rotate-staff-password', text: 'Replace the staff Wi-Fi password already shared with customers', check: { all: [...strongPassword('wifi.password'), ...BAKERY_WIFI_EXTRA, { key: 'wifi.password', op: 'ne', value: BAKERY_STAFF_PASSWORD }] },
-      why: 'A guest network does not revoke the staff password customers already know. Change that password and reconnect staff devices before giving customers the guest password.',
-      expect: 'Wireless > Wi-Fi password is new, at least 16 characters, does not contain the business or a network name (Maple Street, MapleStreet-Staff, MapleStreet-Guest) and is not a near copy of the guest password. Choose unrelated random words or a password-manager-generated value, and do not reuse it.',
-      hints: ['Customers still know the staff password.', 'Change the staff Wi-Fi password, then reconnect staff devices.', 'Wireless > Wi-Fi password: set a new, unique passphrase of at least 16 characters.'],
+    { id: 'rotate-staff-password', text: 'Replace the known staff password while keeping its security mode', check: { all: [...strongPassword('wifi.password'), ...BAKERY_WIFI_EXTRA, { key: 'wifi.password', op: 'ne', value: BAKERY_STAFF_PASSWORD }, { key: 'wifi.security', op: 'eq', value: 'WPA2/WPA3 Transitional' }] },
+      why: 'A guest network does not revoke the staff password customers already know. Change that password and reconnect staff devices before giving customers the guest password. Keep the staff network on Transitional security so WPA3 devices still use WPA3 and older devices use WPA2.',
+      expect: 'Wireless > Wi-Fi password is new, at least 16 characters, does not contain the business or a network name (Maple Street, MapleStreet-Staff, MapleStreet-Guest) and is not a near copy of the guest password. Choose unrelated random words or a password-manager-generated value, and do not reuse it. Wireless > Security remains WPA2/WPA3 Transitional.',
+      hints: ['Customers still know the staff password.', 'Change the staff Wi-Fi password, then reconnect staff devices without changing the security mode.', 'Wireless > Security > WPA2/WPA3 Transitional; Wi-Fi password: set a new, unique passphrase of at least 16 characters.'],
       src: ['ftcWifi', 'cisaUpskill'] },
     { id: 'guest-isolated', text: 'Turn on a guest network that cannot reach the shop devices', check: { all: [{ key: 'guest.enabled', op: 'eq', value: true }, { key: 'guest.lan', op: 'eq', value: false }] },
       why: 'A guest network is a separate wireless network with its own name and password, but it protects the shop only if guests cannot reach shop devices. With local network access allowed, a customer phone, or malware on it, can reach the office PC and the card terminal. With it off, guests get the internet only. CISA says to keep guest traffic away from the main network, and NETGEAR leaves this option off by default for privacy.',
@@ -300,7 +304,7 @@ const router02 = {
       why: 'Pick the strongest mode the intended devices actually support; for unknown guest phones that is WPA2/WPA3 Transitional.',
       src: ['appleRouter'] },
     { id: 'weak-password', check: { any: [weakNewPassword('wifi.password', BAKERY_STAFF_PASSWORD, BAKERY_WIFI_EXTRA), weakNewPassword('guest.password', '', BAKERY_GUEST_EXTRA)] },
-      message: 'That new password is too short or easy to guess: it is under 16 characters, repeats a character or a short chunk, contains a keyboard or number run such as qwerty or 123456, is made only of common passwords such as password or admin plus numbers and symbols, contains the business or a network name (Maple Street, MapleStreet-Staff, MapleStreet-Guest), or is the other Wi-Fi password with only a few characters changed. Customers read the guest password off the counter sign, so a guest password that differs from the staff one by a character or two hands them the staff password. CISA says to use at least 16 characters, random, and never reused. Type a passphrase of 4 to 7 unrelated random words, or a password-manager-generated value, and give each network its own.',
+      message: 'That new password is too short or easy to guess: it is under 16 characters, repeats a character or a short chunk, contains a keyboard or number run such as qwerty or 123456, is made only of common passwords such as password or admin plus numbers and symbols, contains the business or a network name (Maple Street, MapleStreet-Staff, MapleStreet-Guest), or is the other Wi-Fi password with only a few characters changed. Customers read the guest password off the counter sign, so a guest password that differs from the staff one by a character or two hands them the staff password. CISA says to use at least 16 characters, random, and never reused. Type a passphrase of 5 to 7 unrelated random words, or a password-manager-generated value, and give each network its own.',
       why: 'Length alone is not strength: a long run of one character, a common word, or the name of the business or its network is guessed first, and a near copy of one password falls with the other.',
       src: ['cisaPasswords'] },
     { id: 'equal-password', check: { all: [samePassword('guest.password', 'wifi.password'), { key: 'guest.password', op: 'ne', value: BAKERY_STAFF_PASSWORD }] },
@@ -376,7 +380,7 @@ const router03 = {
       { id: 'resv-apply-nvr-ip', type: 'button', label: 'Apply', visibleIf: { all: [{ key: 'resv.mac', op: 'matches', value: NVR_MAC }, { not: { key: 'resv.ip', op: 'matches', value: '^\\s*(?:192\\.168\\.1\\.50)?\\s*$' } }] },
         action: { refuse: 'That MAC address is the NVR, but this ticket keeps the NVR on the address it has now, 192.168.1.50, so the port forward can point at it. Type 192.168.1.50 as the IP Address.' } },
       { id: 'resv-apply-other', type: 'button', label: 'Apply', visibleIf: { all: [{ not: { key: 'resv.mac', op: 'matches', value: NVR_MAC } }, { not: { key: 'resv.ip', op: 'matches', value: '^\\s*$' } }, { not: { key: 'resv.mac', op: 'matches', value: '^\\s*$' } }] },
-        action: { msg: 'Saved a reservation of {{resv.ip}} for MAC address {{resv.mac}}. That MAC address is not the NVR (NVR-SHOP is 00:00:5E:00:53:50 at 192.168.1.50), so the NVR address can still change.' } },
+        action: { refuse: 'That MAC address is not NVR-SHOP (00:00:5E:00:53:50). No NVR reservation was saved. Use the NVR IP address 192.168.1.50 and its MAC address, then select Apply.' } },
     ] },
     { id: 'forwarding', title: 'Port Forwarding', crumbs: ['Advanced', 'Port Forwarding'], controls: [
       { id: 'pf-info', type: 'info', text: 'A port forwarding rule sends traffic that arrives from the internet on one port to one device on your network.' },
@@ -518,6 +522,12 @@ const router04 = {
       expect: 'Wireless > Network name (SSID) is a new unique name that shows neither the router model nor the business, for example Lantern-Net.',
       hints: ['The network name still shows the router model it came with.', 'Open Wireless and change the Network name (SSID) to something unique that does not name the router or the business.', 'Wireless > Network name (SSID): type Lantern-Net (or any unique name without the model or the pharmacy name).'],
       src: ['cisaHome', 'cisaWireless', 'cisaUpskill', 'ftcWifi', 'msNonBroadcast', 'appleRouter', 'comptiaA2obj'] },
+    { id: 'preserve-wpa3', text: 'Keep the existing WPA3 security mode',
+      check: { key: 'wifi.security', op: 'eq', value: 'WPA3 Personal' },
+      why: 'This router already uses WPA3 Personal. No device compatibility issue calls for a downgrade during hardening.',
+      expect: 'Wireless > Security remains WPA3 Personal.',
+      hints: ['Check the existing wireless security.', 'Leave the current WPA3 Personal setting in place.', 'Wireless > Security > WPA3 Personal.'],
+      src: ['appleRouter'] },
   ],
   traps: [
     { id: 'email-firmware', critical: true, check: { key: 'fw.source', op: 'eq', value: 'email' },
@@ -679,9 +689,9 @@ const router05 = {
       message: 'You relied on Block Sites keyword blocking for games.example. On this router, keyword blocking works only for addresses that begin with http://; it does not block https:// addresses, and games.example, like almost every site today, uses HTTPS. Students could still open it during tutoring. Use the Domain Filter, which blocks at the DNS lookup, and test https://games.example.',
       why: 'Know what a filter can see: a keyword rule that only reads http:// addresses cannot block an HTTPS site. Test the real https:// address before calling a block done.',
       src: ['ngManual', 'ngBlockSites', 'cfDnsPolicies'] },
-    { id: 'block-always', check: { any: [{ key: 'filter.mode', op: 'eq', value: 'Always' }, { key: 'block.mode', op: 'eq', value: 'Always' }] },
-      message: 'Blocking is set to Always, so the block runs all week and ignores the schedule, including the Saturday game club. Set Domain Filter > Domain blocking to Per Schedule.',
-      why: 'A time-based rule needs Per Schedule plus a schedule; Always means always.',
+    { id: 'block-always', check: { any: [{ key: 'filter.mode', op: 'eq', value: 'Always' }, { all: [{ key: 'block.mode', op: 'eq', value: 'Always' }, { key: 'block.list', op: 'eq', value: 'games.example' }] }] },
+      message: 'An active blocking rule is set to Always, so it runs all week and ignores the schedule, including the Saturday game club. Set Domain Filter > Domain blocking to Per Schedule. If Block Sites has a keyword in its list, also set Keyword Blocking to Per Schedule or remove the keyword.',
+      why: 'A time-based rule needs Per Schedule plus a schedule; Always means always when the blocking list contains the site.',
       src: ['ngBlockSites', 'ngSchedule'] },
     { id: 'unfiltered-dns', check: { all: [{ key: 'dns.mode', op: 'eq', value: DNS_MANUAL }, { any: [{ key: 'dns.primary', op: 'in', value: ['1.1.1.1', '1.0.0.1'] }, { key: 'dns.secondary', op: 'in', value: ['1.1.1.1', '1.0.0.1'] }] }] },
       message: '1.1.1.1 and 1.0.0.1 are the standard resolver, not one of the 1.1.1.1 for Families filtering addresses. Lookups answered by that server are not filtered, which leaves a hole in the adult content and malware block. Use 1.1.1.3 and 1.0.0.3 as the Primary and Secondary DNS.',
@@ -806,7 +816,7 @@ const router06 = {
       why: 'Keep the router DHCP server on when it is the only one; change the pool, not the server.',
       src: ['appleRouter', 'ngDhcpPool'] },
     { id: 'weak-password', check: { any: [weakNewPassword('iot.password', '', STUDIO_IOT_EXTRA), weakNewPassword('wifi.password', STUDIO_STAFF_PASSWORD, STUDIO_WIFI_EXTRA)] },
-      message: 'That new Wi-Fi password is too short or easy to guess: it is under 16 characters, repeats a character or a short chunk, contains a keyboard or number run such as qwerty or 123456, is made only of common passwords such as password or admin plus numbers and symbols, contains the business or a network name (Larkspur, LDS-Staff, LDS-Devices), or is the other Wi-Fi password with only a few characters changed. A near copy of the staff password on the WPA2 IoT network exposes the staff password to the same offline guessing. The IoT network uses WPA2 Personal, which is open to offline guessing, and the staff network protects the laptops and the NAS, so both passwords matter. Type a passphrase of 4 to 7 unrelated random words, or a password-manager-generated value.',
+      message: 'That new Wi-Fi password is too short or easy to guess: it is under 16 characters, repeats a character or a short chunk, contains a keyboard or number run such as qwerty or 123456, is made only of common passwords such as password or admin plus numbers and symbols, contains the business or a network name (Larkspur, LDS-Staff, LDS-Devices), or is the other Wi-Fi password with only a few characters changed. A near copy of the staff password on the WPA2 IoT network exposes the staff password to the same offline guessing. The IoT network uses WPA2 Personal, which is open to offline guessing, and the staff network protects the laptops and the NAS, so both passwords matter. Type a passphrase of 5 to 7 unrelated random words, or a password-manager-generated value.',
       why: 'Length alone is not strength: a long run of one character, a common word, or the name of the business or its network is guessed first, and a near copy of one password falls with the other. Use 16 or more characters, random, never reused.',
       src: ['cisaPasswords', 'wfaDeploy'] },
     { id: 'equal-password', check: samePassword('iot.password', 'wifi.password'),

@@ -29,6 +29,8 @@
 //   the folded state[otherKey] has 4 or more characters, so a one-letter name matches nothing);
 //   { key, op: 'nearKey', value: otherKey, max } is true when the two folded values are both non-empty
 //   and differ by at most max single-character edits (Levenshtein, default 3).
+//   { key, op: 'repeatedFold' } is true when a value is made of a 2-31 character chunk repeated
+//   end to end, ignoring case (e.g. winter2026Winter2026). Other predicates keep their own case rules.
 //   Windows Run fallback: a query that matches no app of the case but names a real Windows 11 tool
 //   (WINDOWS_TOOLS, e.g. ncpa.cpl) returns ok and info: true with a message saying what the tool is and
 //   that this case is practiced another way (cli: true entries say it is a command-line tool to run in a shell).
@@ -217,6 +219,10 @@ export function createSim(caseDef) {
       const b = squash(state[predicate.value]);
       const max = Number.isInteger(predicate.max) && predicate.max >= 0 ? predicate.max : 3;
       return a !== '' && b !== '' && editDistance(a, b, max) <= max;
+    }
+    if (predicate.op === 'repeatedFold') {
+      const value = String(state[predicate.key] ?? '').toLowerCase();
+      return /^(.{2,31})\1+$/.test(value);
     }
     return compare(predicate.op, state[predicate.key], predicate.value);
   }
