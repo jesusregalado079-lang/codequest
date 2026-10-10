@@ -200,6 +200,10 @@ const labBadge = (id, icon, name, how, have, need) => ({ id, icon, name, how, gr
   return { have: Number.isFinite(h) ? h : 0, need: Math.max(1, Number.isFinite(n) ? n : 1), noDate: true };
 } });
 const labCases = (labId) => [(l) => (labOne(l, labId) || {}).passed || 0, (l) => (labOne(l, labId) || {}).total || 1];
+// Labs of one group: 'aplus' (the A+ labs) or the rest (Security+ & Network+). A summary without groups is all "rest".
+const labGroup = (l, aplus) => (l && Array.isArray(l.perLab) ? l.perLab.filter((x) => x && typeof x === 'object' && (x.group === 'aplus') === aplus) : []);
+const labSum = (list, key) => list.reduce((s, x) => s + (Number.isFinite(x[key]) ? x[key] : 0), 0);
+const groupCases = (aplus) => [(l) => labSum(labGroup(l, aplus), 'passed'), (l) => labSum(labGroup(l, aplus), 'total') || 1];
 const streakBadge = (id, icon, name, need) => ({ id, icon, name, how: `Tick something ${need} days in a row`, group: 'Consistency', test: (ctx) => ({ have: ctx.j.bestStreak, need, noDate: true }) });
 
 export const BADGES = Object.freeze([
@@ -247,7 +251,16 @@ export const BADGES = Object.freeze([
   labBadge('lab-phish', '🎣', 'Phish Spotter', 'Pass every Phish Inspector case', ...labCases('phish')),
   labBadge('lab-code', '🛠️', 'Detection Coder', 'Pass every Detection Coder lab', ...labCases('code')),
   labBadge('lab-perfect-10', '💯', 'Ten Perfect', 'Score 100% on 10 lab cases', (l) => l.perfect || 0, 10),
-  labBadge('lab-all', '🏅', 'Hands-On Hero', 'Pass every case of every lab', (l) => l.passed || 0, (l) => l.total || 1),
+  // Hands-On Hero stays the Security+ & Network+ labs: the A+ labs have their own completion badge.
+  labBadge('lab-all', '🏅', 'Hands-On Hero', 'Pass every case of every Security+ & Network+ lab', ...groupCases(false)),
+  labBadge('lab-win', '🪟', 'Tool Finder', 'Pass every Windows Tool Finder case', ...labCases('win')),
+  labBadge('lab-shell', '⌨️', 'Command Line Fixer', 'Pass every Command Line Fixer case', ...labCases('shell')),
+  labBadge('lab-build', '🧰', 'Bench Builder', 'Pass every PC Build Bench case', ...labCases('build')),
+  labBadge('lab-router', '📶', 'Router Hardener', 'Pass every SOHO Router Setup case', ...labCases('router')),
+  labBadge('lab-order', '🪜', 'Methodical', 'Pass every Fix It In Order case', ...labCases('order')),
+  labBadge('lab-mobprint', '📱', 'Field Tech', 'Pass every Mobile & Printer Fixes case', ...labCases('mobprint')),
+  labBadge('lab-aplus-all', '🎖️', 'A+ Hands-On', 'Pass every case of every A+ lab', ...groupCases(true)),
+  labBadge('lab-mastery-10', '⭐', 'Ten Mastered', 'Pass 10 lab cases in Exam mode, with no hints or solution', (l) => labSum(Array.isArray(l.perLab) ? l.perLab.filter((x) => x && typeof x === 'object') : [], 'mastered'), 10),
   { id: 'gate-open', icon: '🔓', name: 'Gate Open', how: 'Meet all four paid-cert gate conditions', group: 'Milestones', test: (ctx) => { const keys = (ctx.gate.conditions || []).map(gateKey); return { have: countDone(ctx, keys), need: Math.max(1, keys.length), keys }; } },
 ]);
 

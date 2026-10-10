@@ -1,9 +1,8 @@
 // What every lab page shares: the page context, cleanup on leave, the runner header, saving a graded attempt and the
 // "Try again / Next case" row. No lab-specific logic here.
-import { bestScore, isPassed, recordRun } from '../../labs/lab-logic.js';
-import { LAB_SOURCES } from '../../labs/catalog.js';
+import { bestScore, isMastered, isPassed, recordRun } from '../../labs/lab-logic.js';
 import { getLabs, saveLabs } from '../../progress.js';
-import { SECPLUS_801 } from '../../exam/blueprints.js';
+import { BLUEPRINTS, SECPLUS_801 } from '../../exam/blueprints.js';
 
 export const S = { ctx: null, cleanups: [] };
 
@@ -24,13 +23,27 @@ export function objChips(objs, cls = '') {
   return `<span class="lb-objs ${cls}">${(objs || []).map((o) => `<a class="lb-obj" href="#/exam/${SECPLUS_801.id}/domain/${esc(String(o).split('.')[0])}" title="${esc(objLabel(o))}">Sec+ ${esc(o)}</a>`).join('')}</span>`;
 }
 
+const EXAM_SHORT = Object.fromEntries(BLUEPRINTS.map((bp) => [bp.id, bp.short]));
+const OBJ_LABEL = Object.fromEntries(BLUEPRINTS.map((bp) => [bp.id, Object.fromEntries(bp.domains.flatMap((d) => d.objectives.map((o) => [o.id, o.label])))]));
+// Objective chips for the other exams (A+ cases carry examObjs), linking to that exam's domain page.
+export function examChips(examObjs) {
+  const order = BLUEPRINTS.map((bp) => bp.id);
+  const keys = Object.keys(examObjs || {}).sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  return `<span class="lb-objs">${keys.flatMap((k) => (examObjs[k] || []).map((o) => `<a class="lb-obj" href="#/exam/${esc(k)}/domain/${esc(String(o).split('.')[0])}" title="${esc(OBJ_LABEL[k]?.[o] || '')}">${esc(EXAM_SHORT[k] || k)} ${esc(o)}</a>`)).join('')}</span>`;
+}
+
 export const levelName = (n) => ['', 'Level 1 · warm-up', 'Level 2 · working', 'Level 3 · exam-hard'][n] || `Level ${n}`;
 
+// Best score, passed ✓ (an unassisted run at the pass mark) and mastered ★ (an unassisted Exam-mode pass, A+ labs).
 export function bestLine(lab, kase) {
-  const best = bestScore(getLabs(), itemIdOf(lab, kase));
+  const labs = getLabs();
+  const id = itemIdOf(lab, kase);
+  const best = bestScore(labs, id);
   if (best === null) return '<span class="lb-best none">Not tried yet</span>';
-  const ok = best >= lab.pass;
-  return `<span class="lb-best${ok ? ' ok' : ''}">Best ${best}%${ok ? ' · passed ✓' : ` · pass is ${lab.pass}%`}</span>`;
+  const ok = isPassed(labs, id, lab.pass);
+  const star = isMastered(labs, id, lab.pass);
+  const tail = ok ? ' · passed ✓' : best >= lab.pass ? ' · assisted, not yet passed' : ` · pass is ${lab.pass}%`;
+  return `<span class="lb-best${ok ? ' ok' : ''}${star ? ' star' : ''}">Best ${best}%${tail}${star ? ' · mastered ★' : ''}</span>`;
 }
 
 // The top of every runner: back link, lab + case title, level, objective chips, previous best.
@@ -48,7 +61,7 @@ export function runnerHead(lab, kase) {
 }
 
 export function sourceLinks(lab, kase) {
-  const src = LAB_SOURCES[lab.id] || {};
+  const src = lab.sources || {};
   const links = (kase.src || []).map((k) => src[k]).filter((x) => Array.isArray(x) && x.length >= 2);
   return links.length ? `<p class="ex-src">Source: ${links.map(([title, url]) => `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(title)}</a>`).join(' · ')}</p>` : '';
 }
@@ -59,23 +72,31 @@ export function stopwatch() {
   return { reset: () => { start = Date.now(); }, secs: () => Math.max(0, Math.min(86400, Math.round((Date.now() - start) / 1000))) };
 }
 
-// Save one graded attempt (celebrating any badge it unlocks). Returns { ok, score, best, prevBest, passed, firstPass }.
-export function record(lab, kase, score, secs) {
+// Save one graded attempt (celebrating any badge it unlocks). Returns { ok, score, best, prevBest, passed, firstPass,
+// scoredPass, mastered, firstMastered }. A+ runners pass { mode, assisted }: an assisted run is saved but never a pass,
+// and an unassisted Exam-mode pass also masters the case.
+export function record(lab, kase, score, secs, { mode, assisted } = {}) {
   const id = itemIdOf(lab, kase);
   const before = getLabs();
   const prevBest = bestScore(before, id);
   const wasPassed = isPassed(before, id, lab.pass);
+  const wasMastered = isMastered(before, id, lab.pass);
   const clean = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+  const help = assisted === true;
+  const run = { score: clean, secs: Math.max(0, Math.min(86400, Math.round(secs) || 0)),
+    ...(['guided', 'practice', 'exam'].includes(mode) ? { mode } : {}), ...(help ? { assisted: true } : {}) };
   let ok = true;
-  S.ctx.celebrate(() => { ok = saveLabs(recordRun(getLabs(), id, { score: clean, secs: Math.max(0, Math.min(86400, Math.round(secs) || 0)) })).ok; });
+  S.ctx.celebrate(() => { ok = saveLabs(recordRun(getLabs(), id, run)).ok; });
   if (!ok) S.ctx.saveWarn();
   const shown = S.ctx.app.querySelector('.lb-runmeta .lb-best');
   if (shown) shown.outerHTML = bestLine(lab, kase);
+  const scoredPass = clean >= lab.pass && !help;
   // not saved: nothing changed in his record, so claim nothing new (the page-wide warning already says so)
-  if (!ok) return { ok, score: clean, best: prevBest, prevBest, passed: wasPassed, firstPass: false, scoredPass: clean >= lab.pass };
+  if (!ok) return { ok, score: clean, best: prevBest, prevBest, passed: wasPassed, firstPass: false, scoredPass, mastered: wasMastered, firstMastered: false };
   const best = Math.max(prevBest ?? 0, clean);
-  const passed = clean >= lab.pass;
-  return { ok, score: clean, best, prevBest, passed, firstPass: passed && !wasPassed, scoredPass: passed };
+  const passed = scoredPass;
+  const mastered = passed && run.mode === 'exam';
+  return { ok, score: clean, best, prevBest, passed, firstPass: passed && !wasPassed, scoredPass, mastered, firstMastered: mastered && !wasMastered };
 }
 
 export function nextCaseHref(lab, kase) {

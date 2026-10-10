@@ -25,13 +25,16 @@ const raw = () => JSON.parse(memory.get(KEY));
 
 // ---------- catalog ----------
 const OBJ_IDS = new Set(blueprint.domains.flatMap((d) => d.objectives.map((o) => o.id)));
-assert.deepEqual(LABS.map((l) => l.id), ['fw', 'logs', 'subnet', 'cli', 'phish', 'code'], 'six labs in order');
-assert.deepEqual(LABS.map((l) => l.icon), ['🧱', '🔎', '🧮', '💻', '🎣', '🛠️']);
-assert.deepEqual(LABS.map((l) => l.name), ['Firewall & Network Diagram', 'Log Detective', 'Subnet Sprint', 'Terminal Troubleshooter', 'Phish Inspector', 'Detection Coder']);
+// The six Security+ & Network+ labs; the A+ labs (group 'aplus', SY0-801 objs empty) are tested in pro-aplus-labs.test.js.
+const SEC_LABS = LABS.filter((l) => l.group !== 'aplus');
+assert.deepEqual(SEC_LABS.map((l) => l.id), ['fw', 'logs', 'subnet', 'cli', 'phish', 'code'], 'six labs in order');
+assert.deepEqual(SEC_LABS.map((l) => l.icon), ['🧱', '🔎', '🧮', '💻', '🎣', '🛠️']);
+assert.deepEqual(SEC_LABS.map((l) => l.name), ['Firewall & Network Diagram', 'Log Detective', 'Subnet Sprint', 'Terminal Troubleshooter', 'Phish Inspector', 'Detection Coder']);
+assert.deepEqual(LABS.filter((l) => l.group === 'aplus').map((l) => l.id), ['win', 'shell', 'build', 'router', 'order', 'mobprint'], 'then six A+ labs');
 assert.equal(labOf('code').pass, 100, 'code labs pass at 100');
 LABS.filter((l) => l.id !== 'code').forEach((l) => assert.equal(l.pass, PASS, `${l.id} passes at ${PASS}`));
 const allIds = new Set();
-for (const lab of LABS) {
+for (const lab of SEC_LABS) {
   assert.ok(lab.name && lab.blurb && lab.kind, `${lab.id}: name, blurb, kind`);
   assert.ok(lab.cases.length >= 1, `${lab.id}: has cases`);
   const ids = new Set();
@@ -133,7 +136,7 @@ const firstPass = ach(sumOf({ 'fw/fw-01': run(80) }));
 assert.ok(got(firstPass, 'lab-first').earned, 'passing one case earns First Lab');
 assert.equal(got(firstPass, 'lab-fw').earned, labOf('fw').cases.length === 1);
 assert.equal(got(firstPass, 'lab-fw').need, labOf('fw').cases.length, 'Firewall Fixer needs every firewall case');
-assert.equal(got(firstPass, 'lab-all').need, LABS.reduce((s, l) => s + l.cases.length, 0));
+assert.equal(got(firstPass, 'lab-all').need, SEC_LABS.reduce((s, l) => s + l.cases.length, 0));
 assert.equal(got(firstPass, 'lab-first').date, null, 'lab badges carry no date');
 // a fail is not a pass; code needs 100
 assert.equal(got(ach(sumOf({ 'fw/fw-01': run(79) })), 'lab-first').earned, false, '79 is not a pass');
@@ -159,6 +162,19 @@ if (allIds.size >= 10) {
   assert.equal(got(ach(sumOf(nine)), 'lab-perfect-10').have, 9);
 }
 assert.ok(ach(sumOf(everything)).every((b) => b.have <= b.need), 'progress never shows more than needed');
+// Perfect counts unassisted runs only; old runs without the assisted field count as unassisted.
+{
+  const [a, b, c] = [...allIds];
+  const perfectOf = (saved) => sumOf(saved).perfect;
+  assert.equal(perfectOf({ [a]: [{ t: t0, score: 100, secs: 5, mode: 'exam', assisted: true }] }), 0, 'an assisted-only 100 is not perfect');
+  assert.equal(perfectOf({ [a]: [{ t: t0, score: 100, secs: 5, assisted: true }, { t: t0 + 1, score: 100, secs: 5, mode: 'practice' }] }), 1, 'an unassisted 100 is perfect');
+  assert.equal(perfectOf({ [a]: run(100), [b]: [{ t: t0, score: 100, secs: 5 }], [c]: [{ t: t0, score: 90, secs: 5 }, { t: t0 + 1, score: 100, secs: 5, assisted: true }] }), 2, 'old runs count; assisted 100 over a 90 does not');
+  if (allIds.size >= 10) {
+    const tenAssisted = Object.fromEntries([...allIds].slice(0, 10).map((id) => [id, [{ t: t0, score: 100, secs: 30, mode: 'exam', assisted: true }]]));
+    assert.equal(got(ach(sumOf(tenAssisted)), 'lab-perfect-10').earned, false, 'ten assisted-only 100s do not earn Ten Perfect');
+    assert.equal(got(ach(sumOf(tenAssisted)), 'lab-perfect-10').have, 0);
+  }
+}
 
 // b528832 had 39 cases. Passing all of those before the later additions must retain the old completion badges.
 const oldCounts = { fw: 8, logs: 6, subnet: 4, cli: 8, phish: 8, code: 5 };

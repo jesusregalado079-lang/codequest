@@ -1,6 +1,7 @@
 // The labs summary and the labs-per-objective lookup without loading the labs content: both read the generated catalog
 // index (src/pro/exam/tools/build-index.mjs), so the Journey card, the exam pages and the achievements stay light.
-// The labs pages themselves use the full catalog (../../labs/catalog.js), which test/pro-exams.test.js checks it matches.
+// The labs pages use this index plus the generated catalog-meta.js (ui/labs/meta.js) and load a lab's content only on its
+// pages (ui/labs/content.js); test/pro-exams.test.js checks the index matches the catalog (../../labs/catalog.js).
 import { labSummary } from '../../labs/lab-logic.js';
 import { getLabs } from '../../progress.js';
 import LAB_INDEX from './catalog-index.js';

@@ -1,12 +1,13 @@
 // Log Detective runner: one card per log snippet, pick the attack it shows, Check grades with ../../labs/grading.js.
 import { gradeMatch } from '../../labs/grading.js';
-import { LABELS } from '../../labs/content/log-sets.js';
 import { S, esc, focusResult, onLeave, record, runnerHead, scoreBanner, sourceLinks, stopwatch, wireAgain } from './shared.js';
 
 let st = null;
+let LABELS = {}; // the label names, from the log sets module (loaded with the lab's content)
 const labelText = (id) => (LABELS && LABELS[id]) || id;
 
 export function showLogs(lab, kase) {
+  LABELS = lab.content?.LABELS || {};
   st = { picks: (kase.snippets || []).map(() => null), clock: stopwatch(), done: false };
   onLeave(() => { st = null; });
   render(lab, kase);
