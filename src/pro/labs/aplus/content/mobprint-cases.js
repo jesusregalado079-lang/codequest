@@ -483,19 +483,24 @@ const mobprint03 = {
 
 // mobprint-04: lost company phone, Find Hub, follow the policy order.
 const LOST_PHONE = '555\\D?0187';
-// The finder message must ask the finder to get in touch (call, telephone, text, ring, dial, contact, reach, get in
-// touch, or phone us/the/our/me/IT/a number; whole words, so "Recall" does not count), not negated ("do not call",
-// "dont call", "never call"), AND name the IT desk: its number anywhere, or "IT" (capitals, so the pronoun in "report
-// it" does not count), "I.T." or "IT desk" in the same sentence as the request. Any other number of 3 or more digits
-// (911, the lost phone's own 206-555-0187, another area code) fails: the finder would call the wrong place.
+// The finder message must contain a request to get in touch (call, telephone, text, ring, dial, contact, reach, get in
+// touch, or phone us/the/our/me/IT/a number; whole words, so "Recall" does not count) that starts a sentence or clause or
+// follows a word such as "please", "kindly", "found" or "and". So "do not call", "dont call", "never call" and "no need
+// to call" are not requests, while "Do not call the lost phone. Call the IT desk" is. The request must reach the IT
+// desk: the desk number anywhere in the message, "IT" (capitals, so the pronoun in "report it" does not count), "I.T."
+// or "IT desk" in the same sentence, or "call them/us" after the desk is named. Any other number of 3 or more digits
+// (911, the lost phone's own 206-555-0187, another area code) fails: the finder would call the wrong place. Free text
+// is graded by pattern, so this is an approximation tuned on the messages a learner is likely to type.
 const ci = (word) => [...word].map((ch) => (/[a-z]/i.test(ch) ? `[${ch.toUpperCase()}${ch.toLowerCase()}]` : ch)).join('');
 const CALLBACK_ACTION = `(?:${['call', 'telephone', 'text', 'ring', 'dial', 'contact', 'reach'].map(ci).join('|')}|${ci('get')}\\s+${ci('in')}\\s+${ci('touch')})`;
-const CALLBACK_VERB = String.raw`\b(?:${CALLBACK_ACTION}\b|${ci('phone')}(?=\s+(?:${['us', 'the', 'our', 'me'].map(ci).join('|')})\b|\s+IT\b|\s+\(?\d))`;
+const CALLBACK_VERB = String.raw`(?:${CALLBACK_ACTION}\b|${ci('phone')}(?=\s+(?:${['us', 'the', 'our', 'me'].map(ci).join('|')})\b|\s+IT\b|\s+\(?\d))`;
+const REQUEST_LEAD = String.raw`(?:^\s*|[.!?;,:(\n-]\s*|\b(?:${['please', 'kindly', 'and', 'then', 'or', 'you', 'can', 'could', 'should', 'would', 'must', 'just', 'now', 'found', 'simply'].map(ci).join('|')}|${ci('hesitate')}\s+${ci('to')})\s+)`;
+const REQUEST = `${REQUEST_LEAD}${CALLBACK_VERB}`;
 const DESK_NUMBER = String.raw`\(?206\)?[ .-]*555[ .-]*0142(?!\d)`;
 const DESK_NAME = String.raw`(?:\bIT\b|\bI\.T\b|\b${ci('it')}\s+${ci('desk')}\b)`;
-const NEGATED = String.raw`\b(?:${ci('do')}\s+${ci('not')}|${ci('don')}['’\`]?${ci('t')}|${ci('never')}|${ci('not')})\s+(?:\S+\s+)?${CALLBACK_VERB}`;
+const DESK = `(?:${DESK_NAME}|${DESK_NUMBER})`;
 const OTHER_NUMBER = String.raw`(?:^|\D)(?!(?:1?206(?:555(?:0142)?)?|555(?:0142)?|0142)(?!\d))\d{3,}`;
-const CALLBACK_MSG = String.raw`^(?![\s\S]*${NEGATED})(?![\s\S]*${OTHER_NUMBER})(?=[\s\S]*${CALLBACK_VERB})(?:(?=[\s\S]*${DESK_NUMBER})|(?=[\s\S]*${CALLBACK_VERB}[^.!?;]{0,80}?${DESK_NAME})|(?=[\s\S]*${DESK_NAME}[^.!?;]{0,80}?${CALLBACK_VERB}))[\s\S]{10,}$`;
+const CALLBACK_MSG = String.raw`^(?![\s\S]*${OTHER_NUMBER})(?:(?=[\s\S]*${REQUEST}[^.!?;]{0,80}?${DESK})|(?=[\s\S]*${DESK}[^.!?;]{0,80}?${REQUEST})|(?=[\s\S]*${DESK_NUMBER})(?=[\s\S]*${REQUEST})|(?=[\s\S]*${DESK_NAME})(?=[\s\S]*${REQUEST}\s+(?:${ci('them')}|${ci('us')})\b))[\s\S]{10,}$`;
 // Contact info must show the IT desk number and no other number (a label such as "IT desk:" is fine).
 const IT_DESK = String.raw`^(?![\s\S]*${OTHER_NUMBER})[\s\S]*${DESK_NUMBER}`;
 const mobprint04 = {

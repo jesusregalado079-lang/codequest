@@ -548,7 +548,7 @@ const fixture = {
     goals: [{ id: 'unique', check: { not: { key: 'password', op: 'repeatedFold' } } }],
   });
   assert.equal(sim.check().goals[0].pass, false, 'case-varied repetition fails');
-  for (const variant of ['Winter2026!Winter2026', 'winter2026Winter2026!', 'Winter2026 Winter2026', 'Winter2026Winter2027']) {
+  for (const variant of ['Winter2026!Winter2026', 'winter2026Winter2026!', 'Winter2026 Winter2026', 'Winter2026Winter2027', 'pylon8!pylon9!pylon7!']) {
     ok(sim.set('password', variant));
     assert.equal(sim.check().goals[0].pass, false, `near repetition fails: ${variant}`);
   }

@@ -30,8 +30,9 @@
 //   { key, op: 'nearKey', value: otherKey, max } is true when the two folded values are both non-empty
 //   and differ by at most max single-character edits (Levenshtein, default 3).
 //   { key, op: 'repeatedFold' } folds the value the same way (lowercase letters and digits only) and is
-//   true when it is a 2-31 character chunk repeated end to end, or repeats any chunk of 6 or more
-//   characters (winter2026Winter2026, Winter2026!Winter2026, Winter2026Winter2027).
+//   true when it is a 2-31 character chunk repeated end to end, repeats any chunk of 6 or more
+//   characters, or uses a chunk of 4 or more three times (winter2026Winter2026, Winter2026!Winter2026,
+//   Winter2026Winter2027, pylon8!pylon9!pylon7!).
 //   Windows Run fallback: a query that matches no app of the case but names a real Windows 11 tool
 //   (WINDOWS_TOOLS, e.g. ncpa.cpl) returns ok and info: true with a message saying what the tool is and
 //   that this case is practiced another way (cli: true entries say it is a command-line tool to run in a shell).
@@ -223,7 +224,7 @@ export function createSim(caseDef) {
     }
     if (predicate.op === 'repeatedFold') {
       const value = squash(state[predicate.key]);
-      return /^(.{2,31})\1+$/.test(value) || /(.{6,}).*\1/.test(value);
+      return /^(.{2,31})\1+$/.test(value) || /(.{6,}).*\1/.test(value) || /(.{4,}).*\1.*\1/.test(value);
     }
     return compare(predicate.op, state[predicate.key], predicate.value);
   }
