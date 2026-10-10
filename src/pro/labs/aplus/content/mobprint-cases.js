@@ -482,16 +482,22 @@ const mobprint03 = {
 };
 
 // mobprint-04: lost company phone, Find Hub, follow the policy order.
-const IT_DESK = '^\\s*(?:\\+?1[ .-]?)?(?:\\(206\\)|206)[ .-]?555[ .-]?0142\\s*$';
 const LOST_PHONE = '555\\D?0187';
-// The finder message must ask the finder to get in touch (call, phone, text, ring, dial, contact, reach; whole words, so
-// "Recall" does not count) AND name the IT desk or its number (policy step 2). A bare "IT" must be capitals, so the
-// pronoun in "call 911 and report it" does not count as the IT desk.
-const CALLBACK_ACTION = String.raw`(?:[Cc][Aa][Ll][Ll]|[Tt][Ee][Ll][Ee][Pp][Hh][Oo][Nn][Ee]|[Tt][Ee][Xx][Tt]|[Rr][Ii][Nn][Gg]|[Dd][Ii][Aa][Ll]|[Cc][Oo][Nn][Tt][Aa][Cc][Tt]|[Rr][Ee][Aa][Cc][Hh])`;
-const CALLBACK_PHONE = String.raw`[Pp][Hh][Oo][Nn][Ee]`;
-const CALLBACK_VERB = String.raw`(?:${CALLBACK_ACTION}|${CALLBACK_PHONE})`;
-const CALLBACK_TARGET = String.raw`(?:\bIT\b|\b[Ii][Tt]\s+[Dd][Ee][Ss][Kk]\b|\(?206\)?[ .-]*555[ .-]*0142\b)`;
-const CALLBACK_MSG = String.raw`^(?!.*\b(?:[Dd][Oo]\s+[Nn][Oo][Tt]|[Dd][Oo][Nn]['’][Tt]|[Nn][Ee][Vv][Ee][Rr]|[Nn][Oo][Tt])\s+${CALLBACK_VERB}\b)(?=.*\b(?:${CALLBACK_ACTION}\b[^.!?;,]{0,80}|${CALLBACK_PHONE}\s+(?:[Tt][Hh][Ee]\s+)?)${CALLBACK_TARGET}).{10,}$`;
+// The finder message must ask the finder to get in touch (call, telephone, text, ring, dial, contact, reach, get in
+// touch, or phone us/the/our/me/IT/a number; whole words, so "Recall" does not count), not negated ("do not call",
+// "dont call", "never call"), AND name the IT desk: its number anywhere, or "IT" (capitals, so the pronoun in "report
+// it" does not count), "I.T." or "IT desk" in the same sentence as the request. Any other number of 3 or more digits
+// (911, the lost phone's own 206-555-0187, another area code) fails: the finder would call the wrong place.
+const ci = (word) => [...word].map((ch) => (/[a-z]/i.test(ch) ? `[${ch.toUpperCase()}${ch.toLowerCase()}]` : ch)).join('');
+const CALLBACK_ACTION = `(?:${['call', 'telephone', 'text', 'ring', 'dial', 'contact', 'reach'].map(ci).join('|')}|${ci('get')}\\s+${ci('in')}\\s+${ci('touch')})`;
+const CALLBACK_VERB = String.raw`\b(?:${CALLBACK_ACTION}\b|${ci('phone')}(?=\s+(?:${['us', 'the', 'our', 'me'].map(ci).join('|')})\b|\s+IT\b|\s+\(?\d))`;
+const DESK_NUMBER = String.raw`\(?206\)?[ .-]*555[ .-]*0142(?!\d)`;
+const DESK_NAME = String.raw`(?:\bIT\b|\bI\.T\b|\b${ci('it')}\s+${ci('desk')}\b)`;
+const NEGATED = String.raw`\b(?:${ci('do')}\s+${ci('not')}|${ci('don')}['’\`]?${ci('t')}|${ci('never')}|${ci('not')})\s+(?:\S+\s+)?${CALLBACK_VERB}`;
+const OTHER_NUMBER = String.raw`(?:^|\D)(?!(?:1?206(?:555(?:0142)?)?|555(?:0142)?|0142)(?!\d))\d{3,}`;
+const CALLBACK_MSG = String.raw`^(?![\s\S]*${NEGATED})(?![\s\S]*${OTHER_NUMBER})(?=[\s\S]*${CALLBACK_VERB})(?:(?=[\s\S]*${DESK_NUMBER})|(?=[\s\S]*${CALLBACK_VERB}[^.!?;]{0,80}?${DESK_NAME})|(?=[\s\S]*${DESK_NAME}[^.!?;]{0,80}?${CALLBACK_VERB}))[\s\S]{10,}$`;
+// Contact info must show the IT desk number and no other number (a label such as "IT desk:" is fine).
+const IT_DESK = String.raw`^(?![\s\S]*${OTHER_NUMBER})[\s\S]*${DESK_NUMBER}`;
 const mobprint04 = {
   id: 'mobprint-04', title: 'Lost company phone on a bus', level: 3, minutes: 9,
   scenario: 'Marisol Vega, a home care nurse at Brightwater Home Care, left her company Pixel 9 (number 206-555-0187) on a city bus an hour ago. She is at the IT desk and has signed in to Find Hub as a guest on the IT desk phone. The bus company says its lost and found is at the North Depot. Follow the company lost-device policy shown in Find Hub notes. The IT desk number is 206-555-0142.',
@@ -824,7 +830,7 @@ const mobprint06 = {
       expect: 'The fuser, transfer roller, pick roller and separator from the kit are installed.',
       hints: ['If reseating the fuser does not fix it, look at the part that melts toner into paper: it comes in a kit that the report shows as very low.', 'Turn the printer off, unplug it and let it cool, then install the maintenance kit.', 'Home: Turn off the printer and unplug it > Open the printer doors > Install the maintenance kit.'],
       src: ['lexmarkMs82x', 'brotherQuality'] },
-    { id: 'verify', text: 'Print the Print Quality Test Pages to confirm', check: { used: 'action:pq-good' },
+    { id: 'verify', weight: 2, text: 'Print the Print Quality Test Pages to confirm', check: { used: 'action:pq-good' },
       why: 'Lexmark starts and ends print quality troubleshooting with the Print Quality Test Pages. Clean, fused pages prove the fix.',
       expect: 'Settings > Troubleshooting > Print Quality Test Pages prints sharp text that does not rub off.',
       hints: ['Prove the fix with the printer\'s own quality pages.', 'Turn the printer back on and print the quality test pages from Troubleshooting.', 'Settings > Troubleshooting > Print Quality Test Pages.'],
