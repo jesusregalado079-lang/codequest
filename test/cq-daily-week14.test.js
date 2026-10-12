@@ -112,19 +112,19 @@ const REFS = ['Exodus 1:1-22', 'Exodus 2:1-25', 'Exodus 3:1-22', 'Exodus 4:1-23,
 const CHOICE_DAYS = [0, 1, 3];
 const KEY = { // [question prompt, [choice texts], answer letter]; the doc's answer key
   0: [
-    ['Why did the new king of Egypt make the Israelites work as slaves?', ['He was afraid there were so many of them that they might join his enemies in a war', "They had broken the king's laws", 'They had refused to pay their taxes'], 'A'],
-    ['What did the midwives do when the king told them to kill the Hebrew baby boys?', ['They did what the king said', 'They quit their jobs and left Egypt', 'They let the baby boys live because they feared God'], 'C'],
+    ['Why did the new king of Egypt make the Israelites work as slaves?', ['He was afraid there were so many of them that they might join his enemies in a war', "They had broken the king's laws, so he made them work as a punishment for their crimes", 'They had refused to pay their taxes, so he took away their land and made them work'], 'A'],
+    ['What did the midwives do when the king told them to kill the Hebrew baby boys?', ['They did what the king said, because they were afraid of him', 'They quit their jobs because they were afraid of the king', 'They let the baby boys live because they feared God'], 'C'],
     ['At the end of the chapter, what did the king order his people to do to the Hebrew baby boys?', ['Send them away to another country', 'Throw them into the Nile River', 'Put them to work in the palace'], 'B'],
   ],
   1: [
-    ["How did Moses' mother keep her baby safe?", ['She sent him away with a family of traders', 'She put him in a basket among the reeds on the Nile, and his sister watched over him', "She hid him in the king's palace"], 'B'],
-    ['Why did Moses run away from Egypt when he grew up?', ['He was tired of living in the palace', 'The Israelites asked him to leave', 'He killed an Egyptian who was beating a Hebrew, and Pharaoh found out'], 'C'],
+    ["How did Moses' mother keep her baby safe?", ['She gave him to a family of traders who were traveling to another country far away', 'She put him in a basket among the reeds on the Nile, and his sister watched over him', "She hid him inside the king's palace, where the servants helped to take care of him"], 'B'],
+    ['Why did Moses run away from Egypt when he grew up?', ['He was tired of living in the palace, so he decided to leave and see the world', 'The Israelites were angry at him and asked him to leave Egypt', 'He killed an Egyptian who was beating a Hebrew, and Pharaoh found out'], 'C'],
     ['At the end of the chapter, the Israelites cried out because of their slavery. What did God do?', ['He heard them, and He cared about them', 'He sent a flood to wash away the Egyptians', 'He waited for them to stop crying'], 'A'],
   ],
   3: [
-    ['Moses was afraid the people would not believe that God sent him. What did God give Moses to show them?', ['A sword and a shield', 'A letter from Pharaoh', 'Signs: his staff turned into a snake, and his hand turned white'], 'C'],
-    ['Moses said, "I am not a good speaker." How did God answer?', ['"Then you can stay home."', "He said He made the mouth and would help Moses speak, and He sent Moses' brother Aaron too", 'He changed His mind and picked someone else'], 'B'],
-    ['At the end of the reading, Aaron showed the people the signs. What did the people do?', ['They believed, and they bowed down and worshiped God', 'They laughed at Moses', 'They ran away'], 'A'],
+    ['Moses was afraid the people would not believe that God sent him. What did God give Moses to show them?', ['A sword and a shield, so that he could fight the soldiers of Egypt', 'A letter from Pharaoh that said the people must obey Moses', 'Signs: his staff turned into a snake, and his hand turned white'], 'C'],
+    ['Moses said, "I am not a good speaker." How did God answer?', ['"Then you can stay home, and I will send an angel to speak to Pharaoh for you."', "He said He made the mouth and would help Moses speak, and He sent Moses' brother Aaron too", 'He changed His mind and picked a better speaker to go to Pharaoh instead of Moses'], 'B'],
+    ['At the end of the reading, Aaron showed the people the signs. What did the people do?', ['They believed, and they bowed down and worshiped God', 'They laughed at Moses and Aaron and told them to go back home', 'They ran away because they were afraid of the snake'], 'A'],
   ],
 };
 const CHOICE_NOTES = {
@@ -594,5 +594,18 @@ kidPages.forEach((html) => ['For you:', 'parentNote', 'A good answer', 'INTENTIO
   const html = render(week, day, sheet);
   sheet.items.filter((entry) => entry.parentNote && entry.parentNote.length > 25).forEach((entry) => assert.equal(html.includes(entry.parentNote), false, `${day}/${entry.id}: the note is not on the kid's page`));
 })));
+
+// No giveaway by length: the planner flagged that the right choice was usually the longest, so a boy could guess it
+// without reading. The wrong choices were lengthened (questions and right answers untouched) and this keeps it so.
+[g, s].forEach((week) => ['monday', 'tuesday', 'thursday'].forEach((day) => {
+  const bible = week.days[day].sheets.find((sheet) => sheet.subject === 'bible-reading');
+  bible.items.forEach((entry) => {
+    const lengths = entry.choices.map((text) => text.length);
+    const right = lengths[entry.answer.charCodeAt(0) - 65];
+    const longestWrong = Math.max(...lengths.filter((_, index) => index !== entry.answer.charCodeAt(0) - 65));
+    assert.ok(right <= longestWrong * 1.2, `${day}/${entry.id}: the right choice (${right}) is more than 20% longer than every wrong one (${longestWrong})`);
+    assert.ok(right >= longestWrong * 0.7, `${day}/${entry.id}: the right choice (${right}) is much shorter than the longest wrong one (${longestWrong})`);
+  });
+}));
 
 console.log('ok - week 14: schedule, Bible Reading (3 multiple-choice days + 2 typed) for both boys, verses, CodeQuest, every decimal product / stepped chain / bigger-or-smaller / percent block / coin percent / operation choice and result re-derived, kid pages leak nothing');

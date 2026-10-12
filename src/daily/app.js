@@ -93,8 +93,8 @@ function trackPickerHtml() {
     <h1>Whose iPad is this?</h1>
     <p>Pick the quest line for this iPad. You only need to do this once — ask a grown-up to change it later.</p>
     <div class="cqd-track-options">
-      <button type="button" class="cqd-button cqd-primary" data-action="pick-track" data-track="guided"><span class="cqd-track-number" aria-hidden="true">9</span><span class="cqd-track-label">Age 9 <small>Guided worksheets</small></span><span class="cqd-track-arrow" aria-hidden="true">→</span></button>
-      <button type="button" class="cqd-button cqd-primary" data-action="pick-track" data-track="standard"><span class="cqd-track-number" aria-hidden="true">10</span><span class="cqd-track-label">Age 10 <small>Standard worksheets</small></span><span class="cqd-track-arrow" aria-hidden="true">→</span></button>
+      <button type="button" class="cqd-button cqd-primary" data-action="pick-track" data-track="guided"><span class="cqd-track-number" aria-hidden="true">9</span><span class="cqd-track-label">Age 9 <small>Daily worksheets</small></span><span class="cqd-track-arrow" aria-hidden="true">→</span></button>
+      <button type="button" class="cqd-button cqd-primary" data-action="pick-track" data-track="standard"><span class="cqd-track-number" aria-hidden="true">10</span><span class="cqd-track-label">Age 10 <small>Daily worksheets</small></span><span class="cqd-track-arrow" aria-hidden="true">→</span></button>
     </div>
   </section>`;
 }
