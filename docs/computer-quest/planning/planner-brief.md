@@ -21,7 +21,8 @@ Kid-facing text must never say "easy", "guided", "hard" or "standard". Both boys
 - Do not put a worked example's numbers into a practice problem on the same or a later day unless you mean to repeat that problem.
 - Memory verse is one verse for the week, recited to Dad on Friday. It is not a daily sheet.
 - CodeQuest days: two per week per son. A CodeQuest day replaces the Word Problems slot, keeps Math, and stays light: play 15 to 20 minutes, then three reflection questions.
-- Subjects allowed: Memory Verse, Math, Word Problems, CodeQuest. Ask before adding another subject.
+- Subjects allowed: Memory Verse, Math, Word Problems, CodeQuest, Bible Reading. Ask before adding another subject.
+- Bible Reading (approved Week 13) is the third sheet on every weekday for both sons. The boys read the passage from their own Bibles, out loud to a grown-up; no passage text is on screen. Use a written answer (short or long) or multiple choice.
 - Plenty of room to write. No printables, no PDFs, no answer-key page.
 - Use these chore prices for money word problems: take out trash $0.75, vacuum or sweep $1.00, wipe counters $0.75, set or clear table $0.50, tidy living room $1.00, unload groceries $0.75, clean litter box $0.50, load or unload dishwasher $0.75, help make dinner $1.00, foot massage for Mom $2.00, fold and put away laundry $1.50, say memory verse from memory $1.50.
 
@@ -29,6 +30,7 @@ Kid-facing text must never say "easy", "guided", "hard" or "standard". Both boys
 Pick from these. Anything else goes in "New things the app needs" on the plan.
 - **Typed number** (whole numbers, decimals like 37.5, money like 2.70). Give the exact answer.
 - **Short answer and long answer**, checked by a parent. No answer needed, but give a parent note about what a good answer looks like.
+- **Multiple choice** (added Week 14). Two to five choices, lettered A, B, C. Give the exact question, the choices in the order to show them, the correct letter and a parent note. The kid taps one choice and is never told whether it is right; the parent sees the correct letter and the note. Vary where the correct letter lands, and avoid making the correct choice the longest one.
 - **Scale 1 to 5** (for example "how tricky was it").
 - **Fill in the blank** with a word bank, including yes/no questions and the verse.
 - **Coin builder** (younger son). Options:

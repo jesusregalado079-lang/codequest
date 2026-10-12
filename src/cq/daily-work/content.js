@@ -644,9 +644,324 @@ const standard13 = Week('week-13', 'Week 13', [
   ]),
 }, '2026-10-05');
 
+// ---------------------------------------------------------------------------------------------------------
+// Week 14 (Monday 2026-10-12). Planned by Jesse in a separate session and handed over as the Drive docs
+// "Week 14 plan" and "Week 14 Bible reading (updated)"; wording, answers and parent notes are copied from them.
+// New this week: multiple-choice Bible Reading (Mon, Tue, Thu), decimal multiplication for the older son
+// (stepped lines 1a, 1b, 1c are separate items), percent as "out of 100" and choosing the operation for the
+// younger son. Docs: daily-work.md §2d.
+// ---------------------------------------------------------------------------------------------------------
+// A multiple-choice item: `choices` are the option texts in display order (letters are implied by position),
+// `answer` is the correct LETTER. The grown-up sees the letter and the note; the kid sees neither.
+const choice = (id, prompt, choices, answer, parentNote) => Item(id, 'multiple-choice', prompt, { choices, answer, parentNote });
+const BIBLE_CHOICE_HOWTO = (ref) => `Open your own Bible to ${ref} and read it out loud to a grown-up. Reading out loud makes you slow down and notice what is really happening. Then answer the three questions below by picking the best answer for each one. If you are not sure, go back to your Bible and look again.`;
+const bibleChoice = (ref, items) => Sheet('bible-reading', 'bible-reading', `Bible Reading: ${ref}`, BIBLE_CHOICE_HOWTO(ref), null, items);
+// A fill-in-the-word line (word bank = exactly the words that are answers on that sheet).
+const pick14 = (id, prompt, bank, answer, parentNote) => Item(id, 'fill-blank', prompt, { wordBank: bank, answer: [answer], parentNote });
+const BIGGER_SMALLER = ['bigger', 'smaller'];
+const dollarPercent = ' Type the number, like 10.';
+
+const BIBLE14 = {
+  monday: {
+    ref: 'Exodus 1:1-22',
+    items: () => [
+      choice('q1', 'Why did the new king of Egypt make the Israelites work as slaves?', [
+        'He was afraid there were so many of them that they might join his enemies in a war',
+        "They had broken the king's laws",
+        'They had refused to pay their taxes',
+      ], 'A', 'Exodus 1:9-10. The king said the Israelites were too many, and that they might join his enemies if a war broke out.'),
+      choice('q2', 'What did the midwives do when the king told them to kill the Hebrew baby boys?', [
+        'They did what the king said',
+        'They quit their jobs and left Egypt',
+        'They let the baby boys live because they feared God',
+      ], 'C', 'Exodus 1:15-21. The midwives feared God and did not do what the king said, so the boys lived.'),
+      choice('q3', 'At the end of the chapter, what did the king order his people to do to the Hebrew baby boys?', [
+        'Send them away to another country',
+        'Throw them into the Nile River',
+        'Put them to work in the palace',
+      ], 'B', 'Exodus 1:22. Every Hebrew baby boy was to be thrown into the Nile.'),
+    ],
+  },
+  tuesday: {
+    ref: 'Exodus 2:1-25',
+    items: () => [
+      choice('q1', "How did Moses' mother keep her baby safe?", [
+        'She sent him away with a family of traders',
+        'She put him in a basket among the reeds on the Nile, and his sister watched over him',
+        "She hid him in the king's palace",
+      ], 'B', "Exodus 2:2-4. She hid him for three months, then put him in a basket in the reeds on the Nile while his sister watched. Pharaoh's daughter found him and took him in."),
+      choice('q2', 'Why did Moses run away from Egypt when he grew up?', [
+        'He was tired of living in the palace',
+        'The Israelites asked him to leave',
+        'He killed an Egyptian who was beating a Hebrew, and Pharaoh found out',
+      ], 'C', 'Exodus 2:11-15. Moses killed the Egyptian, and when Pharaoh found out he ran away to Midian.'),
+      choice('q3', 'At the end of the chapter, the Israelites cried out because of their slavery. What did God do?', [
+        'He heard them, and He cared about them',
+        'He sent a flood to wash away the Egyptians',
+        'He waited for them to stop crying',
+      ], 'A', 'Exodus 2:23-25. God heard their groaning and was concerned about them.'),
+    ],
+  },
+  thursday: {
+    ref: 'Exodus 4:1-23, then 4:27-31',
+    items: () => [
+      choice('q1', 'Moses was afraid the people would not believe that God sent him. What did God give Moses to show them?', [
+        'A sword and a shield',
+        'A letter from Pharaoh',
+        'Signs: his staff turned into a snake, and his hand turned white',
+      ], 'C', 'Exodus 4:1-9. God gave Moses signs, including the staff that became a snake and the hand that turned white.'),
+      choice('q2', 'Moses said, "I am not a good speaker." How did God answer?', [
+        '"Then you can stay home."',
+        "He said He made the mouth and would help Moses speak, and He sent Moses' brother Aaron too",
+        'He changed His mind and picked someone else',
+      ], 'B', 'Exodus 4:10-16. God said He would help Moses speak, and Aaron would speak for him.'),
+      choice('q3', 'At the end of the reading, Aaron showed the people the signs. What did the people do?', [
+        'They believed, and they bowed down and worshiped God',
+        'They laughed at Moses',
+        'They ran away',
+      ], 'A', 'Exodus 4:29-31. The people believed, and when they heard that God cared about them, they bowed down and worshiped.'),
+    ],
+  },
+};
+const bible14Choice = (day) => bibleChoice(BIBLE14[day].ref, BIBLE14[day].items());
+const bible14Wed = (sentences) => bibleReading('Exodus 3:1-22', `What strange thing did Moses see on the mountain, and what did God promise him when Moses asked, "Who am I to do this?" ${sentences}`, 'A good answer says Moses saw a bush on fire that did not burn up. When Moses asked who he was to do this, God promised, "I will be with you" (Exodus 3:12). It may also say God was sending Moses to Pharaoh to bring the Israelites out of Egypt.');
+const bible14Fri = (sentences) => bibleReading('Exodus 5:1-23', `What happened when Moses asked Pharaoh to let the people go, and how did the Israelites feel about Moses afterward? ${sentences}`, 'A good answer says Pharaoh said no and made the work harder (no straw, but the same number of bricks), and the Israelite foremen blamed Moses and Aaron. There is no happy ending yet. That is on purpose, and it is the cliffhanger for next week.');
+
+const guided14 = Week('week-14', 'Week 14', [
+  Sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
+    Item('verse', 'fill-blank', "Make allowance for each other's ___, and forgive anyone who offends you. Remember, the Lord ___ you, so you must forgive others.", {
+      wordBank: ['faults', 'forgave'], answer: ['faults', 'forgave'],
+    }),
+  ], { citation: 'Colossians 3:13 (NLT)' }),
+], {
+  monday: Day([
+    Sheet('percent-means-out-of-100', 'math', 'Percent Means Out of 100',
+      "Percent means 'out of 100.' The sign for it is %. A dollar is 100 cents, so cents are a perfect way to see percent. One penny is 1 cent out of 100 cents, so it is 1 percent of a dollar. A dime is 10 cents out of 100, so it is 10 percent of a dollar. To find the percent of a dollar, count the cents. The number of cents is the percent.",
+      '1 dime. A dime is 10 cents. A dollar is 100 cents. 10 out of 100 is 10 percent. Answer: 10%.\n\n1 dime and 3 pennies. 10 + 3 = 13 cents. 13 out of 100 is 13 percent. Answer: 13%.\n\n2 × 5 means 2 groups of 5. 5 + 5 = 10.', [
+        money('1', `What percent of a dollar is 1 quarter?${dollarPercent}`, 25, '25 cents. 25 out of 100 = 25%.'),
+        money('2', `What percent of a dollar is 3 dimes?${dollarPercent}`, 30, '30 cents. 30 out of 100 = 30%.'),
+        money('3', `What percent of a dollar is 2 quarters?${dollarPercent}`, 50, '50 cents. 50 out of 100 = 50%.'),
+        money('4', `What percent of a dollar is 1 quarter and 2 nickels?${dollarPercent}`, 35, '25 + 10 = 35 cents. 35 out of 100 = 35%.'),
+        money('5', `What percent of a dollar is 4 dimes and 2 pennies?${dollarPercent}`, 42, '40 + 2 = 42 cents. 42 out of 100 = 42%.'),
+        money('6', '2 × 3 = ?', 6, '3 + 3 = 6.'),
+        money('7', '2 × 4 = ?', 8, '4 + 4 = 8.'),
+      ]),
+    Sheet('percent-stories', 'word-problems', 'Percent Stories',
+      'In a story, find how many cents there are. A dollar is 100 cents, so the number of cents is the percent of a dollar. Read the story slowly and find the coins. Add the coins to find the cents, then write that number as the percent.',
+      'Eli has 40 cents. A dollar is 100 cents. What percent of a dollar does Eli have? 40 out of 100 is 40 percent. Answer: 40%.', [
+        money('1', `Sofia has 65 cents. What percent of a dollar does Sofia have?${dollarPercent}`, 65, '65 out of 100 = 65%.'),
+        money('2', `Omar has 3 quarters. What percent of a dollar does Omar have?${dollarPercent}`, 75, '75 cents. 75 out of 100 = 75%.'),
+        money('3', `Tina has 2 dimes and 3 pennies. What percent of a dollar does Tina have?${dollarPercent}`, 23, '20 + 3 = 23 cents. 23%.'),
+        pick14('4', 'Ben says that 50 cents is 50 percent of a dollar. Is Ben right?', ['yes', 'no'], 'yes', '50 out of 100 = 50%.'),
+      ]),
+    bible14Choice('monday'),
+  ]),
+  tuesday: Day([
+    Sheet('your-jars-are-percents-too', 'math', 'Your Jars Are Percents Too',
+      'You already know that percent means out of 100. Your money jars are percents too. Give is 10 percent, Save is 20 percent, and Spend is 70 percent. Add them: 10 + 20 + 70 = 100, so the three jars together make the whole 100 percent. If you earn $1.00, which is 100 cents, then Give is 10 cents, Save is 20 cents and Spend is 70 cents.',
+      '1 dime. A dime is 10 cents. A dollar is 100 cents. 10 out of 100 is 10 percent. Answer: 10%.\n\nYour Give jar has $0.10 out of $1.00. 10 cents out of 100 cents is 10 percent. Give is 10%.\n\n2 × 6 means 2 groups of 6. 6 + 6 = 12.', [
+        money('1', `What percent of a dollar is 2 dimes and 1 nickel?${dollarPercent}`, 25, '20 + 5 = 25 cents. 25 out of 100 = 25%.'),
+        money('2', `What percent of a dollar is 1 quarter and 3 pennies?${dollarPercent}`, 28, '25 + 3 = 28 cents. 28 out of 100 = 28%.'),
+        money('3', `Your Save jar is $0.20 out of $1.00. What percent is that?${dollarPercent}`, 20, '20 out of 100 = 20%.'),
+        money('4', `Your Spend jar is $0.70 out of $1.00. What percent is that?${dollarPercent}`, 70, '70 out of 100 = 70%.'),
+        money('5', `Give is 10 percent and Save is 20 percent. What percent is left for Spend?${dollarPercent}`, 70, '100 − 10 − 20 = 70.'),
+        money('6', '2 × 4 = ?', 8, '4 + 4 = 8.'),
+        money('7', '4 × 10 = ?', 40, '4 × 10 = 40.'),
+      ]),
+    codeQuest13(),
+    bible14Choice('tuesday'),
+  ]),
+  wednesday: Day([
+    Sheet('add-or-subtract', 'math', 'Add or Subtract?',
+      "A word problem hides an operation, and clue words help you find it. 'In all,' 'altogether,' 'total' and 'gets more' usually mean ADD, because you are putting amounts together. 'Left,' 'fewer,' 'gave away,' 'spent' and 'change' usually mean SUBTRACT, because you are taking an amount away. Read the problem, circle the clue words with your pen, choose add or subtract, and then solve.",
+      "1 dime. A dime is 10 cents. A dollar is 100 cents. 10 out of 100 is 10 percent. Answer: 10%.\n\nJin has 12 marbles. He gets 5 more. How many marbles does he have in all? Clue: 'gets more' and 'in all' mean putting together, so ADD. 12 + 5 = 17.\n\nJin has 17 marbles. He gives away 6. How many are left? Clue: 'gives away' and 'left' mean taking away, so SUBTRACT. 17 − 6 = 11.\n\n3 × 10 means 3 groups of 10. Count by 10s: 10, 20, 30. 3 × 10 = 30.", [
+        money('1', `What percent of a dollar is 1 quarter and 4 pennies?${dollarPercent}`, 29, '25 + 4 = 29 cents. 29 out of 100 = 29%.'),
+        pick14('2', 'Lucia has 14 stickers. Her friend gives her 8 more. How many stickers does Lucia have in all? Which operation do you use?', ['add', 'subtract'], 'add', "'More' and 'in all' mean putting together."),
+        money('3', 'Solve it. How many stickers does Lucia have in all?', 22, '14 + 8 = 22.'),
+        pick14('4', 'Noel has 25 cents. He spends 9 cents. How many cents are left? Which operation do you use?', ['add', 'subtract'], 'subtract', "'Spends' and 'left' mean taking away."),
+        money('5', 'Solve it. How many cents are left?', 16, '25 − 9 = 16.'),
+        money('6', '4 × 7 = ?', 28, '7 + 7 + 7 + 7 = 28. INTENTIONAL REPEAT (Week 13): he needs to see facts more than once.'),
+        money('7', '5 × 7 = ?', 35, '7 + 7 + 7 + 7 + 7 = 35. INTENTIONAL REPEAT (Week 13): he needs to see facts more than once.'),
+        money('8', '6 × 6 = ?', 36, '6 + 6 + 6 + 6 + 6 + 6 = 36. INTENTIONAL REPEAT (Week 13): he needs to see facts more than once.'),
+      ]),
+    codeQuest13(),
+    bible14Wed('Write 1 or 2 sentences.'),
+  ]),
+  thursday: Day([
+    Sheet('add-subtract-or-multiply', 'math', 'Add, Subtract, or Multiply?',
+      "Some problems have groups that are all the same size. The clue words are 'each,' 'every,' 'groups of' and 'rows of.' When you see equal groups and you want the total, you MULTIPLY. Multiplying is a quick way to add the same number again and again. 4 groups of 3 is 3 + 3 + 3 + 3, which is 4 × 3. If the amounts are different sizes and you put them together, ADD. If you take something away, SUBTRACT. Read the problem, look for equal groups, and choose.",
+      "1 dime. A dime is 10 cents. A dollar is 100 cents. 10 out of 100 is 10 percent. Answer: 10%.\n\nJin has 12 marbles. He gets 5 more. How many in all? Clue: 'gets more' means putting together, so ADD. 12 + 5 = 17.\n\nThere are 2 boxes with 3 crayons in each box. How many crayons in all? Clue: 'in each box' means equal groups, so MULTIPLY. 2 × 3 = 6, because 3 + 3 = 6.\n\n4 × 7 means 4 groups of 7. 7 + 7 + 7 + 7 = 28.", [
+        money('1', `What percent of a dollar is 3 dimes and 6 pennies?${dollarPercent}`, 36, '30 + 6 = 36 cents. 36 out of 100 = 36%.'),
+        pick14('2', 'Mara has 30 cents and finds 15 more cents. Which operation tells how many cents she has in all?', ['add', 'multiply'], 'add', "'Finds more' and 'in all' mean putting together."),
+        pick14('3', 'There are 2 bags with 4 oranges in each bag. Which operation tells how many oranges in all?', ['add', 'multiply'], 'multiply', "'In each bag' means equal groups."),
+        money('4', 'Solve it. How many oranges in all?', 8, '2 × 4 = 8.'),
+        pick14('5', 'There are 4 packs with 10 stickers in each pack. Which operation tells how many stickers in all?', ['add', 'multiply'], 'multiply', "'In each pack' means equal groups."),
+        money('6', 'Solve it. How many stickers in all?', 40, '4 × 10 = 40.'),
+        money('7', '4 × 9 = ?', 36, '9 + 9 + 9 + 9 = 36. INTENTIONAL REPEAT (Week 13): he needs to see facts more than once.'),
+        money('8', '5 × 9 = ?', 45, '9 + 9 + 9 + 9 + 9 = 45. INTENTIONAL REPEAT (Week 13): he needs to see facts more than once.'),
+      ]),
+    Sheet('which-operation-stories', 'word-problems', 'Which Operation? Stories',
+      'Read the story twice and look for clue words. If amounts are put together, add. If something is taken away or you find how many are left, subtract. If there are equal groups, multiply. Choose the operation first, then solve.',
+      "A tray holds 2 rows of 5 cookies. How many cookies are on the tray? Clue: 'rows of' means equal groups, so MULTIPLY. 2 × 5 = 10, because 5 + 5 = 10. Answer: 10 cookies.", [
+        pick14('1', 'Kofi has 18 cents. He finds 7 more cents. Which operation tells how many cents Kofi has in all?', ['add', 'subtract', 'multiply'], 'add', "'Finds more' and 'in all' mean putting together."),
+        money('2', 'Solve it. How many cents does Kofi have in all?', 25, '18 + 7 = 25.'),
+        pick14('3', 'There are 4 plates with 2 cookies on each plate. Which operation tells how many cookies in all?', ['add', 'subtract', 'multiply'], 'multiply', "'On each plate' means equal groups."),
+        money('4', 'Solve it. How many cookies in all?', 8, '4 × 2 = 8.'),
+        pick14('5', 'Dina had 20 stickers. She gave away 8. Which operation tells how many are left?', ['add', 'subtract', 'multiply'], 'subtract', "'Gave away' and 'left' mean taking away."),
+        money('6', 'Solve it. How many stickers are left?', 12, '20 − 8 = 12.'),
+      ]),
+    bible14Choice('thursday'),
+  ]),
+  friday: Day([
+    Sheet('share-equally-divide', 'math', 'Share Equally: Divide',
+      "Sometimes you share things equally, or you ask how many groups you can make. That is DIVIDING. The clue words are 'share equally,' 'split,' 'each person gets' and 'how many groups.' Division is the opposite of multiplying. If 2 × 5 = 10, then 10 shared into 2 equal groups is 5 in each group, so 10 ÷ 2 = 5. To divide, ask yourself what number times the number you are dividing by makes the total. Today you also choose among all four operations. ADD puts amounts together. SUBTRACT takes away. MULTIPLY finds the total of equal groups. DIVIDE shares equally.",
+      "1 dime. A dime is 10 cents. A dollar is 100 cents. 10 out of 100 is 10 percent. Answer: 10%.\n\n10 stickers are shared equally by 2 children. How many stickers does each child get? Clue: 'shared equally' means DIVIDE. 2 × 5 = 10, so 10 ÷ 2 = 5. Each child gets 5.\n\nHana had 13 cents and spent 4 cents. How many are left? Clue: 'spent' and 'left' mean SUBTRACT. 13 − 4 = 9.\n\n4 × 9 means 4 groups of 9. 9 + 9 + 9 + 9 = 36.", [
+        money('1', `What percent of a dollar is 2 quarters and 3 pennies?${dollarPercent}`, 53, '50 + 3 = 53 cents. 53 out of 100 = 53%.'),
+        pick14('2', '8 apples are shared equally by 2 children. Which operation tells how many apples each child gets?', ['divide', 'subtract', 'multiply', 'add'], 'divide', "'Shared equally' means divide."),
+        money('3', 'Solve it. How many apples does each child get?', 4, '2 × 4 = 8, so 8 ÷ 2 = 4.'),
+        pick14('4', 'Pia has 15 cents and spends 6 cents. Which operation tells how many cents are left?', ['divide', 'subtract', 'multiply', 'add'], 'subtract', "'Spends' and 'left' mean taking away."),
+        pick14('5', 'There are 3 rows with 3 chairs in each row. Which operation tells how many chairs in all?', ['divide', 'subtract', 'multiply', 'add'], 'multiply', "'In each row' means equal groups."),
+        pick14('6', 'Kim has 8 stickers and gets 6 more. Which operation tells how many stickers Kim has in all?', ['divide', 'subtract', 'multiply', 'add'], 'add', "'Gets more' and 'in all' mean putting together."),
+        money('7', '6 × 8 = ?', 48, '8 + 8 + 8 + 8 + 8 + 8 = 48. INTENTIONAL REPEAT (Week 13): he needs to see facts more than once.'),
+        money('8', '5 × 7 = ?', 35, '7 + 7 + 7 + 7 + 7 = 35. INTENTIONAL REPEAT (Week 13, and Wednesday this week): he needs to see facts more than once.'),
+      ]),
+    Sheet('mixed-stories-all-four', 'word-problems', 'Mixed Stories, All Four',
+      "Today every kind of story is mixed together. For each one, read twice, find the clue words, choose the operation, and then solve. Clue words: 'in all,' 'together' and 'more' mean add. 'Left,' 'gave away' and 'fewer' mean subtract. 'Each,' 'every,' 'groups of' and 'rows of' mean multiply. 'Shared equally' and 'split' mean divide.",
+      "10 pencils are shared equally by 5 children. How many pencils does each child get? Clue: 'shared equally' means DIVIDE. 5 × 2 = 10, so 10 ÷ 5 = 2. Each child gets 2 pencils.", [
+        pick14('1', 'A box has 18 crayons. Dev gives away 7. Which operation tells how many crayons are left?', ['subtract', 'divide', 'multiply'], 'subtract', "'Gives away' and 'left' mean taking away."),
+        money('2', 'Solve it. How many crayons are left?', 11, '18 − 7 = 11.'),
+        pick14('3', '5 children share 15 stickers equally. Which operation tells how many stickers each child gets?', ['subtract', 'divide', 'multiply'], 'divide', "'Share equally' means divide."),
+        money('4', 'Solve it. How many stickers does each child get?', 3, '5 × 3 = 15, so 15 ÷ 5 = 3.'),
+        pick14('5', 'There are 4 packs with 2 pencils in each pack. Which operation tells how many pencils in all?', ['subtract', 'divide', 'multiply'], 'multiply', "'In each pack' means equal groups."),
+        money('6', 'Solve it. How many pencils in all?', 8, '4 × 2 = 8.'),
+      ]),
+    bible14Fri('Write 1 or 2 sentences.'),
+  ]),
+}, '2026-10-12');
+
+// Older son: multiply decimals, taught from the beginning. Stepped lines (1a, 1b, 1c) are separate items kept
+// together and in order; the help fades Mon/Tue (2 stepped, 1 half-stepped) -> Wed (bigger-or-smaller lines)
+// -> Thu (estimate lines, "1 block = X%") -> Fri (nothing written out, a few clue labels).
+const standard14 = Week('week-14', 'Week 14', [
+  Sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
+    Item('verse', 'fill-blank', 'Get rid of all ___, rage, anger, harsh words, and slander, as well as all types of evil ___. Instead, be kind to each other, tenderhearted, ___ one another, just as God through Christ has forgiven you.', {
+      wordBank: ['bitterness', 'behavior', 'forgiving'], answer: ['bitterness', 'behavior', 'forgiving'],
+    }),
+  ], { citation: 'Ephesians 4:31-32 (NLT)' }),
+], {
+  monday: Day([
+    Sheet('tenths-decimals-are-smaller-units', 'math', 'Tenths: Decimals Are Smaller Units',
+      'A decimal is a whole number counted in smaller units. The number 0.4 means 4 tenths, because one whole is split into 10 equal tenths. So 3 × 0.4 means 3 groups of 4 tenths, which is 12 tenths. Ten tenths make 1 whole, so 12 tenths is 1 whole and 2 tenths, which is 1.2. You can always do it in two steps: multiply the whole numbers (3 × 4 = 12), then say what unit you are counting (tenths) and turn it back into a decimal. Then check with an estimate. 0.4 is a little less than half, so 3 groups of it should be a little more than 1, and 1.2 fits.',
+      '3 × 0.4. 0.4 is 4 tenths. 3 × 4 tenths = 12 tenths. 12 tenths = 1.2 (10 tenths make 1, and 2 tenths are left). Answer: 1.2. Check: 0.4 is a little less than half, so 3 groups should be a little more than 1. 1.2 fits.\n\n5 × 0.6. 0.6 is 6 tenths. 5 × 6 tenths = 30 tenths. 30 tenths = 3 wholes. Answer: 3. Check: 0.6 is a little more than half, so 5 groups should be a little more than 2.5. 3 fits.\n\n4 × 1.2. 1.2 is 12 tenths. 4 × 12 tenths = 48 tenths. 48 tenths = 4.8 (4 wholes and 8 tenths). Answer: 4.8. Check: 1.2 is a little more than 1, so 4 groups should be a little more than 4. 4.8 fits.', [
+        money('1a', 'How many tenths is 0.7?', 7, '0.7 = 7 tenths.'),
+        money('1b', '4 × 7 = ?', 28, '28 tenths.'),
+        money('1c', '4 × 0.7 = ?', 2.8, '28 tenths = 2.8.'),
+        money('2a', 'How many tenths is 0.3?', 3, '0.3 = 3 tenths.'),
+        money('2b', '5 × 3 = ?', 15, '15 tenths.'),
+        money('2c', '5 × 0.3 = ?', 1.5, '15 tenths = 1.5.'),
+        money('3a', 'Multiply the tenths: 3 × 16 = ?', 48, '1.6 is 16 tenths. 3 × 16 = 48 tenths.'),
+        money('3b', '3 × 1.6 = ?', 4.8, '48 tenths = 4.8.'),
+        money('4', '6 × 0.4 = ?', 2.4, '6 × 0.4 = 2.4.'),
+        money('5', '7 × 0.5 = ?', 3.5, '7 × 0.5 = 3.5.'),
+      ]),
+    Sheet('tenths-in-real-life', 'word-problems', 'Tenths in Real Life',
+      'Stories use decimals when they talk about money and measuring. First find how many groups there are and how big each group is. Then multiply the same way as on the Math sheet: turn the decimal into tenths, multiply the whole numbers, then turn it back. Money gives you a check. $0.50 is 5 tenths of a dollar, so 3 times $0.50 is 15 tenths of a dollar, which is $1.50.',
+      'A bag of rice weighs 0.8 kg. You have 3 bags. How many kg of rice do you have? Step 1: 3 groups of 0.8 kg. Step 2: 0.8 is 8 tenths. Step 3: 3 × 8 = 24 tenths. Step 4: 24 tenths = 2.4. Answer: 2.4 kg.', [
+        money('1a', 'You clean the litter box ($0.50) 5 times this week. First, how many tenths of a dollar is $0.50?', 5, '$0.50 = 5 tenths of a dollar.'),
+        money('1b', '5 × 5 = ?', 25, '25 tenths of a dollar.'),
+        money('1c', 'How much do you earn, in dollars?', 2.5, '25 tenths = 2.50. Accept 2.5 or 2.50.'),
+        money('2', 'A ribbon piece is 0.9 meters long. You need 6 pieces. How many meters of ribbon do you need?', 5.4, '6 × 9 = 54 tenths = 5.4.'),
+        money('3', 'You set the table ($0.50) 9 times. How much do you earn, in dollars?', 4.5, '9 × 5 = 45 tenths = 4.50. Accept 4.5 or 4.50.'),
+      ]),
+    bible14Choice('monday'),
+  ]),
+  tuesday: Day([
+    Sheet('hundredths-and-a-shortcut', 'math', 'Hundredths, and a Shortcut That Always Works',
+      'Last time you counted tenths. Hundredths work the same way, just smaller. 0.25 means 25 hundredths, because one whole is split into 100 equal parts. So 3 × 1.25 is 3 groups of 125 hundredths, which is 375 hundredths, and 375 hundredths is 3.75. That leads to a shortcut that always works. Ignore the decimal point and multiply as if the numbers were whole (3 × 125 = 375). Then count how many decimal places the number you started with had (1.25 has 2) and put the decimal point back so the answer has the same number of places (3.75). It works because ignoring the point counts the small units, and putting the point back turns them into wholes. Always check with an estimate. 1.25 is a little more than 1, so 3 groups should be a little more than 3.',
+      '4 × 2.5. Ignore the decimal point: 4 × 25 = 100. 2.5 has 1 decimal place, so the answer has 1 decimal place: 10.0, which is 10. Check: 2.5 is between 2 and 3, so 4 groups is between 8 and 12. 10 fits.\n\n3 × 1.25. Ignore the decimal point: 3 × 125 = 375. 1.25 has 2 decimal places, so the answer has 2: 3.75. Check: 1.25 is a little more than 1, so 3 groups is a little more than 3. 3.75 fits.\n\n6 × 0.35. Ignore the decimal point: 6 × 35 = 210. 0.35 has 2 decimal places, so the answer has 2: 2.10, which is 2.1. Check: 0.35 is a little more than one third, so 6 groups is a little more than 2. 2.1 fits.', [
+        money('1a', 'Ignore the decimal point: 7 × 32 = ?', 224, '7 × 32 = 224.'),
+        money('1b', 'How many decimal places does 3.2 have?', 1, '3.2 has 1.'),
+        money('1c', '7 × 3.2 = ?', 22.4, '224 with 1 decimal place = 22.4.'),
+        money('2a', 'Ignore the decimal point: 4 × 625 = ?', 2500, '4 × 625 = 2500.'),
+        money('2b', 'How many decimal places does 6.25 have?', 2, '6.25 has 2.'),
+        money('2c', '4 × 6.25 = ?', 25, '2500 with 2 decimal places = 25.'),
+        money('3a', 'Ignore the decimal point: 9 × 15 = ?', 135, '9 × 15 = 135.'),
+        money('3b', '9 × 1.5 = ?', 13.5, '135 with 1 decimal place = 13.5.'),
+        money('4', '8 × 3.75 = ?', 30, '8 × 3.75 = 30.'),
+        money('5', '5 × 2.8 = ?', 14, '5 × 2.8 = 14.'),
+      ]),
+    codeQuest13(),
+    bible14Choice('tuesday'),
+  ]),
+  wednesday: Day([
+    Sheet('decimal-times-decimal', 'math', 'Decimal Times Decimal: Tenths of Tenths',
+      "Now both numbers are decimals. Think of 0.3 × 0.4 as 3 tenths of 4 tenths. A tenth of a tenth is a hundredth, so the answer is in hundredths: 3 × 4 = 12 hundredths, which is 0.12. That is why the shortcut still works. Ignore the decimal points (3 × 4 = 12), count the decimal places in both numbers together (1 + 1 = 2), and put the decimal point back so the answer has that many places (0.12). Notice that 0.12 is smaller than 0.4. When you multiply by a number smaller than 1, you take only part of the other number, so the answer gets smaller. When you multiply by a number bigger than 1, the answer gets bigger. Ask 'bigger or smaller?' first, because it catches mistakes.",
+      '0.3 × 0.4. Ignore the decimal points: 3 × 4 = 12. 1 + 1 = 2 decimal places: 0.12. Check: 0.3 is smaller than 1, so the answer should be smaller than 0.4. 0.12 fits.\n\n0.5 × 0.8. Ignore the decimal points: 5 × 8 = 40. 1 + 1 = 2 decimal places: 0.40, which is 0.4. Check: 0.5 is one half, and half of 0.8 is 0.4. It fits.\n\n1.2 × 0.3. Ignore the decimal points: 12 × 3 = 36. 1 + 1 = 2 decimal places: 0.36. Check: 1.2 is a little more than 1, so the answer should be a little more than 0.3. 0.36 fits.', [
+        pick14('1a', 'Is 0.2 × 0.6 bigger or smaller than 0.2?', BIGGER_SMALLER, 'smaller', '0.6 is less than 1, so the answer is smaller than 0.2.'),
+        money('1b', 'Ignore the decimal points: 2 × 6 = ?', 12, '2 × 6 = 12.'),
+        money('1c', 'How many decimal places in all? (0.2 has 1, 0.6 has 1)', 2, '1 + 1 = 2.'),
+        money('1d', '0.2 × 0.6 = ?', 0.12, '12 with 2 decimal places = 0.12.'),
+        pick14('2a', 'Is 0.7 × 0.5 bigger or smaller than 0.7?', BIGGER_SMALLER, 'smaller', '0.5 is less than 1, so the answer is smaller than 0.7.'),
+        money('2b', 'Ignore the decimal points: 7 × 5 = ?', 35, '7 × 5 = 35.'),
+        money('2c', '0.7 × 0.5 = ?', 0.35, '35 with 2 decimal places = 0.35.'),
+        pick14('3a', 'Is 1.2 × 1.5 bigger or smaller than 1.2?', BIGGER_SMALLER, 'bigger', '1.5 is more than 1, so the answer is bigger than 1.2.'),
+        money('3b', '1.2 × 1.5 = ?', 1.8, '1.2 × 1.5 = 1.8.'),
+        pick14('4a', 'Is 0.4 × 2.5 bigger or smaller than 0.4?', BIGGER_SMALLER, 'bigger', '2.5 is more than 1, so the answer is bigger than 0.4.'),
+        money('4b', '0.4 × 2.5 = ?', 1, '0.4 × 2.5 = 1.'),
+      ]),
+    codeQuest13(),
+    bible14Wed('Write 2 sentences.'),
+  ]),
+  thursday: Day([
+    Sheet('put-it-together-then-percent-blocks', 'math', 'Put It Together, Then Percent Blocks',
+      'Today you use all three ideas together, and then you use them on the percent blocks that were tricky before. The steps are the same every time: ignore the decimal points and multiply the whole numbers, count the decimal places, put the decimal point back, and check with an estimate. On the percent blocks, one block is worth 100 divided by the number of blocks, and the percent is the number of shaded blocks times what one block is worth. That last step is decimal multiplication, so the shortcut you learned this week does it for you. With 16 blocks, one block is worth 6.25%. Items 1 to 3 are decimal multiplication on its own. Items 4 and 5 are percent blocks, and the picture tells you what one block is worth.',
+      '4 × 0.9. Estimate: 0.9 is a little less than 1, so the answer should be a little less than 4. Ignore the decimal point: 4 × 9 = 36. 0.9 has 1 decimal place: 3.6. It fits the estimate.\n\n6 × 2.15. Estimate: 2.15 is close to 2, so the answer is about 12. Ignore the decimal point: 6 × 215 = 1290. 2.15 has 2 decimal places: 12.90, which is 12.9. It fits the estimate.\n\n0.8 × 0.7. Smaller than 0.8, because 0.7 is less than 1. Ignore the decimal points: 8 × 7 = 56. 1 + 1 = 2 decimal places: 0.56.\n\nPercent blocks: 15 out of 40. One block is 100 ÷ 40 = 2.5%. Ignore the decimal point: 15 × 25 = 375. 2.5 has 1 decimal place: 37.5. Answer: 37.5%.', [
+        money('1a', 'Estimate: round 0.8 to 1. 6 × 1 = ?', 6, 'Close to the real answer, which is 4.8.'),
+        money('1b', '6 × 0.8 = ?', 4.8, '6 × 0.8 = 4.8.'),
+        money('2a', 'Estimate: round 4.25 to 4. 7 × 4 = ?', 28, 'Close to the real answer, which is 29.75.'),
+        money('2b', '7 × 4.25 = ?', 29.75, '7 × 4.25 = 29.75.'),
+        pick14('3a', 'Is 0.6 × 0.9 bigger or smaller than 0.6?', BIGGER_SMALLER, 'smaller', '0.9 is less than 1, so the answer is smaller than 0.6.'),
+        money('3b', '0.6 × 0.9 = ?', 0.54, '0.6 × 0.9 = 0.54.'),
+        money('4a', 'Ignore the decimal point: 3 × 625 = ?', 1875, 'One block is 6.25%. 3 × 625 = 1875.'),
+        pct13('4b', '3 out of 16 is what percent?', 3, 16, 'unit', '3 × 6.25 = 18.75.'),
+        money('5a', 'Ignore the decimal point: 11 × 25 = ?', 275, 'One block is 2.5%. 11 × 25 = 275.'),
+        pct13('5b', '11 out of 40 is what percent?', 11, 40, 'unit', '11 × 2.5 = 27.5.'),
+      ]),
+    Sheet('decimals-in-stories', 'word-problems', 'Decimals in Stories',
+      'Stories with decimals usually give you a price or a measurement and a number of groups. Find the groups and the size of each one, multiply with the steps you learned, and check with an estimate. For money, remember that cents are hundredths of a dollar, so $0.75 is 75 hundredths.',
+      'You buy 5 stickers at $0.45 each. How much do you pay? Estimate: $0.45 is close to $0.50, and 5 × $0.50 is $2.50, so about $2.50. Ignore the decimal point: 5 × 45 = 225. $0.45 has 2 decimal places: 2.25. Answer: $2.25, which is close to the estimate.', [
+        money('1', 'You take out the trash ($0.75) 4 times this week. How much do you earn, in dollars?', 3, '4 × 75 = 300; 2 places = 3.00. Accept 3 or 3.00.'),
+        money('2', 'A notebook costs $2.35. You buy 4 notebooks. How much do you pay, in dollars?', 9.4, '4 × 235 = 940; 2 places = 9.40. Accept 9.4 or 9.40.'),
+        money('3', 'A recipe needs 1.5 cups of flour. You make 0.5 of the recipe. How many cups of flour do you need?', 0.75, '15 × 5 = 75; 1 + 1 = 2 places = 0.75.'),
+      ]),
+    bible14Choice('thursday'),
+  ]),
+  friday: Day([
+    Sheet('show-what-you-know', 'math', 'Show What You Know',
+      'No steps are written out today, so use them yourself: ignore the decimal points and multiply the whole numbers, count the decimal places, put the decimal point back, and check with an estimate or with bigger or smaller. On the percent blocks the picture only gives a few clues, so work out what one block is worth first.',
+      '2.5 × 3.2. Estimate: 2.5 × 3 = 7.5, so about 8. Ignore the decimal points: 25 × 32 = 800. 1 + 1 = 2 decimal places: 8.00, which is 8. It fits the estimate.\n\nPercent blocks: 13 out of 40. One block is 100 ÷ 40 = 2.5%. Ignore the decimal point: 13 × 25 = 325. 2.5 has 1 decimal place: 32.5. Answer: 32.5%.', [
+        money('1', '8 × 0.7 = ?', 5.6, '8 × 0.7 = 5.6.'),
+        money('2', '5 × 3.6 = ?', 18, '5 × 3.6 = 18.'),
+        money('3', '0.3 × 0.9 = ?', 0.27, '0.3 × 0.9 = 0.27.'),
+        money('4', '1.5 × 4.2 = ?', 6.3, '1.5 × 4.2 = 6.3.'),
+        pct13('5', '10 out of 16 is what percent?', 10, 16, 'clues', '10 × 6.25 = 62.5.'),
+        pct13('6', '33 out of 40 is what percent?', 33, 40, 'clues', '33 × 2.5 = 82.5.'),
+      ]),
+    Sheet('decimals-out-in-the-world', 'word-problems', 'Decimals Out in the World',
+      'Decimal multiplication shows up in shopping, measuring, cooking and percents. A price per pound times the pounds gives the cost. A length times a width gives the area. A percent is a decimal too. 15% means 15 out of 100, which is 0.15, so 15% of a number is 0.15 times that number. Read each story, decide what is being multiplied, and then use the steps.',
+      'Ribbon costs $1.20 per meter. You buy 2.5 meters. How much do you pay? Estimate: $1.20 is a little more than $1, so a little more than 2.5 dollars, about $3. Write $1.20 as 1.2. Ignore the decimal points: 12 × 25 = 300. 1 + 1 = 2 decimal places: 3.00. Answer: $3.00.', [
+        money('1', 'Apples cost $1.80 per pound. You buy 2.5 pounds. How much do you pay, in dollars?', 4.5, '18 × 25 = 450; 2 places = 4.50. Accept 4.5 or 4.50.'),
+        money('2', 'A garden bed is 3.2 meters long and 1.5 meters wide. What is its area in square meters?', 4.8, '32 × 15 = 480; 2 places = 4.80. Accept 4.8.'),
+        money('3', 'Find 15% of $42. Write 15% as 0.15 and multiply. How many dollars is it?', 6.3, '0.15 × 42: 15 × 42 = 630; 2 places = 6.30. Accept 6.3 or 6.30.'),
+        money('4', 'A car uses 8.5 gallons of gas at $3.20 per gallon. How much does the gas cost, in dollars?', 27.2, 'Write $3.20 as 3.2. 85 × 32 = 2720; 1 + 1 = 2 decimal places = 27.20. Accept 27.2 or 27.20.'),
+      ]),
+    bible14Fri('Write 2 sentences.'),
+  ]),
+}, '2026-10-12');
+
 export const DAILY_WORK = deepFreeze({
-  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13 } },
-  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13 } },
+  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14 } },
+  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14 } },
 });
 
 export function getWeek(track, weekId) {

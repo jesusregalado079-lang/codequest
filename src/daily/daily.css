@@ -376,6 +376,47 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .cqd-scale .cqd-chip { width: 56px; height: 56px; border-radius: 50%; font-family: 'Baloo 2', sans-serif; font-size: 1.28rem; }
 .cqd-scale .cqd-chip[aria-pressed="true"] { border-color: var(--subject); background: var(--subject); color: #fff; box-shadow: 0 3px 0 rgba(0, 0, 0, .14); }
 
+/* Multiple choice: one big card per choice. The picked card uses the subject colour only,
+   never green/red, and nothing here can differ between a right and a wrong pick. */
+.cqd-choices { display: grid; gap: 10px; }
+.cqd-choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 16px;
+  border: 2px solid #bfcdd1;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--cqd-text);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #dde4e2;
+}
+.cqd-choice-letter {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid #bfcdd1;
+  border-radius: 50%;
+  background: var(--subject-soft);
+  color: var(--cqd-ink);
+  font-family: 'Baloo 2', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+.cqd-choice-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cqd-choice.is-picked, .cqd-choice[aria-checked="true"] { border-color: var(--subject); background: var(--subject-soft); box-shadow: 0 3px 0 rgba(0, 0, 0, .12), 0 0 0 2px var(--subject); }
+.cqd-choice.is-picked .cqd-choice-letter, .cqd-choice[aria-checked="true"] .cqd-choice-letter { border-color: var(--subject); background: var(--subject); color: #fff; }
+.cqd-choice:focus-visible { outline: 3px solid var(--cqd-ink); outline-offset: 2px; }
+
 /* A tray of recognizable coins; totals remain visually neutral. */
 .cqd-item-coin { padding-bottom: 26px; }
 .cqd-coin-target { display: inline-block; margin-top: 1px; margin-bottom: 15px; padding: 6px 12px; border-radius: 8px; background: var(--subject-soft); color: #3f5962; font-weight: 800; }
@@ -832,7 +873,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .cqd-percent-readout strong { font-family: 'Baloo 2', sans-serif; font-size: 1.65rem; }
 
 /* Press feedback follows the same physical vocabulary everywhere. Never animate canvas geometry. */
-.cqd-coin-add, .cqd-coin-minus, .cqd-chip, .cqd-blank, .cqd-mode-btn, .cqd-link-button, .cqd-tracker-day, .cqd-grade button {
+.cqd-coin-add, .cqd-coin-minus, .cqd-chip, .cqd-blank, .cqd-choice, .cqd-choice-letter, .cqd-mode-btn, .cqd-link-button, .cqd-tracker-day, .cqd-grade button {
   transition: transform var(--cqd-press-time) var(--cqd-ease), background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 .cqd-sheet-stage { transition: box-shadow 180ms ease; }
@@ -1232,7 +1273,8 @@ body:has(.cqd-save-alert:not([hidden])) #app { padding-bottom: calc(220px + env(
 
 /* "Show me the blocks": the demo stays closed until he asks (help 'demand'). Big, calm, obviously a button. */
 .cqd-block-reveal { min-height: 48px; margin: 10px 0 12px; padding: 10px 18px; font-size: 1rem; }
-.cqd-check-tithe, .cqd-check-note { margin: 0 0 7px; padding: 8px 12px; border-radius: 8px; background: #e8f3f6; color: #2b4557; font-size: .95rem; }
+.cqd-check-tithe, .cqd-check-correct, .cqd-check-note { margin: 0 0 7px; padding: 8px 12px; border-radius: 8px; background: #e8f3f6; color: #2b4557; font-size: .95rem; }
+.cqd-check-correct { overflow-wrap: anywhere; }
 .cqd-check-note { background: #fff4d6; color: #5c4310; }
 
 /* ---------- Payday Helper (the younger son's tool): split a payday into Give, Save and Spend ---------- */

@@ -415,7 +415,7 @@ function onClick(event) {
   if (action.indexOf('daily-') === 0) {
     const data = { week: button.dataset.week, day: button.dataset.day, sheet: button.dataset.sheet, item: button.dataset.item, index: button.dataset.index, denom: button.dataset.denom };
     if (action === 'daily-submit' && !dayReadyForSubmit()) return;
-    const value = action === 'daily-word' ? button.dataset.word : action === 'daily-scale' ? button.dataset.value : null;
+    const value = action === 'daily-word' ? button.dataset.word : (action === 'daily-scale' || action === 'daily-choice') ? button.dataset.value : null;
     persist((s) => applyDailyAction(s, action, data, value, new Date().toISOString()));
     render();
   }

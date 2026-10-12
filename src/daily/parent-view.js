@@ -7,7 +7,7 @@
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek, weekdayKey } from '../cq/daily-work/schedule.js';
 import { paydaySummaryHtml } from '../payday/summary.js';
-import { canPayExactly, coinCounts, coinSummary, coinTotal, displayValue, money, storedDay, storedItem } from '../cq/daily-work/daily-work-ui.js';
+import { canPayExactly, choiceLabel, coinCounts, coinSummary, coinTotal, displayValue, money, storedDay, storedItem } from '../cq/daily-work/daily-work-ui.js';
 import { checkParentPin, hasParentPin, parentUnlocked, recentPinResets, setParentPin } from './pin.js';
 import { dayStatus } from './calendar.js';
 import { sheetsForDay } from './sheet-view.js';
@@ -21,6 +21,7 @@ export function createParentState() {
 
 export function gradeSuggestion(item, value) {
   if (item.kind === 'numeric') return Number(value) === Number(item.answer);
+  if (item.kind === 'multiple-choice') return value === item.answer;
   if (item.kind === 'fill-blank') {
     return Array.isArray(value) && Array.isArray(item.answer) && value.length === item.answer.length
       && value.every((entry, index) => entry === item.answer[index]);
@@ -47,6 +48,7 @@ export function gradeSuggestion(item, value) {
 function answerText(item, value) {
   if (value === null || value === undefined) return 'Not answered';
   if (item.kind === 'coin-total' && item.targetCents !== null && item.targetCents !== undefined) return coinSummary(coinCounts(value));
+  if (item.kind === 'multiple-choice') return choiceLabel(item, value) || displayValue(value);
   return displayValue(value);
 }
 
@@ -54,8 +56,9 @@ function choiceKey(sheetId, itemId) {
   return `${sheetId}/${itemId}`;
 }
 
-export function gradeDailyWork(store, weekId, dayKey, choices, nowIso) {
-  const week = DAILY_WORK[store.track] && DAILY_WORK[store.track].weeks && DAILY_WORK[store.track].weeks[weekId];
+// `content` defaults to the shipped DAILY_WORK; it exists so tests can grade inline items.
+export function gradeDailyWork(store, weekId, dayKey, choices, nowIso, content = DAILY_WORK) {
+  const week = content[store.track] && content[store.track].weeks && content[store.track].weeks[weekId];
   if (!week || !DAY_KEYS.includes(dayKey)) return store;
   const selected = choices || {};
   const next = JSON.parse(JSON.stringify(store.dailyWork || { weeks: {} }));
@@ -159,6 +162,12 @@ function titheLine(item, value) {
   return `<p class="cqd-check-tithe">Tithe ${esc(money(item.payCents))}: these coins <strong>${ok ? 'can' : 'cannot'}</strong> pay it exactly.</p>`;
 }
 
+// Parent-only line for a multiple-choice item: the correct choice, spelled out. (Never shown to the kid.)
+function correctChoiceLine(item) {
+  const label = item.kind === 'multiple-choice' ? choiceLabel(item, item.answer) : null;
+  return label ? `<p class="cqd-check-correct"><strong>Correct choice:</strong> ${esc(label)}</p>` : '';
+}
+
 function checkedItemHtml(sheet, item, state) {
   const suggestion = gradeSuggestion(item, state.value);
   const key = choiceKey(sheet.id, item.id);
@@ -167,7 +176,7 @@ function checkedItemHtml(sheet, item, state) {
   const neutral = suggestion === null;
   return `<li class="cqd-check-item"><p class="cqd-check-prompt">${esc(item.prompt)}</p>
     <p class="cqd-check-answer"><strong>Answer:</strong> ${esc(answerText(item, state.value))}</p>
-    ${titheLine(item, state.value)}${item.parentNote ? `<p class="cqd-check-note"><strong>For you:</strong> ${esc(item.parentNote)}</p>` : ''}
+    ${correctChoiceLine(item)}${titheLine(item, state.value)}${item.parentNote ? `<p class="cqd-check-note"><strong>For you:</strong> ${esc(item.parentNote)}</p>` : ''}
     ${neutral ? '<p class="cqd-muted">No automatic suggestion — you decide.</p>' : `<p class="cqd-suggestion">Suggested: ${suggestion ? 'Correct' : 'Incorrect'}</p>`}
     <div class="cqd-grade" role="group" aria-label="Grade this item">
       <button type="button" data-action="daily-parent-grade" data-choice="correct" data-grade-key="${esc(key)}" aria-pressed="${correctChecked}">Correct</button>
@@ -197,8 +206,8 @@ export function suggestedDay(store, week, todayIso) {
   return today ? todayKey : 'monday';
 }
 
-function checkWorkHtml(store, state, todayIso) {
-  const week = currentWeek(DAILY_WORK, store.track, todayIso);
+function checkWorkHtml(store, state, todayIso, content) {
+  const week = currentWeek(content, store.track, todayIso);
   if (!week) return `${pinResetNotice(store)}<section class="cqd-empty"><h1>No Daily Work yet</h1></section>${store.track === 'guided' ? `<section class="cqd-parent">${paydaySummaryHtml(store.payday)}</section>` : ''}`;
   const showPayday = store.track === 'guided' && state.selectedDay === 'payday';
   const selectedDay = showPayday ? 'payday' : DAY_KEYS.includes(state.selectedDay) ? state.selectedDay : suggestedDay(store, week, todayIso);
@@ -222,6 +231,6 @@ function checkWorkHtml(store, state, todayIso) {
     <div class="cqd-actions"><button type="button" class="cqd-button cqd-primary" data-action="daily-parent-save" data-week="${esc(week.id)}" data-day="${selectedDay}">Save</button></div></section>`;
 }
 
-export function renderParent(store, state, todayIso, now = Date.now()) {
-  return parentUnlocked(store, now) ? checkWorkHtml(store, state, todayIso) : pinGateHtml(store, state);
+export function renderParent(store, state, todayIso, now = Date.now(), content = DAILY_WORK) {
+  return parentUnlocked(store, now) ? checkWorkHtml(store, state, todayIso, content) : pinGateHtml(store, state);
 }

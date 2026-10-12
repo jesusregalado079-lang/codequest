@@ -108,6 +108,18 @@ Planned in the Claude desktop app and handed over as the Google Doc `Week 13 pla
 - **Checked against live Weeks 11/12 (the planner could not see them):** no older-son pair repeats Week 12, two repeat Week 11 (`3 out of 10`, `5 out of 20`); no tithe amount, multiplication fact or story name repeats; no worked example is reused as a practice problem. Left as the plan wrote them.
 - Tests: `test/cq-daily-week13.test.js` (every answer re-derived: model coins parsed from the notes and checked with `canPayExactly`, yes/no from the coins in the prompt, percents `100*part/whole`, Wednesday leak-proof at every fill, kid pages leak nothing); browser: `daily-regression.cjs week13 week13-complete`.
 
+## 2d. Week 14 — from the Drive handoff, 2026-10-12
+Planned in the Claude desktop app and handed over as two Google Docs in the Drive folder `CodeQuest Plans`: `Week 14 plan` (Math, Word Problems, CodeQuest, verses) and `Week 14 Bible reading (updated)` (the third sheet every weekday; it supersedes the plan's older Bible description, and the older Bible doc was trashed). `guided14` / `standard14`, both `assignedWeekOf '2026-10-12'`; Week 13 is untouched and the weekend catch-up shows it Sat/Sun 10/10-10/11. From Mon 10/12 to Sun 10/18 Week 14 shows; Mon 10/19 shows nothing until Week 15 exists. Wording, answers, word banks and parent notes are copied from the docs; the plan's "INTENTIONAL REPEAT" markers stay in grown-up notes and never reach a kid page.
+
+- **Multiple choice (new item kind, see section 3):** Bible Reading Mon, Tue and Thu are three questions with three lettered choices, the same for both boys. The kid taps a card and is never told whether it is right; Parent Mode shows the pick, the correct choice and the note, and a wrong mark clears the pick and reopens that question. With only three choices a retry can be guessed by elimination.
+- **Bible Reading (third sheet Mon-Fri, both boys, same passage):** Exodus 1:1-22, 2:1-25, 3:1-22, "4:1-23, then 4:27-31" (4:24-26 left out on purpose), 5:1-23. Wed and Fri are one `long-text` item ("Write 2 sentences." older, "Write 1 or 2 sentences." younger). Helpers `choice()`, `bibleChoice()`; typed days reuse `bibleReading()`.
+- **CodeQuest sheet (Tue, Wed):** the plan's text is identical to Week 13, so `codeQuest13()` is reused.
+- **Older son (new skill, decimal multiplication):** Mon tenths, Tue hundredths and the ignore-the-point shortcut, Wed decimal times decimal, Thu all together then percent blocks, Fri real life. Lines 1a/1b/1c are separate items kept in order. Wed: a `fill-blank` "bigger, smaller" line before each problem. Thu: estimate lines, and the percent blocks (3 out of 16, 11 out of 40) use `wholeBlocks` with `help: 'unit'` ("1 block = X%"); Fri: 10 out of 16 and 33 out of 40 with `help: 'clues'`. Typed decimals are compared as numbers, so 2.5 = 2.50.
+- **Younger son:** Mon/Tue percent as "out of 100" with coins and the money jars (plain typed numbers, no percent sign); Wed-Fri choosing add / subtract / multiply / divide (each story is an operation line from a word bank, then a "Solve it." line), with Week 13 multiplication facts repeated on purpose. Math sheets stay at 7-8 items.
+- **Verses:** Ephesians 4:31-32 (three blanks: bitterness, behavior, forgiving); Colossians 3:13 (two: faults, forgave).
+- **Checked against live Weeks 11-13:** no story name or percent-block pair repeats; no worked example is reused as a practice problem; the only repeats are the plan's intentional ones.
+- Tests: `test/cq-daily-week14.test.js` (decimal products via BigInt, stepped chains, bigger/smaller, percent blocks, coin percents, operation choice and result, Bible multiple choice, kid pages leak nothing) and `test/cq-daily-choice.test.js` (the multiple-choice engine); browser: `daily-regression.cjs week14 week14-complete`.
+
 ## 3. Content data shape (per profile)
 ```
 DailyWorkContent = {
@@ -137,7 +149,7 @@ Sheet = {
 }
 Item = {
   id: string,
-  kind: 'numeric' | 'fill-blank' | 'short-text' | 'long-text' | 'scale' | 'coin-total',
+  kind: 'numeric' | 'fill-blank' | 'short-text' | 'long-text' | 'scale' | 'coin-total' | 'multiple-choice',
   prompt: string,
   wordBank: string[] | null,       // fill-blank only
   answer: string | number | (string | number)[] | null,  // an array for a multi-blank fill-blank item (Memory Verse has 2 blanks, in order); a single value otherwise. numeric/fill-blank/coin-total: known, computed by the lead. null on short-text/long-text/scale — always parent-judged.
@@ -161,6 +173,19 @@ Two modes, confirmed against the real Grade 4 Week 11 packet (both boys, coins +
 - **"Show two different ways"** (the packet asks for this on several items) — no new field. Author it as two sibling items sharing the same `targetCents`/`answer`, same as any other pair of items on a sheet.
 
 Either way: **a live running total on screen is fine — that's just reflecting the kid's own actions, same as watching a number while typing it. The app must never auto-compare that total to `targetCents`/`answer` and reveal right or wrong itself.** That stays the parent's call in §5, same as every other item kind — the interactive doesn't get to grade itself just because it's more visual. Exact interaction (tap-to-add vs. real drag-and-drop) is a build-time UI call, not a design fork; noted here only so the schema anticipates it. This makes checking easy in §5 either way: the parent sees the actual coins chosen for a build-the-amount item, or the plain total for a count-the-pile one.
+**`multiple-choice` (added Week 14 — pick A, B or C):**
+```
+ChoiceItem = Item & {
+  kind: 'multiple-choice',
+  choices: string[],               // 2-5 option texts in display order; letters are implied by index (A, B, C ...)
+  answer: string,                  // the correct LETTER, e.g. 'A' — parent-only
+  parentNote?: string,             // shown only in Parent Mode ("For you:")
+}
+```
+- `ItemState.value` is the picked **letter** (`'B'`) or `null`. Action: `daily-choice` (`data-value="B"`); a letter outside A-E or beyond the item's choice count is ignored. Picking another letter replaces the pick. Any non-null pick counts as answered for submit-readiness.
+- Kid page: a `role="radiogroup"` of big tappable cards (`role="radio"`, `aria-checked`), the picked card highlighted. **Neutrality:** the kid markup never reads `answer` or `parentNote` and carries no correctness class or attribute (a test renders the same item with two different answers and compares the HTML byte for byte).
+- Grading (§5): Parent Mode shows the pick as `B: <text>`, the `Correct choice: C: <text>` and the note, and pre-suggests Correct when `value === answer`, Incorrect otherwise. Marking Incorrect clears the value and reopens just that item, as for every kind. A locked (already-correct) row shows `B: <text>`.
+
 Per-item state (kid's answer + grading) is stored separately from the content above, so re-authoring next week never touches this week's history. It lives at `cq.dailyWork` **inside each profile**, exactly where `cq.lessons` already lives — content is shared per track, progress is per boy:
 ```
 DailyWorkState = {

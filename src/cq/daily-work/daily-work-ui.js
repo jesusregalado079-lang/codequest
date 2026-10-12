@@ -128,13 +128,38 @@ export function displayValue(value) {
   return String(value);
 }
 
+// Multiple choice: the stored value is the picked LETTER ('A'...'E'), the letters are implied by
+// each choice's position in item.choices. Nothing here (or in any kid-facing markup) reads
+// item.answer; whether a pick is right is decided only in parent mode.
+const CHOICE_LETTERS = 'ABCDE';
+
+export function choiceLetter(index) {
+  return CHOICE_LETTERS.charAt(index);
+}
+
+// "B: <choice text>" for a stored letter, or null when the value is not a letter this item has.
+export function choiceLabel(item, letter) {
+  const choices = Array.isArray(item && item.choices) ? item.choices : [];
+  if (typeof letter !== 'string' || letter.length !== 1) return null;
+  const index = CHOICE_LETTERS.indexOf(letter);
+  return index >= 0 && index < choices.length ? `${letter}: ${choices[index]}` : null;
+}
+
+function validChoice(letter, count) {
+  if (typeof letter !== 'string' || letter.length !== 1) return false;
+  const index = CHOICE_LETTERS.indexOf(letter);
+  const limit = Number.isInteger(count) && count > 0 ? Math.min(count, CHOICE_LETTERS.length) : CHOICE_LETTERS.length;
+  return index >= 0 && index < limit;
+}
+
 function itemData(week, dayKey, sheet, item) {
   return `data-week="${esc(week.id)}" data-day="${esc(dayKey)}" data-sheet="${esc(sheet.id)}" data-item="${esc(item.id)}"`;
 }
 
 function lockedItem(item, state) {
   const text = item.kind === 'coin-total' && state.value && typeof state.value === 'object'
-    ? coinSummary(coinCounts(state.value)) : displayValue(state.value);
+    ? coinSummary(coinCounts(state.value))
+    : (item.kind === 'multiple-choice' && choiceLabel(item, state.value)) || displayValue(state.value);
   return `<div class="cq-dw-locked"><span>${esc(text)}</span></div>`;
 }
 
@@ -194,6 +219,10 @@ function renderItem(week, dayKey, sheet, item, state, locked) {
   if (item.kind === 'fill-blank') {
     const blanks = blankValues(item, state.value);
     return `<li class="cq-dw-item"><p>${esc(item.prompt)}</p><div class="cq-dw-blanks" aria-label="Your word choices">${blanks.map((word, index) => `<button type="button" class="cq-dw-blank" data-action="daily-blank" data-index="${index}" ${data}>${word ? esc(word) : 'Blank'}</button>`).join('')}</div><div class="cq-options cq-dw-bank" aria-label="Word bank">${(item.wordBank || []).map((word) => `<button type="button" class="cq-chip" data-action="daily-word" data-word="${esc(word)}" ${data}>${esc(word)}</button>`).join('')}</div></li>`;
+  }
+  if (item.kind === 'multiple-choice') {
+    // Old PC-hub path only (the tab was removed): plain chips, nothing fancy.
+    return `<li class="cq-dw-item"><p>${esc(item.prompt)}</p><div class="cq-options" role="radiogroup" aria-label="Choose one answer">${(item.choices || []).map((text, index) => { const letter = choiceLetter(index); return `<button type="button" class="cq-chip" role="radio" data-action="daily-choice" data-value="${letter}" aria-checked="${state.value === letter}" ${data}>${letter}: ${esc(text)}</button>`; }).join('')}</div></li>`;
   }
   if (item.kind === 'scale') {
     return `<li class="cq-dw-item"><p>${esc(item.prompt)}</p><div class="cq-options cq-dw-scale" aria-label="Choose a number">${Array.from({ length: item.scaleMax || 0 }, (_, index) => { const value = index + 1; return `<button type="button" class="cq-chip" data-action="daily-scale" data-value="${value}" aria-pressed="${state.value === value}" ${data}>${value}</button>`; }).join('')}</div></li>`;
@@ -271,6 +300,9 @@ export function updateDailyWork(cq, action, data, value, nowIso) {
   // daily-percent-set: the dedicated iPad page's 100-square percent grid — same "store a plain
   // number" write as daily-scale, just a different picker UI over the same numeric item shape.
   if (action === 'daily-scale' || action === 'daily-percent-set') return setItem(cq, data, Number(value));
+  // daily-choice: store the picked letter. data.choiceCount (set from the authored item by the
+  // caller) bounds the letters; anything that is not one valid letter leaves the state untouched.
+  if (action === 'daily-choice') return validChoice(value, data.choiceCount) ? setItem(cq, data, value) : cq;
   if (action === 'daily-word' || action === 'daily-blank') {
     const current = storedItem(storedDay(cq, data.week, data.day), data.sheet, data.item).value;
     const blanks = blankValues({ answer: data.answer }, current);

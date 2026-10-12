@@ -45,7 +45,7 @@ for (const track of ['guided', 'standard']) {
   assert.equal(DAILY_WORK[track].weeks['week-12'].assignedWeekOf, '2026-09-28', 'Week 12 is untouched');
   ['2026-10-03', '2026-10-04'].forEach((day) => assert.equal(currentWeek(DAILY_WORK, track, day).id, 'week-12', `${track} ${day}: the weekend still shows Week 12`));
   ['2026-10-05', '2026-10-06', '2026-10-09', '2026-10-10', '2026-10-11'].forEach((day) => assert.equal(currentWeek(DAILY_WORK, track, day).id, 'week-13', `${track} ${day}`));
-  assert.equal(currentWeek(DAILY_WORK, track, '2026-10-12'), null, 'nothing is authored after Week 13 yet');
+  assert.equal(currentWeek(DAILY_WORK, track, '2026-10-12').id, 'week-14', 'Week 14 takes over on Monday 10/12 (see cq-daily-week14.test.js)');
 }
 
 // ---------- shape: the week the plan describes ----------

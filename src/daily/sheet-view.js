@@ -8,7 +8,7 @@ import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { quantityVessel, shadeCells, tallyMarks } from './manipulatives.js';
 import { blockView } from './blocks.js';
 import {
-  OK_STATUS, allItems, coinCounts, coinTotal, displayValue, hasFixes, isComplete, itemMeta,
+  OK_STATUS, allItems, choiceLabel, choiceLetter, coinCounts, coinTotal, displayValue, hasFixes, isComplete, itemMeta,
   itemWithSheet, ready, storedItem, updateDailyWork,
 } from '../cq/daily-work/daily-work-ui.js';
 
@@ -71,7 +71,8 @@ function blankValues(item, value) {
 
 function lockedRow(item, state) {
   const text = item.kind === 'coin-total' && state.value && typeof state.value === 'object'
-    ? `${coinTotal(coinCounts(state.value)) ? money(coinTotal(coinCounts(state.value))) : 'No coins yet'}` : displayValue(state.value);
+    ? `${coinTotal(coinCounts(state.value)) ? money(coinTotal(coinCounts(state.value))) : 'No coins yet'}`
+    : (item.kind === 'multiple-choice' && choiceLabel(item, state.value)) || displayValue(state.value);
   return `<p class="cqd-item-prompt">${esc(item.prompt)}</p><div class="cqd-locked" aria-label="Locked, already correct"><span>${esc(text)}</span></div>`;
 }
 
@@ -187,6 +188,15 @@ function renderItem(week, dayKey, sheet, item, state, locked, fillOf, revealOf) 
       <div class="cqd-bank" aria-label="Word bank">${(item.wordBank || []).map((word) => `<button type="button" class="cqd-chip" data-action="daily-word" data-word="${esc(word)}" ${data}>${esc(word)}</button>`).join('')}</div>
     </li>`;
   }
+  if (item.kind === 'multiple-choice') {
+    // Nothing in this markup reads item.answer or item.parentNote: the picked card is highlighted
+    // the same way whichever choice is correct (a test renders two answers and compares bytes).
+    const labelId = `cqd-q-${esc(sheet.id)}-${esc(item.id)}`;
+    return `<li class="cqd-item cqd-item-choice">
+      <p class="cqd-item-prompt" id="${labelId}">${esc(item.prompt)}</p>
+      <div class="cqd-choices" role="radiogroup" aria-labelledby="${labelId}">${(item.choices || []).map((text, index) => { const letter = choiceLetter(index); const picked = state.value === letter; return `<button type="button" class="cqd-choice${picked ? ' is-picked' : ''}" role="radio" aria-checked="${picked}" data-action="daily-choice" data-value="${letter}" ${data}><span class="cqd-choice-letter">${letter}</span><span class="cqd-choice-text">${esc(text)}</span></button>`; }).join('')}</div>
+    </li>`;
+  }
   if (item.kind === 'scale') {
     return `<li class="cqd-item">
       <p class="cqd-item-prompt">${esc(item.prompt)}</p>
@@ -243,10 +253,13 @@ export function dayComplete(dayState, sheets) {
 // Mirrors ui.js's onAction/onInput daily-* handling exactly (itemMeta enrichment, then
 // updateDailyWork) so this page's writes are byte-for-byte the same shape the hub tab already
 // produces and the parent grading view already expects — just called from this page's own wiring.
-export function applyDailyAction(store, action, rawData, value, nowIso) {
+export function applyDailyAction(store, action, rawData, value, nowIso, content = DAILY_WORK) {
   const data = { ...rawData };
-  const item = itemMeta(DAILY_WORK, store.track, data);
-  if (item) { data.kind = item.kind; data.answer = item.answer; }
+  const item = itemMeta(content, store.track, data);
+  if (item) {
+    data.kind = item.kind; data.answer = item.answer;
+    if (Array.isArray(item.choices)) data.choiceCount = item.choices.length;
+  }
   return updateDailyWork(store, action, data, value, nowIso);
 }
 
