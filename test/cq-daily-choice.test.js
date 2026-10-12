@@ -58,9 +58,12 @@ const base = pick(empty(), 'A');
   assert.equal(pick(base, bad), base, `invalid pick ${JSON.stringify(bad)} is ignored (D/E are beyond 3 choices)`);
 });
 assert.equal(at(base).value, 'A', 'the earlier pick survives invalid input');
-// Without a choice count only the A-E range applies.
-assert.equal(at(pick(empty(), 'E', { choiceCount: undefined })).value, 'E');
-assert.equal(pick(empty(), 'F', { choiceCount: undefined }).dailyWork.weeks['week-test'], undefined, 'F is outside A-E');
+// Without a known choice count NO letter is accepted (found by the Codex check: E used to be stored for a 3-choice item).
+[undefined, null, 0, -1, 2.5, '3', NaN].forEach((count) => {
+  ['A', 'B', 'E', 'F'].forEach((letter) => {
+    assert.equal(pick(empty(), letter, { choiceCount: count }).dailyWork.weeks['week-test'], undefined, `no usable choice count (${String(count)}): ${letter} is refused`);
+  });
+});
 assert.equal(at(pick(empty(), 'E', { choiceCount: 5 })).value, 'E');
 assert.equal(pick(base, 'C', { choiceCount: 2 }), base, 'C is out of range for a 2-choice item');
 
@@ -180,5 +183,34 @@ assert.equal(normalizeDailyWork(oldShape).weeks['week-11'].days.monday.sheets.pr
 const withLetter = normalizeDailyWork({ weeks: { 'week-11': { days: { monday: { submittedAt: null, sheets: { 'bible-reading': { items: { q1: { value: 'B', status: 'answered', checkedAt: null } } } } } } } } });
 assert.equal(withLetter.weeks['week-11'].days.monday.sheets['bible-reading'].items.q1.value, 'B', 'a stored letter is a plain string and round-trips');
 assert.deepEqual(normalizeDailyWork(undefined), { weeks: {} });
+
+// --- saved state is not trusted: junk can never count as a pick (found by the Codex check) ------
+// Real Week 14 multiple-choice item: Monday Bible Reading q1 has three choices (A to C).
+const MC_KEY = { weekId: 'week-14', day: 'monday', sheet: 'bible-reading', item: 'q1' };
+const saved = (value, status = 'answered', checkedAt = null) => ({ weeks: { [MC_KEY.weekId]: { days: { [MC_KEY.day]: { submittedAt: null, sheets: { [MC_KEY.sheet]: { items: { [MC_KEY.item]: { value, status, checkedAt } } } } } } } } });
+const loaded = (value, status, checkedAt) => normalizeDailyWork(saved(value, status, checkedAt)).weeks[MC_KEY.weekId].days[MC_KEY.day].sheets[MC_KEY.sheet].items[MC_KEY.item];
+['A', 'B', 'C'].forEach((letter) => {
+  assert.deepEqual(loaded(letter), { value: letter, status: 'answered', checkedAt: null }, `real letter ${letter} survives`);
+});
+assert.deepEqual(loaded('C', 'correct', '2026-10-12T12:00:00.000Z'), { value: 'C', status: 'correct', checkedAt: '2026-10-12T12:00:00.000Z' }, 'a checked, correct pick is untouched');
+assert.deepEqual(loaded(null, 'wrong', '2026-10-12T12:00:00.000Z'), { value: null, status: 'wrong', checkedAt: '2026-10-12T12:00:00.000Z' }, 'a parent-marked wrong item (value cleared) stays wrong so it reopens');
+[2, {}, 'a', 'AA', '', 'D', 'E', 'F', '__proto__', 'A'.repeat(5000), [], ['A'], true].forEach((junk) => {
+  const item = loaded(junk, 'answered');
+  assert.equal(item.value, null, `junk ${JSON.stringify(junk).slice(0, 20)} is dropped`);
+  assert.equal(item.status, 'unanswered', 'and the item is unanswered again');
+  const checked = loaded(junk, 'correct', '2026-10-12T12:00:00.000Z');
+  assert.deepEqual(checked, { value: null, status: 'unanswered', checkedAt: null }, `a "correct" mark on junk ${JSON.stringify(junk).slice(0, 20)} cannot complete the day`);
+});
+// Other kinds under the same ids are NOT touched: a numeric item keeps any value (here the same key in Week 13 is not multiple choice).
+assert.equal(normalizeDailyWork({ weeks: { 'week-13': { days: { monday: { submittedAt: null, sheets: { 'bible-reading': { items: { q1: { value: 'Z', status: 'answered', checkedAt: null } } } } } } } } }).weeks['week-13'].days.monday.sheets['bible-reading'].items.q1.value, 'Z', 'only multiple-choice items are validated');
+
+// A half-saved week (no days) must not crash the load (found by the Codex check).
+['week-11', 'week-13', 'week-14'].forEach((weekId) => {
+  [{}, { days: null }, { days: [] }, { days: 'x' }, { days: { monday: null } }, { days: { monday: { sheets: null } } }, { days: { monday: { sheets: { s: null } } } }].forEach((half) => {
+    const out = normalizeDailyWork({ weeks: { [weekId]: half } });
+    assert.ok(out.weeks[weekId] && typeof out.weeks[weekId].days === 'object', `${weekId} ${JSON.stringify(half)} loads as an empty week`);
+  });
+});
+assert.deepEqual(normalizeDailyWork({ weeks: { 'week-14': {} } }), { weeks: { 'week-14': { days: {} } } });
 
 console.log('cq-daily-choice tests passed');

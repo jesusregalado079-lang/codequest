@@ -148,7 +148,8 @@ export function choiceLabel(item, letter) {
 function validChoice(letter, count) {
   if (typeof letter !== 'string' || letter.length !== 1) return false;
   const index = CHOICE_LETTERS.indexOf(letter);
-  const limit = Number.isInteger(count) && count > 0 ? Math.min(count, CHOICE_LETTERS.length) : CHOICE_LETTERS.length;
+  // No known choice count means no letter is accepted (the caller must pass the authored count).
+  const limit = Number.isInteger(count) && count > 0 ? Math.min(count, CHOICE_LETTERS.length) : 0;
   return index >= 0 && index < limit;
 }
 
