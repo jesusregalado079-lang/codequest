@@ -87,4 +87,19 @@ export default [
       },
     ],
   },
+  {
+    title: 'Hands-On Networking Labs, Free Tier (2026)',
+    blurb:
+      'Pro has subnetting, firewall and router labs but no switch command-line practice (VLANs, trunks, routing). This browser lab site fills that gap, and VLANs and segmentation come back in Security+. Use the free tier; the paid plan is optional and not needed to start.',
+    source: { label: '@archin3t · Instagram reel', url: 'https://www.instagram.com/reel/DeVhieCM9aq/' },
+    links: [
+      {
+        id: 's3-switchlab',
+        name: 'SwitchLab',
+        by: 'SwitchLab',
+        url: 'https://switchlab.dev',
+        note: 'Free tier ($0, no card): sandbox, flashcards, Meet the CLI, Learn Switching, Network Foundations 1-3, the first few routing labs, and one full CCNA practice exam with unlimited retakes. The 43 CCNA command-line labs need a paid plan ($22/month or $99/year). Checked 2026-10-13; the Reddit quotes on its home page are the site\'s own picks.',
+      },
+    ],
+  },
 ];
