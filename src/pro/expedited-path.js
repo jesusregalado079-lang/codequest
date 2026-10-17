@@ -49,8 +49,11 @@ export default [
     months: 'months 2–4+',
     cost: '$0',
     hours: [12, 24],
-    blurb: 'Do not wait for Security+ to start building paid technical experience. Apply for Tier 1 help desk, service desk, desktop support, IT technician and security-adjacent support roles while continuing the roadmap.',
+    blurb: 'Forage simulations are optional application evidence; their time is not included in this stage’s application budget. Do not wait for Security+ to start building paid technical experience. Apply for Tier 1 help desk, service desk, desktop support, IT technician and security-adjacent support roles while continuing the roadmap.',
     items: [
+      {"key": "exp2-forage-commonwealth", "name": "Forage: Commonwealth Bank Introduction to Cybersecurity. Free optional job simulation; practice data analysis and incident communication. Add completed work as a simulation, not employment.", "url": "https://www.theforage.com/simulations/commonwealth-bank/intro-cybersecurity-rdxl", "hours": 0},
+      {"key": "exp2-forage-aig", "name": "Forage: AIG Shields Up Cybersecurity. Free optional vulnerability-response and ransomware-recovery simulation. Save your explanation for interviews; label it as simulated work.", "url": "https://www.theforage.com/simulations/aig/cybersecurity-ku1i", "hours": 0},
+      {"key": "exp2-forage-datacom", "name": "Forage: Datacom Cyber Security Operations. Free optional breach-investigation and recommendations simulation. Use it for interview practice; keep applying while you study.", "url": "https://www.theforage.com/simulations/datacom/cybersecurity-zm6d", "hours": 0},
       { key: 'exp2-resume', name: 'Create a technical resume version featuring CodeQuest/AI projects, support lab, GitHub, A+ progress and troubleshooting evidence', hours: 4 },
       { key: 'exp2-postings', name: 'Save 10 current local/location-eligible IT support postings and record recurring skills/cert requirements', hours: 3 },
       { key: 'exp2-apps10', name: 'Submit first 10 targeted applications', hours: 4 },

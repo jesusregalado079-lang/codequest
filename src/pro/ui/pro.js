@@ -381,6 +381,13 @@ function renderStudyGroups(groups, road = null) {
         <div class="c-card-body">
           ${next ? nextUpHtml(next) : ''}
           <p class="chapter-lead">${esc(g.blurb)}</p>
+          ${g.related ? `<p class="study-note"><a href="${esc(g.related.href)}">${esc(g.related.label)}</a></p>` : ''}
+          ${g.guide ? `<details class="c-panel study-guide" open>
+            <summary><strong>${esc(g.guide.title)}</strong></summary>
+            <p class="study-note">${esc(g.guide.intro)}</p>
+            <ol>${g.guide.steps.map((step) => `<li><p class="study-note">${esc(step)}</p></li>`).join('')}</ol>
+            <p class="study-note">Sources: ${g.guide.sources.map((source) => `<a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.label)}</a>`).join(' · ')}</p>
+          </details>` : ''}
           <div class="study-list">
           ${g.links
             .map((l) => {
@@ -1168,6 +1175,7 @@ function showCareerProgress(backupStatus) {
           <ul class="gate-ul">${gate.triggers.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
           <p class="study-note"><strong>Possible second cert — one only, by the branch you're actually on:</strong></p>
           <ul class="gate-ul">${gate.second.map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.name)} <span aria-hidden="true">↗</span></a> <span class="study-by">${esc(s.by)}</span> — ${esc(s.note)}</li>`).join('')}</ul>
+          <p class="study-note"><a href="#/resources">Approved pentesting certification ladder: Studies</a></p>
           <p class="study-note"><strong>Ratings Codex overruled:</strong></p>
           <ul class="gate-ul">${gate.overruled.map((o) => `<li>${esc(o)}</li>`).join('')}</ul>
         </div>
