@@ -1,12 +1,13 @@
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
 import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
-import { blockFillFor, commit, drawingFor, historyFor, load, refreshed, saveDrawing, setBlockFill, snapshotHistory, withTrack } from './store.js';
+import { blockFillFor, celebrationSeen, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, setBlockFill, snapshotHistory, withTrack } from './store.js';
 import { blockPlan, nextFill } from './blocks.js';
 import { currentWeekSnapshots, renderCalendar, renderVerseScreen } from './calendar.js';
 import { applyDailyAction, dayComplete, dayReady, dayReopened, renderSheetArticle, sheetsForDay } from './sheet-view.js';
 import { attachDrawing, loadDrawing, sizeCanvas } from './drawing.js';
 import { createDailyMotion } from './motion.js';
+import { celebrationForSheet, celebrationHtml, trophyButtonHtml } from './celebration.js';
 import { act as paydayReduce, newSession as newPayday } from '../payday/session.js';
 import { abandonOpen, actOnOpen, addSession, openSession } from '../payday/state.js';
 import { renderPayday } from '../payday/view.js';
@@ -23,6 +24,8 @@ let parentState = createParentState();
 let drawingController = null;
 let pinPending = false;
 let parentSession = 0;
+let openCelebrationMessage = null;
+let celebrationReturnFocus = null;
 // 'Show me the blocks' taps (Thursday-style demo-on-demand problems). Kept for this visit only: reload and the demo is closed again.
 const revealedBlocks = new Set();
 const revealKey = (week, day, sheet, item) => `${week}|${day}|${sheet}|${item}`;
@@ -109,20 +112,22 @@ function sheetScreenHtml() {
   const dayState = storedDay(store, week.id, route.dayKey);
   const completed = dayComplete(dayState, allSheets);
   const reopened = dayReopened(dayState, allSheets);
-  const nav = `<div class="cqd-sheet-nav"><button type="button" class="cqd-link-button" data-action="back-to-calendar">← This week</button></div>`;
+  const sheet = allSheets[index];
+  const message = celebrationForSheet(week, sheet);
+  const nav = `<div class="cqd-sheet-nav"><button type="button" class="cqd-link-button" data-action="back-to-calendar">← This week</button>${message ? trophyButtonHtml() : ''}</div>`;
   if (dayState.submittedAt && completed) {
     return `${nav}<section class="cqd-empty cqd-finished"><h1>All done, great job!</h1><p>Your parent checked everything for ${route.dayKey}.</p></section>`;
   }
   if (dayState.submittedAt && !reopened) {
     return `${nav}<section class="cqd-empty"><h1>Nice work!</h1><p>Waiting for a parent to check it.</p></section>`;
   }
-  const sheet = allSheets[index];
   const pager = allSheets.length > 1
     ? `<div class="cqd-pager">
         <button type="button" class="cqd-button" data-action="prev-sheet" ${index === 0 ? 'disabled' : ''}>‹ Prev</button>
         <span class="cqd-pager-middle"><span class="cqd-pager-count">Sheet ${index + 1} of ${allSheets.length}</span><span class="cqd-pager-dots" aria-hidden="true">${allSheets.map((s, i) => `<span class="cqd-dot ${i === index ? 'is-current' : ''}"></span>`).join('')}</span></span>
         <button type="button" class="cqd-button" data-action="next-sheet" ${index === allSheets.length - 1 ? 'disabled' : ''}>Next ›</button>
-      </div>` : '';
+      </div>` : week.breakWeek === true || (!(week.weekItems || []).length && sheet.subject === 'bible-reading')
+    ? '<div class="cqd-pager cqd-pager-single"><span class="cqd-pager-count">Sheet 1 of 1</span></div>' : '';
   const ready = dayReady(dayState, allSheets);
   return `${nav}
     ${reopened ? '<p class="cqd-reopen">A parent sent back a few answers to fix. Your finished answers are locked.</p>' : ''}
@@ -145,6 +150,35 @@ function sheetScreenHtml() {
     </div>
     ${pager}
     <div class="cqd-actions"><button type="button" class="cqd-button cqd-primary" data-action="daily-submit" data-week="${week.id}" data-day="${route.dayKey}" ${ready ? '' : 'disabled'}>I’m done — go get a parent!</button></div>`;
+}
+
+function currentCelebration() {
+  if (route.screen !== 'sheet') return null;
+  const week = currentWeek(DAILY_WORK, store.track, todayIso());
+  const sheet = week && sheetsForDay(week, route.dayKey)[route.sheetIndex];
+  return celebrationForSheet(week, sheet);
+}
+
+function showCelebration(message, focusTarget) {
+  if (!message || openCelebrationMessage) return;
+  openCelebrationMessage = message;
+  celebrationReturnFocus = focusTarget || app.querySelector('[data-action="open-celebration"]') || app.querySelector('[data-action="back-to-calendar"]');
+  app.insertAdjacentHTML('beforeend', celebrationHtml(message));
+  app.querySelector('[data-action="close-celebration"]').focus({ preventScroll: true });
+}
+
+function closeCelebration() {
+  if (!openCelebrationMessage) return;
+  persist((s) => markCelebrationSeen(s, store.track, openCelebrationMessage.id, new Date().toISOString()));
+  openCelebrationMessage = null;
+  app.querySelector('.cqd-celebration-overlay')?.remove();
+  if (celebrationReturnFocus?.isConnected) celebrationReturnFocus.focus({ preventScroll: true });
+  celebrationReturnFocus = null;
+}
+
+function showFirstCelebration() {
+  const message = currentCelebration();
+  if (message && !celebrationSeen(store, store.track, message.id)) showCelebration(message);
 }
 
 function setupDrawing() {
@@ -236,7 +270,9 @@ function render(motionIntent) {
   else if (route.screen === 'sheet') { app.innerHTML = sheetScreenHtml(); setupDrawing(); }
   else if (route.screen === 'payday') { app.innerHTML = renderPayday(paydayCurrent(), { confirmRestart: paydayAsk }); }
   else if (route.screen === 'verse') {
-    app.innerHTML = `<div class="cqd-sheet-nav"><button type="button" class="cqd-link-button" data-action="back-to-calendar">← This week</button></div>${renderVerseScreen(store, todayIso())}`;
+    const verse = renderVerseScreen(store, todayIso());
+    if (verse) app.innerHTML = `<div class="cqd-sheet-nav"><button type="button" class="cqd-link-button" data-action="back-to-calendar">← This week</button></div>${verse}`;
+    else { route = { screen: 'calendar', dayKey: null, sheetIndex: 0 }; app.innerHTML = renderCalendar(store, todayIso(), viewedMonth.year, viewedMonth.month); }
   }
   else {
     snapshotToday();
@@ -261,6 +297,10 @@ function onClick(event) {
   if (!button || !app.contains(button)) return;
   const action = button.dataset.action;
 
+  if (action === 'close-celebration') { closeCelebration(); return; }
+  if (openCelebrationMessage) return;
+  if (action === 'open-celebration') { showCelebration(currentCelebration(), button); return; }
+
   if (action === 'pick-track') {
     persist((s) => withTrack(s, button.dataset.track));
     render();
@@ -270,6 +310,7 @@ function onClick(event) {
     detachDrawing();
     route = { screen: 'sheet', dayKey: button.dataset.day, sheetIndex: 0 };
     render();
+    showFirstCelebration();
     return;
   }
   if (action === 'back-to-calendar') {
@@ -281,6 +322,7 @@ function onClick(event) {
   if (action === 'prev-sheet' || action === 'next-sheet') {
     route.sheetIndex += action === 'prev-sheet' ? -1 : 1;
     render();
+    showFirstCelebration();
     return;
   }
   if (action === 'set-mode') {
@@ -313,6 +355,7 @@ function onClick(event) {
   }
   if (action.indexOf('payday-') === 0) { handlePayday(button, action); return; }
   if (action === 'open-verse') {
+    if (!renderVerseScreen(store, todayIso())) return;
     route = { screen: 'verse', dayKey: null, sheetIndex: 0 };
     render('open-verse');
     return;
@@ -484,6 +527,11 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 
 // Enter in a Payday Helper answer box presses that screen's main button.
 app.addEventListener('keydown', (event) => {
+  if (openCelebrationMessage) {
+    if (event.key === 'Escape') { event.preventDefault(); closeCelebration(); }
+    else if (event.key === 'Tab') { event.preventDefault(); app.querySelector('[data-action="close-celebration"]')?.focus(); }
+    return;
+  }
   if (event.key !== 'Enter' || !event.target.matches || !event.target.matches('[data-payday-input]')) return;
   event.preventDefault();
   const main = app.querySelector('.pd-actions .cqd-primary[data-action]');

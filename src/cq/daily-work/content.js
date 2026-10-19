@@ -959,9 +959,79 @@ const standard14 = Week('week-14', 'Week 14', [
   ]),
 }, '2026-10-12');
 
+// Week 15 (Monday 2026-10-19): break week, with Bible Reading only.
+// Monday and Tuesday repeat the Week 14 sheets, including their balanced choice wording.
+const BIBLE15 = {
+  wednesday: {
+    ref: 'Daniel 1:1-21',
+    items: () => [
+      choice('q1', "Daniel and his friends were taken from home to train in the king's palace in Babylon. What did Daniel decide not to do?", [
+        'Learn the language of Babylon',
+        "Eat the king's rich food and wine",
+        'Meet with the king',
+      ], 'B', "Daniel 1:8. Daniel decided not to eat the king's rich food and wine."),
+      choice('q2', 'Daniel asked for a ten-day test. What happened?', [
+        'They ate vegetables and water, and looked healthier than the others',
+        "They ate the king's food, and looked healthier than the others",
+        'They ate vegetables and water, and got very sick',
+      ], 'A', "Daniel 1:12-15. After ten days on vegetables and water, they looked healthier than the young men who ate the king's food."),
+      choice('q3', 'Near the end of the chapter, who gave Daniel and his three friends knowledge and understanding?', [
+        'The chief official',
+        "The king's teachers",
+        'God',
+      ], 'C', 'Daniel 1:17. God gave the four young men knowledge and understanding.'),
+    ],
+  },
+  thursday: {
+    ref: 'Daniel 3:1-30',
+    items: () => [
+      choice('q1', 'King Nebuchadnezzar set up a huge gold statue and gave an order. What was the order?', [
+        'Bring a gift of gold to the king every day',
+        'Build a new palace for the king and his family',
+        'Bow down to the statue when the music plays',
+      ], 'C', 'Daniel 3:4-6. When the music played, everyone had to bow down to the gold statue, or be thrown into a blazing furnace.'),
+      choice('q2', 'Shadrach, Meshach and Abednego would not bow down. What did they tell the king?', [
+        'God can save us, but even if He does not, we will not bow',
+        'We are sorry, and we will bow down to the statue now',
+        'We did not hear the music, so we did not bow',
+      ], 'A', 'Daniel 3:16-18. They said God was able to save them, but even if He did not, they would not bow down.'),
+      choice('q3', 'The king threw the three men into the furnace, then looked inside. What did he see?', [
+        'The fire had gone out, and the men were asleep',
+        'Four men walking in the fire, not tied up and not hurt',
+        'The three men had escaped before the fire was lit',
+      ], 'B', 'Daniel 3:24-25. The king saw four men walking in the fire, not tied up and not hurt.'),
+    ],
+  },
+};
+const bible15Choice = (day) => bibleChoice(BIBLE15[day].ref, BIBLE15[day].items());
+const bible15Fri = (sentences) => bibleReading('Daniel 6:1-23, then 6:25-28', `Why was Daniel thrown into the lions' den, and how did God take care of him there? ${sentences}`, "A good answer says jealous officials tricked the king into making a law that no one could pray to anyone but the king. Daniel kept praying to God, so he was thrown to the lions, and God sent an angel to shut the lions' mouths, so Daniel was not hurt (Daniel 6:22).");
+const celebration15 = () => ({
+  id: 'week-15-break',
+  trigger: 'bible-reading',
+  blocks: [
+    { type: 'p', text: 'Congratulations, I am proud of you boys and your constant learning!' },
+    { type: 'p', text: 'God loves to give good gifts to His children, and so do I. The Bible says:' },
+    { type: 'quote', text: '"So if you sinful people know how to give good gifts to your children, how much more will your heavenly Father give good gifts to those who ask him." (Matthew 7:11)' },
+    { type: 'p', text: 'So this week is a gift from me to you:' },
+    { type: 'bullets', items: ['A whole week off from your work', '1½ hours of Fortnite this week'] },
+    { type: 'p', text: 'Your Bible reading stays, because that is how we grow closer to our Father in heaven.' },
+    { type: 'signoff', text: 'Love, Dad' },
+  ],
+  button: "I'm ready!",
+});
+const week15 = (sentences) => Object.assign(Week('week-15', 'Week 15', [], {
+  monday: Day([bible14Choice('thursday')]),
+  tuesday: Day([bible14Fri(sentences)]),
+  wednesday: Day([bible15Choice('wednesday')]),
+  thursday: Day([bible15Choice('thursday')]),
+  friday: Day([bible15Fri(sentences)]),
+}, '2026-10-19'), { breakWeek: true, celebration: celebration15() });
+const guided15 = week15('Write 1 or 2 sentences.');
+const standard15 = week15('Write 2 sentences.');
+
 export const DAILY_WORK = deepFreeze({
-  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14 } },
-  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14 } },
+  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14, 'week-15': guided15 } },
+  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14, 'week-15': standard15 } },
 });
 
 export function getWeek(track, weekId) {

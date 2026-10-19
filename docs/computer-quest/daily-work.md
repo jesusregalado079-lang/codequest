@@ -120,6 +120,19 @@ Planned in the Claude desktop app and handed over as two Google Docs in the Driv
 - **Checked against live Weeks 11-13:** no story name or percent-block pair repeats; no worked example is reused as a practice problem; the only repeats are the plan's intentional ones.
 - Tests: `test/cq-daily-week14.test.js` (decimal products via BigInt, stepped chains, bigger/smaller, percent blocks, coin percents, operation choice and result, Bible multiple choice, kid pages leak nothing) and `test/cq-daily-choice.test.js` (the multiple-choice engine); browser: `daily-regression.cjs week14 week14-complete`.
 
+## 2e. Week 15 — break week, 2026-10-19
+From `Week 15 plan` and `Week 15 Bible reading` in Drive. `guided15` / `standard15`, assigned Monday 2026-10-19; Week 14 remains available through Sunday 10/18, Week 15 through Sunday 10/25.
+
+- **Break week:** one Bible Reading sheet each weekday; no Math, Word Problems, CodeQuest, or memory verse. `weekItems` is empty and `breakWeek` is true.
+- **Celebration:** first Bible Reading opening triggers a one-time per-boy pop-up. Its exact plan text includes Matthew 7:11, two gift bullets, `Love, Dad`, and `I'm ready!`; a trophy button reopens it during the week.
+- **Monday and Tuesday:** Exodus 4:1-23, then 4:27-31, and Exodus 5:1-23 reuse the Week 14 Thursday and Friday sheets exactly, including the app's balanced multiple-choice options.
+- **Wednesday:** Daniel 1:1-21, three multiple-choice questions.
+- **Thursday:** Daniel 3:1-30, three multiple-choice questions.
+- **Friday:** Daniel 6:1-23, then 6:25-28, one typed answer; Daniel 6:24 is omitted on purpose.
+- **Both sons:** same passages and multiple-choice questions. Typed prompts end `Write 2 sentences.` for older son and `Write 1 or 2 sentences.` for younger son.
+- **Parent review:** every question has a parent note. Correct letters and notes stay off kid sheets; the app does not mark answers for the boy.
+- **Tests:** `test/cq-daily-week15.test.js` covers schedule, exact content, Week 14 reuse, celebration blocks, choice lengths, and kid-render isolation. The Week 13/14, choice, daily-work, UI, page, and syntax-compat tests pass.
+
 ## 3. Content data shape (per profile)
 ```
 DailyWorkContent = {
@@ -135,6 +148,7 @@ Week = {
     monday: Day, tuesday: Day, wednesday: Day, thursday: Day, friday: Day,
   },
 }
+
 Day = {
   sheets: Sheet[],                // ordered; length and subjects vary by day (see §1) — never assume exactly 2
 }
@@ -156,6 +170,8 @@ Item = {
   scaleMax: number | null,         // scale only, e.g. 5
 }
 ```
+
+**Break week and celebration pop-up:** A week may set `breakWeek: true` and leave `weekItems: []` when there is no memory verse. Its `days` still carry the scheduled sheets, such as one `bible-reading` sheet per weekday; those sheets keep the normal answer, submit, and parent-check flow. An optional `celebration: { id, trigger, blocks, button }` opens once per boy when a sheet with `subject === trigger` is first opened during the current week. `blocks` is an ordered array of `{ type: 'p' | 'quote' | 'signoff', text }` or `{ type: 'bullets', items: string[] }`. The button label comes from `button`; the trophy on matching sheets reopens the message. The iPad store records a seen timestamp under the track and celebration `id`.
 
 **`coin-total` (younger boy — a real coin interactive, not a typed word problem, confirmed 2026-09-22):**
 ```

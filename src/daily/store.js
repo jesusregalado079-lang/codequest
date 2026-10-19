@@ -148,6 +148,32 @@ export function emptyStore() {
   return { track: null, parent: defaultParent(), dailyWork: emptyDailyWorkState(), drawings: {}, history: {}, blockFills: {}, payday: emptyPayday() };
 }
 
+function celebrationKey(track, id) {
+  return TRACKS.includes(track) && typeof id === 'string' && /^[a-z0-9-]{1,80}$/.test(id) ? `${track}:${id}` : null;
+}
+
+function normalizeCelebrationsSeen(value) {
+  const seen = {};
+  const source = object(value);
+  Object.keys(source).forEach((key) => {
+    const separator = key.indexOf(':');
+    if (separator < 0 || celebrationKey(key.slice(0, separator), key.slice(separator + 1)) !== key) return;
+    if (isValidIsoStamp(source[key])) seen[key] = source[key];
+  });
+  return seen;
+}
+
+export function celebrationSeen(store, track, id) {
+  const key = celebrationKey(track, id);
+  return !!(key && normalizeCelebrationsSeen(store.celebrationsSeen)[key]);
+}
+
+export function markCelebrationSeen(store, track, id, nowIso) {
+  const key = celebrationKey(track, id);
+  if (!key || !isValidIsoStamp(nowIso)) return store;
+  return { ...store, celebrationsSeen: { ...normalizeCelebrationsSeen(store.celebrationsSeen), [key]: nowIso } };
+}
+
 function normalize(value, { ink = true } = {}) {
   const s = object(value);
   return {
@@ -158,6 +184,8 @@ function normalize(value, { ink = true } = {}) {
     history: normalizeHistory(s.history),
     blockFills: normalizeBlockFills(s.blockFills),
     payday: normalizePayday(s.payday),
+    // Keep the exact legacy empty-store shape until a celebration has actually been recorded.
+    ...(Object.prototype.hasOwnProperty.call(s, 'celebrationsSeen') ? { celebrationsSeen: normalizeCelebrationsSeen(s.celebrationsSeen) } : {}),
   };
 }
 

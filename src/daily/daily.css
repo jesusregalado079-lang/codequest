@@ -225,7 +225,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .cqd-parent-entry .cqd-link-button { color: #586b78; font-size: .88rem; }
 
 /* Paper worksheet and subject mastheads */
-.cqd-sheet-nav { margin: 0 0 12px; }
+.cqd-sheet-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+.cqd-trophy-button { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 6px 12px; border: 1px solid #c99332; border-radius: 999px; background: #fff2ca; color: #67480e; font-size: .84rem; font-weight: 900; cursor: pointer; }
+.cqd-trophy-button span:first-child { font-size: 1.2rem; line-height: 1; }
 .cqd-sheet-wrap { position: relative; }
 .cqd-sheet-stage { position: relative; border-radius: var(--cqd-radius); }
 .cqd-sheet {
@@ -591,6 +593,49 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .cqd-pager-middle { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 95px; }
 .cqd-pager-count { color: #5f6e75; font-size: .77rem; font-weight: 900; white-space: nowrap; }
 .cqd-pager-dots { display: flex; align-items: center; gap: 6px; }
+.cqd-pager-single { margin: 18px 0 10px; }
+
+/* Week celebration. The confetti stays visible without motion. */
+.cqd-celebration-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; background: rgba(23, 37, 55, .72); }
+.cqd-celebration-dialog { position: relative; width: min(100%, 710px); max-height: calc(100dvh - 32px); overflow-y: auto; border: 4px solid #d6a23c; border-radius: 30px; background: #fffaf0; box-shadow: 0 24px 80px rgba(9, 21, 39, .4); overscroll-behavior: contain; }
+.cqd-celebration-art { position: relative; display: grid; place-items: center; height: 190px; overflow: hidden; background: radial-gradient(circle at 50% 65%, #fff1bd 0, #ffdc7c 40%, #f4b944 100%); }
+.cqd-celebration-glow { position: absolute; width: 190px; height: 190px; border: 3px solid rgba(255,255,255,.65); border-radius: 50%; box-shadow: 0 0 0 19px rgba(255,255,255,.18), 0 0 0 39px rgba(255,255,255,.12); }
+.cqd-celebration-trophy { position: relative; z-index: 1; font-size: 7rem; line-height: 1; filter: drop-shadow(0 12px 10px rgba(100, 55, 7, .25)); animation: cqd-trophy-arrive 650ms var(--cqd-ease) both; }
+.cqd-confetti { position: absolute; width: 9px; height: 17px; border-radius: 2px; background: #4b75aa; transform: rotate(24deg); animation: cqd-confetti-float 2.5s ease-in-out infinite alternate; }
+.cqd-confetti:nth-of-type(4n) { background: #d45d70; }
+.cqd-confetti:nth-of-type(4n + 1) { background: #338873; }
+.cqd-confetti:nth-of-type(4n + 2) { background: #fff8ec; }
+.cqd-confetti-1 { top: 21%; left: 11%; } .cqd-confetti-2 { top: 60%; left: 17%; transform: rotate(-31deg); }
+.cqd-confetti-3 { top: 13%; left: 25%; } .cqd-confetti-4 { top: 74%; left: 29%; transform: rotate(48deg); }
+.cqd-confetti-5 { top: 24%; left: 37%; } .cqd-confetti-6 { top: 67%; left: 40%; transform: rotate(-15deg); }
+.cqd-confetti-7 { top: 9%; left: 49%; } .cqd-confetti-8 { top: 76%; left: 52%; transform: rotate(39deg); }
+.cqd-confetti-9 { top: 20%; left: 61%; } .cqd-confetti-10 { top: 67%; left: 65%; transform: rotate(-40deg); }
+.cqd-confetti-11 { top: 13%; left: 74%; } .cqd-confetti-12 { top: 72%; left: 78%; transform: rotate(18deg); }
+.cqd-confetti-13 { top: 26%; left: 87%; } .cqd-confetti-14 { top: 56%; left: 92%; transform: rotate(-26deg); }
+.cqd-confetti-15 { top: 49%; left: 6%; } .cqd-confetti-16 { top: 9%; left: 93%; transform: rotate(31deg); }
+.cqd-celebration-copy { padding: 28px clamp(24px, 6vw, 48px) 32px; font-size: 1.13rem; line-height: 1.55; }
+.cqd-celebration-copy h2 { margin: 0 0 22px; color: #654311; font-size: clamp(1.7rem, 4vw, 2.3rem); text-align: center; }
+.cqd-celebration-copy p { margin-bottom: 18px; }
+.cqd-celebration-quote { margin: 20px 0; padding: 16px 20px; border-left: 5px solid #d9a749; border-radius: 0 14px 14px 0; background: #fff0ca; color: #493b28; font-size: 1.08em; font-weight: 800; }
+.cqd-celebration-bullets { margin: 16px 0 23px; padding-left: 1.5em; font-weight: 900; }
+.cqd-celebration-bullets li { padding-left: 5px; margin-bottom: 8px; }
+.cqd-celebration-bullets li::marker { color: #bd7924; }
+.cqd-celebration-signoff { color: #6b4e22; font-family: 'Baloo 2', sans-serif; font-size: 1.4rem; font-weight: 700; }
+.cqd-celebration-close { display: block; width: min(100%, 300px); margin: 24px auto 0; font-size: 1.1rem; }
+@keyframes cqd-trophy-arrive { from { opacity: .4; transform: translateY(18px) scale(.8) rotate(-8deg); } to { opacity: 1; transform: translateY(0) scale(1) rotate(0); } }
+@keyframes cqd-confetti-float { from { translate: 0 -5px; } to { translate: 4px 8px; } }
+@media (max-width: 620px) {
+  .cqd-celebration-overlay { padding: 8px; }
+  .cqd-celebration-dialog { max-height: calc(100dvh - 16px); border-width: 3px; border-radius: 21px; }
+  .cqd-celebration-art { height: 142px; }
+  .cqd-celebration-trophy { font-size: 5.5rem; }
+  .cqd-celebration-copy { padding: 23px 20px 26px; font-size: 1rem; }
+  .cqd-celebration-copy h2 { font-size: 1.55rem; }
+  .cqd-celebration-quote { padding: 12px 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cqd-celebration-trophy, .cqd-confetti { animation: none; }
+}
 .cqd-dot { width: 8px; height: 8px; border-radius: 50%; background: #bdc9ca; }
 .cqd-dot.is-current { width: 21px; border-radius: 99px; background: var(--cqd-ink); }
 .cqd-actions { margin-top: 22px; text-align: center; }

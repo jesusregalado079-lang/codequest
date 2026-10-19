@@ -79,8 +79,8 @@ export function currentWeekSnapshots(store, todayIso) {
 // A full month grid (Sunday-first, matching US calendar convention), one cell per day plus nulls
 // padding the first/last rows out to full weeks. Only cells inside the real current week can ever
 // be `clickable` (live content); everything else is a read-only status from history, or blank.
-export function buildMonth(store, year, month, todayIso) {
-  const week = currentWeek(DAILY_WORK, store.track, todayIso);
+export function buildMonth(store, year, month, todayIso, content = DAILY_WORK) {
+  const week = currentWeek(content, store.track, todayIso);
   const thisWeek = new Map(realWeekDates(todayIso).map((d) => [d.iso, d.dayKey]));
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const leadingBlanks = new Date(Date.UTC(year, month, 1)).getUTCDay();
@@ -152,10 +152,10 @@ function monthCellHtml(cell, track) {
   return `<span class="${classes.join(' ')} cqd-month-readonly"${presentation} role="img" aria-label="${esc(accessibleLabel)}"${cell.isToday ? ' aria-current="date"' : ''}>${contents}</span>`;
 }
 
-export function renderCalendar(store, todayIso, viewedYear, viewedMonth) {
-  const week = currentWeek(DAILY_WORK, store.track, todayIso);
+export function renderCalendar(store, todayIso, viewedYear, viewedMonth, content = DAILY_WORK) {
+  const week = currentWeek(content, store.track, todayIso);
   const verse = week ? weekVerse(week) : null;
-  const month = buildMonth(store, viewedYear, viewedMonth, todayIso);
+  const month = buildMonth(store, viewedYear, viewedMonth, todayIso, content);
   const weekdayHeader = DAY_INITIALS.map((initial) => `<span class="cqd-month-weekday">${initial}</span>`).join('');
   const grid = month.cells.map((cell) => monthCellHtml(cell, store.track)).join('');
   const verseButton = verse
@@ -208,10 +208,10 @@ export function renderCalendar(store, todayIso, viewedYear, viewedMonth) {
   </section>`;
 }
 
-export function renderVerseScreen(store, todayIso) {
-  const week = currentWeek(DAILY_WORK, store.track, todayIso);
+export function renderVerseScreen(store, todayIso, content = DAILY_WORK) {
+  const week = currentWeek(content, store.track, todayIso);
   const verse = week ? weekVerse(week) : null;
-  if (!verse) return '<section class="cqd-empty"><h1>No verse this week</h1></section>';
+  if (!verse) return '';
   return `<section class="cqd-verse-screen">
     <div class="cqd-verse-book">
     <div class="cqd-verse-card cqd-verse-card-full">

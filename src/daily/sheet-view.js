@@ -45,6 +45,7 @@ export function sheetsForDay(week, dayKey) {
 // highlighted) for an ungraded reference card — not a quiz anymore, just something to read and
 // practice reciting. Generic over however many blanks a verse has, not hardcoded to 2.
 export function weekVerse(week) {
+  if (!week || week.breakWeek === true) return null;
   const sheet = (week.weekItems || [])[0];
   const item = sheet && (sheet.items || [])[0];
   if (!sheet || !item || item.kind !== 'fill-blank') return null;
