@@ -87,7 +87,13 @@ assert.equal(after1.current.n, 2, 'Phase 1 done: Phase 2 is where he is');
 assert.equal(after1.next.phase, 2);
 assert.ok(after1.milestones.find((m) => m.requires.length === 1 && m.requires[0] === 1).reached, 'the Phase 1 milestone is reached');
 assert.ok(after1.pct > 0 && after1.pct < 100);
-assert.ok(after1.weeksLeft < start.weeksLeft);
+// Finishing Phase 1 takes exactly its hours off what is left. The week count is a rounded-up view of those hours,
+// so it may stay the same when Phase 1 is under a week of study; checking hours keeps this true whatever the totals.
+const p1Hours = after1.coreHoursDone - start.coreHoursDone;
+assert.ok(p1Hours > 0, 'Phase 1 hours count as done');
+assert.equal(after1.coreHoursTotal - after1.coreHoursDone, start.coreHoursTotal - start.coreHoursDone - p1Hours, 'the hours left drop by exactly what Phase 1 took');
+assert.ok(after1.weeksLeft <= start.weeksLeft, 'finishing work never adds weeks');
+assert.equal(after1.weeksLeft, Math.ceil((after1.coreHoursTotal - after1.coreHoursDone) / 21), 'weeks left follow the hours left at 21 hours a week');
 assert.equal(after1.streak, 1);
 
 const fast = jr(p1.done, p1.doneAt, 42);

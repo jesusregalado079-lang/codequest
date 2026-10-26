@@ -15,7 +15,7 @@ const { default: full, extras, milestones, gate } = await import('../src/pro/car
 const { default: studies } = await import('../src/pro/resources.js');
 const { default: stages } = await import('../src/pro/expedited-path.js');
 const { LEGACY_KEYS_V1 } = await import('../src/pro/legacy-keys.js');
-const { EXPEDITED_SHARED_V1, EXPEDITED_SHARED_DIRECT, EXPEDITED_KEPT_SEPARATE } = await import('../src/pro/shared-keys.js');
+const { EXPEDITED_SHARED_V1, EXPEDITED_SHARED_DIRECT, EXPEDITED_KEPT_SEPARATE, STUDIES_SHARED_V1 } = await import('../src/pro/shared-keys.js');
 const progress = await import('../src/pro/progress.js');
 const { groupStats, passMark, quizKey, outKey } = await import('../src/pro/career-logic.js');
 
@@ -23,7 +23,8 @@ const KEY = 'codequest-pro-v1';
 const reset = (state) => { memory.clear(); if (state !== undefined) memory.set(KEY, JSON.stringify(state)); };
 
 // ---------- the data ----------
-const SHARED_IDS = new Set(['ai-fluency', 'linkedin-genai-career-essentials']); // the same course listed in two places
+// the same course listed in two places (KC7 and Wazuh: roadmap Phase 3 and the Studies approved labs, since 2026-10-26)
+const SHARED_IDS = new Set(['ai-fluency', 'linkedin-genai-career-essentials', 'p3-kc7', 'p3-wazuh']);
 const fullLinks = full.flatMap((p) => p.links);
 const extraLinks = extras.flatMap((g) => g.links);
 const studyLinks = studies.flatMap((g) => g.links);
@@ -230,6 +231,19 @@ assert.equal(progress.isStudyDone('p2-the-unix-shell-absolute-beginner-navigatio
 reset();
 progress.ensureMigrated();
 assert.deepEqual(progress.studyDoneMap(), {});
+
+// ---------- Studies copies of KC7 and Wazuh now use the roadmap ids (2026-10-26) ----------
+STUDIES_SHARED_V1.forEach(([from, to]) => {
+  assert.ok(!studyLinks.some((l) => l.id === from), `the old Studies id ${from} is gone`);
+  assert.ok(studyLinks.some((l) => l.id === to) && fullLinks.some((l) => l.id === to), `${to} is on both Studies and the roadmap`);
+});
+reset({ studyDone: { 's-approved-p3-kc7': true } });
+progress.ensureMigrated();
+assert.equal(progress.isStudyDone('p3-kc7'), true, 'a KC7 checkmark saved on Studies carries over to the shared id');
+assert.equal(progress.isStudyDone('p3-wazuh'), false, 'nothing is invented for Wazuh');
+progress.toggleStudyDone('p3-kc7');
+progress.ensureMigrated();
+assert.equal(progress.isStudyDone('p3-kc7'), false, 'the carry-over runs once and never re-ticks it');
 
 // ---------- counts and quizzes ----------
 const p3 = full.find((p) => p.n === 3);

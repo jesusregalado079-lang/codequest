@@ -28,6 +28,15 @@ export const EXPEDITED_SHARED_V1 = Object.freeze([
   ['exp8-owasp-agentic-applications', 'p8-owasp-top-10-for-agentic-applications'],
 ]);
 
+// Added 2026-10-26. The Studies copies of KC7 and Wazuh (from the 10/16 approved batch) had their own ids, so they
+// never showed the roadmap's checkmark. They now use the roadmap ids, as SCHEMA.md requires for the same course listed
+// on two pages. Each pair is [old Studies id, roadmap id]: a checkmark already saved under the old id is carried over
+// once. FROZEN: add a new migration instead of editing this one.
+export const STUDIES_SHARED_V1 = Object.freeze([
+  ['s-approved-p3-kc7', 'p3-kc7'],
+  ['s-approved-p3-wazuh', 'p3-wazuh'],
+]);
+
 // Expedited items that use a roadmap id as their key from the start (nothing to carry over): the two Professor
 // Messer courses, and the items added 2026-10-26 that ask for exactly the roadmap's work. Together with the targets
 // of EXPEDITED_SHARED_V1 this is the complete list of shared checkmarks; the test checks it against the data.
@@ -87,9 +96,8 @@ export const EXPEDITED_KEPT_SEPARATE = Object.freeze([
     expeditedAsks: 'Run Wazuh\'s single-node Docker deployment in WSL2 on the HP, send lab telemetry to it and verify events arrive reliably.',
     roadmap: [
       { id: 'p3-wazuh', where: 'Phase 3', asks: 'A bigger build: a reproducible single-node setup on the HP plus sanitized dashboards and a demo. Custom detections are a separate roadmap item.' },
-      { id: 's-approved-p3-wazuh', where: 'Studies list', asks: 'The Wazuh lab reference: follow the HP setup checklist, keep Sysmon and Defender active, verify telemetry before tests. It sets no finish line of its own.' },
     ],
-    reason: 'Expedited asks only to run Wazuh on the HP and verify that telemetry arrives. The Phase 3 roadmap item also asks for a reproducible setup, sanitized dashboards and a demo, so finishing the Expedited step must not complete it (rule 3). The Studies entry is a lab reference with no task (rule 4).',
+    reason: 'Expedited asks only to run Wazuh on the HP and verify that telemetry arrives. The Phase 3 roadmap item also asks for a reproducible setup, sanitized dashboards and a demo, so finishing the Expedited step must not complete it (rule 3). The Studies Wazuh entry uses the roadmap id, so it shows the same note.',
   },
   {
     key: 'exp5-attack',

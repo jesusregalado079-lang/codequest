@@ -13,7 +13,7 @@ export default [
     guide: hpSetup,
     "links": [
       {
-        "id": "s-approved-p3-kc7",
+        "id": "p3-kc7",
         "name": "KC7: browser investigation cases",
         "by": "KC7 Foundation",
         "url": "https://kc7cyber.com/",
@@ -62,7 +62,7 @@ export default [
         "note": "Free GraphQL practice on the HP after VAmPI and crAPI, or when an authorized target uses GraphQL. Begin in Beginner mode. Follow project setup with localhost-only port bindings. Kept as a later specialization, not a prerequisite for first submissions."
       },
       {
-        "id": "s-approved-p3-wazuh",
+        "id": "p3-wazuh",
         "name": "Wazuh: HP defensive lab",
         "by": "Wazuh",
         "url": "https://documentation.wazuh.com/current/deployment-options/docker/wazuh-container.html",
