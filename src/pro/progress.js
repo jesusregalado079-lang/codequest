@@ -4,6 +4,7 @@
 // from rendering), every write goes through one guarded save() that reports failure instead of throwing, and the
 // learner can export his progress to a file and import it back (the only copy otherwise lives in this browser).
 import { LEGACY_KEYS_V1 } from './legacy-keys.js';
+import { EXPEDITED_SHARED_V1 } from './shared-keys.js';
 import { emptyExamState, mergeExamState, normalizeExamState, normalizeExams } from './exam/exam-logic.js';
 import { isPassed, mergeLabs, normalizeLabs } from './labs/lab-logic.js';
 import LAB_INDEX from './ui/labs/catalog-index.js';
@@ -271,7 +272,9 @@ export function applyKeyMigration(name, pairs) {
 }
 
 export function ensureMigrated() {
-  return applyKeyMigration('ids-2026-10-08', LEGACY_KEYS_V1);
+  const first = applyKeyMigration('ids-2026-10-08', LEGACY_KEYS_V1);
+  applyKeyMigration('expedited-shared-2026-10-26', EXPEDITED_SHARED_V1);
+  return first;
 }
 
 // ---------- backup ----------

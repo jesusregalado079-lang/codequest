@@ -20,7 +20,7 @@ export default [
     blurb: 'Get comfortable with the systems underneath cybersecurity before chasing certifications. The goal is basic confidence with Windows, files, users, permissions, command line, troubleshooting, and a simple VM.',
     items: [
       { key: 'exp0-windows', name: 'Windows basics: files, processes, Task Manager, Device Manager, updates, users and permissions', hours: 5, url: 'https://learn.microsoft.com/en-us/windows/' },
-      { key: 'exp0-shell', name: 'Absolute-beginner shell navigation: pwd, ls, cd, mkdir, cp, mv, rm, help/man', hours: 4, url: 'https://swcarpentry.github.io/shell-novice/' },
+      { key: 'p2-the-unix-shell-absolute-beginner-navigation', name: 'Absolute-beginner shell navigation: pwd, ls, cd, mkdir, cp, mv, rm, help/man', hours: 4, url: 'https://swcarpentry.github.io/shell-novice/' },
       { key: 'exp0-vm', name: 'Create one disposable Windows or Linux virtual machine and document how to start, stop, snapshot and restore it. On an Apple M1 Mac, use UTM or Parallels with Windows 11 on ARM, or a cloud VM; VirtualBox cannot run an x86 Windows guest', hours: 4 },
       { key: 'exp0-proof', name: 'Checkpoint: explain administrator vs standard user, file permissions, process vs service, and what an operating system does without AI assistance', hours: 2 },
     ],
@@ -133,7 +133,7 @@ export default [
     blurb: 'Add Python, PowerShell, cloud/IAM and CI only after the employment-first foundation is moving. Pull the deeper material from your original roadmap as the exact job or portfolio gap demands.',
     items: [
       { key: 'exp7-python', name: 'Python: files, JSON, requests, regex, error handling; build one log or IOC automation', hours: 20, url: 'https://docs.python.org/3/tutorial/' },
-      { key: 'exp7-powershell', name: 'PowerShell: objects, pipelines, Get-Process, Get-WinEvent, Export-Csv; automate one evidence collection task', hours: 10, url: 'https://learn.microsoft.com/en-us/powershell/scripting/learn/ps101/00-introduction' },
+      { key: 'p2-introduction-to-powershell', name: 'PowerShell: objects, pipelines, Get-Process, Get-WinEvent, Export-Csv; automate one evidence collection task', hours: 10, url: 'https://learn.microsoft.com/en-us/powershell/scripting/learn/ps101/00-introduction' },
       { key: 'exp7-cloud', name: 'Cloud/IAM lab: users/roles, least privilege, MFA, logging; deliberately misconfigure something in a controlled lab and prove the remediation', hours: 20 },
       { key: 'exp7-ci', name: 'Add tests/CI to one security automation repository and preserve a failing-before/passing-after example', hours: 8 },
     ],
@@ -147,7 +147,7 @@ export default [
     blurb: 'This is where your existing agentic-AI experience becomes a differentiator. Treat AI security as a specialization layered on top of conventional IT/security, not as a shortcut around it.',
     items: [
       { key: 'exp8-owasp', name: 'Study the 2026 OWASP LLM/GenAI risks and reproduce harmless prompt-injection/evaluation cases using synthetic data', hours: 12, url: 'https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/' },
-      { key: 'exp8-owasp-agentic-applications', name: 'Read the OWASP Top 10 for Agentic Applications 2026 and map agent risks to the MCP threat model', hours: 4, url: 'https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/' },
+      { key: 'p8-owasp-top-10-for-agentic-applications', name: 'Read the OWASP Top 10 for Agentic Applications 2026 and map agent risks to the MCP threat model', hours: 4, url: 'https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/' },
       { key: 'exp8-atlas', name: 'Map two AI-system threat scenarios to MITRE ATLAS', hours: 6, url: 'https://atlas.mitre.org/' },
       { key: 'exp8-mcp', name: 'Threat-model one MCP/agent workflow: tools, permissions, trust boundaries, injection paths, data exposure and human approval gates', hours: 12, url: 'https://modelcontextprotocol.io/' },
       { key: 'exp8-project', name: 'Publish one sanitized AI-agent security assessment project with test cases, observed failures, mitigations and manual verification', hours: 15 },

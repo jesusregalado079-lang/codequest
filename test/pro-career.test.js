@@ -15,6 +15,7 @@ const { default: full, extras, milestones, gate } = await import('../src/pro/car
 const { default: studies } = await import('../src/pro/resources.js');
 const { default: stages } = await import('../src/pro/expedited-path.js');
 const { LEGACY_KEYS_V1 } = await import('../src/pro/legacy-keys.js');
+const { EXPEDITED_SHARED_V1, EXPEDITED_KEPT_SEPARATE } = await import('../src/pro/shared-keys.js');
 const progress = await import('../src/pro/progress.js');
 const { groupStats, passMark, quizKey, outKey } = await import('../src/pro/career-logic.js');
 
@@ -67,7 +68,37 @@ const expKeys = expItems.map((i) => i.key || i.url);
 assert.equal(new Set(expKeys).size, expKeys.length, 'Expedited keys are unique');
 const allIds = new Set([...fullLinks, ...extraLinks, ...studyLinks].map((l) => l.id));
 const linkedToFull = expKeys.filter((k) => allIds.has(k));
-assert.deepEqual(linkedToFull.sort(), ['p2-comptia-network-n10-009-free-course', 'p2-comptia-security-sy0-701-foundations-checkpoint'], 'only the two Professor Messer courses share a checkmark between the roadmaps');
+assert.deepEqual(linkedToFull.sort(), ['p2-comptia-network-n10-009-free-course', 'p2-comptia-security-sy0-701-foundations-checkpoint', 'p2-introduction-to-powershell', 'p2-the-unix-shell-absolute-beginner-navigation', 'p8-owasp-top-10-for-agentic-applications'], 'only the two Professor Messer courses and three same-scope items share a checkmark between the roadmaps');
+EXPEDITED_SHARED_V1.forEach(([from, to]) => {
+  assert.ok(allIds.has(to), `shared key ${to} is a real roadmap id`);
+  assert.ok(expKeys.includes(to), `Expedited uses ${to} as its key`);
+  assert.ok(!expKeys.includes(from), `the old Expedited key ${from} is gone`);
+});
+// Items that cite the same link but ask for different work keep their OWN checkmark, with a written reason (shared-keys.js rules)
+const keptKeys = EXPEDITED_KEPT_SEPARATE.map((e) => e.key);
+assert.equal(new Set(keptKeys).size, keptKeys.length, 'each kept-separate item is listed once');
+EXPEDITED_KEPT_SEPARATE.forEach((e) => {
+  assert.ok(expKeys.includes(e.key), `${e.key} is a real Expedited item`);
+  assert.ok(!allIds.has(e.key), `${e.key} keeps its own key, never a roadmap id`);
+  assert.ok(Array.isArray(e.roadmap) && e.roadmap.length > 0, `${e.key}: names the roadmap item(s) it was compared with`);
+  e.roadmap.forEach((id) => {
+    assert.ok(allIds.has(id), `${e.key}: ${id} is a real roadmap id`);
+    assert.ok(!expKeys.includes(id), `${e.key}: ${id} is not used as any Expedited key, so the two checkmarks stay independent`);
+  });
+  assert.ok(typeof e.reason === 'string' && e.reason.length >= 80, `${e.key}: a written reason for staying separate`);
+  assert.ok(/rule[s]? \d/.test(e.reason), `${e.key}: the reason cites which sharing rule applies`);
+});
+// rule 6: any Expedited item whose link matches a roadmap/Extra/Studies link is either shared or listed with a reason
+const urlKey = (u) => String(u || '').replace(/^https?:\/\/(www\.)?/i, '').replace(/[#?].*$/, '').replace(/\/$/, '').toLowerCase();
+const roadmapUrls = new Set([...fullLinks, ...extraLinks, ...studyLinks].map((l) => urlKey(l.url)).filter(Boolean));
+expItems.forEach((i) => {
+  if (!i.url || !roadmapUrls.has(urlKey(i.url))) return;
+  const k = i.key || i.url;
+  assert.ok(allIds.has(k) || keptKeys.includes(k), `${k} links to the same place as a roadmap item: share its id or add it to EXPEDITED_KEPT_SEPARATE with a reason`);
+});
+// the schema notes name every kept-separate item, so the written rules cannot drift from the table
+const schemaText = (await import('node:fs')).readFileSync(new URL('../src/pro/SCHEMA.md', import.meta.url), 'utf8');
+keptKeys.forEach((k) => assert.ok(schemaText.includes(k), `SCHEMA.md explains why ${k} stays separate`));
 
 // ---------- the frozen move from URL keys to ids ----------
 const roadmapAndExpIds = new Set([...allIds, ...expKeys]);
@@ -130,6 +161,24 @@ assert.equal(progress.isStudyDone('p7-htb-academy-web-modules'), false);
 // a fresh browser: nothing to move, nothing invented
 reset();
 assert.equal(progress.ensureMigrated().moved, 0);
+assert.deepEqual(progress.studyDoneMap(), {});
+
+// ---------- Expedited items that now share a roadmap id (2026-10-26) ----------
+// a checkmark he already had on Expedited carries over to the shared id; one already on the roadmap just shows on Expedited
+reset({ studyDone: { 'exp0-shell': true, 'exp7-powershell': true, 'exp4-linux': true, 'p8-owasp-top-10-for-agentic-applications': true } });
+progress.ensureMigrated();
+const sharedDone = progress.studyDoneMap();
+assert.equal(sharedDone['p2-the-unix-shell-absolute-beginner-navigation'], true, 'shell navigation carries over from Expedited');
+assert.equal(sharedDone['p2-introduction-to-powershell'], true, 'PowerShell carries over from Expedited');
+assert.equal(sharedDone['p8-owasp-top-10-for-agentic-applications'], true, 'a roadmap checkmark is kept');
+assert.equal(sharedDone['p2-bandit-wargame'], undefined, 'Bandit to level 15 does not finish all 34 levels: items with different scope stay separate');
+// runs once: unticking afterwards sticks
+progress.toggleStudyDone('p2-the-unix-shell-absolute-beginner-navigation');
+progress.ensureMigrated();
+assert.equal(progress.isStudyDone('p2-the-unix-shell-absolute-beginner-navigation'), false, 'the carry-over never re-ticks something he unticked');
+// a fresh browser: nothing invented
+reset();
+progress.ensureMigrated();
 assert.deepEqual(progress.studyDoneMap(), {});
 
 // ---------- counts and quizzes ----------

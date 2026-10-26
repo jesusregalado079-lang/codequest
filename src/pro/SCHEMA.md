@@ -97,7 +97,28 @@ Engine reveals one at a time; each reveal costs 2 XP off the lesson award.
 
 ## Career Path progress (since 2026-10-08)
 - Every checkable resource in `career-path.js` (phases and `extras`) and `resources.js` has a permanent `id`; that id is its progress key. Change a link's `url` or `name` freely, never its `id`. New items get a new unique id (`p<phase>-…`, `x<group>-…`, `s<group>-…`). The same course listed on two pages shares one id (`ai-fluency`, `linkedin-genai-career-essentials`).
-- Expedited items use their `key`; the two Professor Messer courses use the Full roadmap ids so one checkmark shows on both roadmaps.
+- Expedited items use their `key`; the two Professor Messer courses and three same-scope items (shell navigation, PowerShell, OWASP Agentic Top 10) use the Full roadmap ids so one checkmark shows on both roadmaps. `shared-keys.js` carries a checkmark already saved under an old Expedited key over to the shared id once (`expedited-shared-2026-10-26`).
+
+### Expedited vs roadmap checkmarks: sharing rules
+A checkmark is saved under an item's key, so two items show one checkmark only when they use the same key. The rules live in `shared-keys.js` and `test/pro-career.test.js` enforces them:
+1. Share one id only when both roadmaps ask for the same work, at the same scope, with the same finish line.
+2. The same link is not enough; several items cite one URL but ask for different work.
+3. Never share a smaller item with a larger one (finishing the smaller would falsely mark the larger done).
+4. Never share a "do or build this" item with a "read or use this resource" item, in either direction.
+5. One Expedited key maps to at most one roadmap id; if the roadmap lists the same resource twice, the Expedited item stays separate.
+6. Every Expedited item whose link matches a roadmap, Extra or Studies link must be shared or listed in `EXPEDITED_KEPT_SEPARATE` with a reason, or the test fails.
+7. Moving an item from separate to shared needs a new carry-over migration (never edit the existing one) and must delete its `EXPEDITED_KEPT_SEPARATE` entry in the same change.
+
+### Kept separate on purpose (own `exp…` key, never a roadmap id)
+Checking either side never checks the other. Full wording is in `EXPEDITED_KEPT_SEPARATE`.
+- `exp2-interview` vs `s3-servicedesk-simulator`: Expedited is practice on six named interview scenarios; Studies is only the site, one tool for it (rule 4).
+- `exp4-windowslogs` vs `p2-event-viewer-inspect-windows-evidence`: Expedited is a wider Windows security lab (users and groups, logins, Event Viewer, exported evidence); the roadmap item is the Event Viewer part only (rule 3).
+- `exp4-linux` vs `p2-bandit-wargame`: Bandit through level 15 vs all 34 levels (rule 3).
+- `exp5-sysmon` vs `p3-sysmon`: Expedited installs Sysmon and identifies telemetry; the roadmap item also installs the Wazuh agent and forwards events, which Expedited tracks as `exp5-wazuh` (rules 1 and 3).
+- `exp5-attack` vs `p3-att-and-ck-matrix`: simulate two techniques and map them vs a reference whose time also covers the coverage matrix and incident report (rules 1 and 4).
+- `exp8-owasp` vs `p8-owasp-top-10-for-llm-applications` and `p3-owasp-top-10-for-llm-applications`: the roadmap lists the resource twice with different work, and Expedited asks to reproduce prompt-injection cases (rules 4 and 5).
+- `exp8-atlas` vs `p8-mitre-atlas`: a mapping exercise vs a reference with no defined task (rule 4).
+- `exp8-mcp` vs `p8-model-context-protocol-specification`: threat-model one workflow vs threat-model, attack-test, harden and build on a real local MCP server (rule 3).
 - Deliverables are `out:<key>`, gate conditions `gate:<key>`, a passed quiz `quiz:<id>` (2 of 3 right).
 - Before 2026-10-08 progress was keyed by URL. `legacy-keys.js` (frozen) maps those old keys to ids and `progress.js` `ensureMigrated()` applies it once on both pages. Never edit that table.
 - `progress.js` normalises everything it reads, reports failed saves instead of throwing, and exports/imports a JSON backup (Progress page, "Back up your progress").
