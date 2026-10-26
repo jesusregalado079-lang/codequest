@@ -6,6 +6,7 @@ import beginnerUnits from '../beginner/foundations.js';
 import studies from '../resources.js';
 import careerPath, { milestones, gate, extras } from '../career-path.js';
 import expeditedStages from '../expedited-path.js';
+import { notesForRoadmap, planNoteHtml } from '../plan-diff.js';
 import { DEFAULT_EXAM, EXAMS, examById } from '../exam/registry.js';
 import { examRoute } from '../exam/routes.js';
 import { examSummaries } from '../exam/summary.js';
@@ -401,6 +402,7 @@ function renderStudyGroups(groups, road = null) {
                   <div class="study-name">${esc(l.name)} <span class="ext" aria-hidden="true">↗</span></div>
                   <div class="study-note">${esc(l.note)}</div>
                 </a>
+                ${planNoteHtml(notesForRoadmap(l.id, (k) => done[k]))}
                 ${l.quiz ? renderMiniQuiz(l.id, l.quiz, done) : ''}
               </div>
             </div>`;

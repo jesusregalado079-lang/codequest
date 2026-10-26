@@ -409,6 +409,14 @@ a.rm-next-name:hover { color: var(--link); }
 .check-copy a, .check-copy > span { color: var(--text); text-decoration: none; font-weight: 600; }
 .check-copy a:hover { color: var(--link); }
 .check-copy small { color: var(--muted); white-space: nowrap; font-size: 0.875rem; }
+.check-main { flex: 1; min-width: 0; }
+/* "Differs on the other plan": same link, different work, separate checkmark (see shared-keys.js) */
+.plan-diff { margin: 8px 0 2px; padding: 8px 12px; border-left: 3px solid var(--link-line); background: var(--link-soft); border-radius: 0 6px 6px 0; }
+.plan-diff p { margin: 0; color: var(--muted); font-size: 0.875rem; line-height: 1.5; }
+.plan-diff p + p { margin-top: 6px; }
+.plan-diff b { color: var(--text); font-weight: 650; }
+.pd-status { display: inline-block; font-weight: 650; color: var(--text); }
+.pd-status.is-done { color: var(--done-text); }
 .check-row.done .check-copy > a, .check-row.done .check-copy > span { color: #d5dee7; }
 .footnote { margin: 28px 6px 0; color: var(--muted); font-size: 0.875rem; }
 

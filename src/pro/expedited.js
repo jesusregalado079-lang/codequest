@@ -1,10 +1,17 @@
 import stages, { summary } from './expedited-path.js';
 import { ensureMigrated, isStudyDone, requestPersistentStorage, toggleStudyDone } from './progress.js';
 import { careerHeaderHtml } from './ui/career-nav.js';
+import { notesForExpedited, planNoteHtml } from './plan-diff.js';
 
 const app = document.getElementById('expedited-app');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const keyOf = (item) => item.key || item.url;
+// The badge shows the number in the stage's own title ("Stage 3" -> 3, "Employment Gate #1" -> G1), not its list
+// position: the list counts the two employment gates, so position 4 is titled Stage 3.
+const stageBadge = (stage) => {
+  const m = String(stage.title).match(/^Stage (\d+)|Gate #(\d+)/);
+  return m ? (m[1] ?? `G${m[2]}`) : String(stage.n);
+};
 
 function stageStats(stage) {
   const items = stage.items || [];
@@ -109,7 +116,7 @@ function renderStage(stage, isCurrent) {
   return `
     <section class="stage-card c-card${state}">
       <div class="stage-top c-card-top">
-        <div class="stage-number c-badge" aria-hidden="true">${stage.n}</div>
+        <div class="stage-number c-badge" aria-hidden="true">${esc(stageBadge(stage))}</div>
         <div class="stage-title c-card-title">
           <h2>${esc(stage.title)}</h2>
           <p>${esc(stage.blurb)}</p>
@@ -132,14 +139,19 @@ function renderStage(stage, isCurrent) {
 function renderItem(item) {
   const key = keyOf(item);
   const done = isStudyDone(key);
+  // Pro's own labs and exams ('./pro.html#/…') open in this tab; outside sites open in a new one.
+  const internal = Boolean(item.url) && item.url.startsWith('./');
   const name = item.url
-    ? `<a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">${esc(item.name)} <span aria-hidden="true">↗</span></a>`
+    ? `<a href="${esc(item.url)}"${internal ? '' : ' target="_blank" rel="noopener noreferrer"'}>${esc(item.name)} <span aria-hidden="true">${internal ? '→' : '↗'}</span></a>`
     : `<span>${esc(item.name)}</span>`;
   // one label; aria-pressed says whether it is done
   return `
     <div class="check-row${done ? ' done' : ''}">
       <button type="button" class="checkbox c-check" data-check="${esc(key)}" aria-pressed="${done}" aria-label="Mark ${esc(item.name)} complete">${done ? '✓' : ''}</button>
-      <div class="check-copy">${name}${item.hours ? `<small>~${item.hours}h</small>` : '<small>milestone / exam</small>'}</div>
+      <div class="check-main">
+        <div class="check-copy">${name}${item.hours ? `<small>~${item.hours}h</small>` : '<small>milestone / exam</small>'}</div>
+        ${planNoteHtml(notesForExpedited(key, isStudyDone))}
+      </div>
     </div>`;
 }
 

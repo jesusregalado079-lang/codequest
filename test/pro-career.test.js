@@ -15,7 +15,7 @@ const { default: full, extras, milestones, gate } = await import('../src/pro/car
 const { default: studies } = await import('../src/pro/resources.js');
 const { default: stages } = await import('../src/pro/expedited-path.js');
 const { LEGACY_KEYS_V1 } = await import('../src/pro/legacy-keys.js');
-const { EXPEDITED_SHARED_V1, EXPEDITED_KEPT_SEPARATE } = await import('../src/pro/shared-keys.js');
+const { EXPEDITED_SHARED_V1, EXPEDITED_SHARED_DIRECT, EXPEDITED_KEPT_SEPARATE } = await import('../src/pro/shared-keys.js');
 const progress = await import('../src/pro/progress.js');
 const { groupStats, passMark, quizKey, outKey } = await import('../src/pro/career-logic.js');
 
@@ -68,7 +68,16 @@ const expKeys = expItems.map((i) => i.key || i.url);
 assert.equal(new Set(expKeys).size, expKeys.length, 'Expedited keys are unique');
 const allIds = new Set([...fullLinks, ...extraLinks, ...studyLinks].map((l) => l.id));
 const linkedToFull = expKeys.filter((k) => allIds.has(k));
-assert.deepEqual(linkedToFull.sort(), ['p2-comptia-network-n10-009-free-course', 'p2-comptia-security-sy0-701-foundations-checkpoint', 'p2-introduction-to-powershell', 'p2-the-unix-shell-absolute-beginner-navigation', 'p8-owasp-top-10-for-agentic-applications'], 'only the two Professor Messer courses and three same-scope items share a checkmark between the roadmaps');
+const sharedIds = [...EXPEDITED_SHARED_DIRECT, ...EXPEDITED_SHARED_V1.map(([, to]) => to)].sort();
+assert.equal(new Set(sharedIds).size, sharedIds.length, 'each shared id is listed once');
+assert.deepEqual(linkedToFull.sort(), sharedIds, 'exactly the items listed in shared-keys.js share a checkmark between the roadmaps');
+// a shared checkmark points at the same place on both pages
+const linkById = new Map([...fullLinks, ...extraLinks, ...studyLinks].map((l) => [l.id, l]));
+const sameUrl = (u) => String(u || '').replace(/^https?:\/\/(www\.)?/i, '').replace(/[#?].*$/, '').replace(/\/$/, '').toLowerCase();
+sharedIds.forEach((id) => {
+  const item = expItems.find((i) => i.key === id);
+  assert.equal(sameUrl(item.url), sameUrl(linkById.get(id).url), `${id}: the shared Expedited item links to the same place as the roadmap item`);
+});
 EXPEDITED_SHARED_V1.forEach(([from, to]) => {
   assert.ok(allIds.has(to), `shared key ${to} is a real roadmap id`);
   assert.ok(expKeys.includes(to), `Expedited uses ${to} as its key`);
@@ -81,9 +90,12 @@ EXPEDITED_KEPT_SEPARATE.forEach((e) => {
   assert.ok(expKeys.includes(e.key), `${e.key} is a real Expedited item`);
   assert.ok(!allIds.has(e.key), `${e.key} keeps its own key, never a roadmap id`);
   assert.ok(Array.isArray(e.roadmap) && e.roadmap.length > 0, `${e.key}: names the roadmap item(s) it was compared with`);
-  e.roadmap.forEach((id) => {
-    assert.ok(allIds.has(id), `${e.key}: ${id} is a real roadmap id`);
-    assert.ok(!expKeys.includes(id), `${e.key}: ${id} is not used as any Expedited key, so the two checkmarks stay independent`);
+  assert.ok(typeof e.expeditedAsks === 'string' && e.expeditedAsks.length >= 20, `${e.key}: says what the Expedited item asks for`);
+  e.roadmap.forEach((r) => {
+    assert.ok(allIds.has(r.id), `${e.key}: ${r.id} is a real roadmap id`);
+    assert.ok(!expKeys.includes(r.id), `${e.key}: ${r.id} is not used as any Expedited key, so the two checkmarks stay independent`);
+    assert.ok(typeof r.where === 'string' && r.where.length > 0, `${e.key}: says where ${r.id} lives`);
+    assert.ok(typeof r.asks === 'string' && r.asks.length >= 20, `${e.key}: says what ${r.id} asks for`);
   });
   assert.ok(typeof e.reason === 'string' && e.reason.length >= 80, `${e.key}: a written reason for staying separate`);
   assert.ok(/rule[s]? \d/.test(e.reason), `${e.key}: the reason cites which sharing rule applies`);
@@ -99,6 +111,44 @@ expItems.forEach((i) => {
 // the schema notes name every kept-separate item, so the written rules cannot drift from the table
 const schemaText = (await import('node:fs')).readFileSync(new URL('../src/pro/SCHEMA.md', import.meta.url), 'utf8');
 keptKeys.forEach((k) => assert.ok(schemaText.includes(k), `SCHEMA.md explains why ${k} stays separate`));
+
+// ---------- "differs on the other plan" notes: what the other plan asks, and whether he finished that one ----------
+const { notesForExpedited, notesForRoadmap, planNoteHtml } = await import('../src/pro/plan-diff.js');
+const nothingDone = () => false;
+EXPEDITED_KEPT_SEPARATE.forEach((e) => {
+  const onExp = notesForExpedited(e.key, nothingDone);
+  assert.equal(onExp.length, e.roadmap.length, `${e.key}: one note per roadmap item it differs from`);
+  onExp.forEach((n) => assert.ok(n.asks && n.where && n.done === false, `${e.key}: names where and what, not done`));
+  e.roadmap.forEach((r) => {
+    const onRoad = notesForRoadmap(r.id, nothingDone);
+    const stageLabel = stages.find((s) => (s.items || []).some((i) => i.key === e.key)).title.split(' — ')[0];
+    assert.ok(onRoad.length >= 1 && onRoad[0].where === `Expedited plan, ${stageLabel}`, `${r.id}: its note names the Expedited stage as the page titles it`);
+    assert.equal(onRoad[0].asks, e.expeditedAsks, `${r.id}: its note says what Expedited asks`);
+  });
+});
+// Bandit: Expedited stops at level 15, the roadmap wants all 34, and each side reports whether the OTHER one is done
+assert.equal(notesForExpedited('exp4-linux', (id) => id === 'p2-bandit-wargame')[0].done, true, 'Expedited note: the roadmap Bandit is finished');
+assert.equal(notesForExpedited('exp4-linux', nothingDone)[0].done, false, 'Expedited note: the roadmap Bandit is not finished');
+assert.equal(notesForRoadmap('p2-bandit-wargame', (k) => k === 'exp4-linux')[0].done, true, 'roadmap note: the Expedited Bandit is finished');
+assert.equal(notesForRoadmap('p2-bandit-wargame', nothingDone)[0].where, 'Expedited plan, Stage 3', 'named by the stage title on the page, not the badge number');
+assert.equal(notesForRoadmap('s3-servicedesk-simulator', nothingDone)[0].where, 'Expedited plan, Employment Gate #1');
+// an item the roadmap lists twice reports each one on its own
+const owasp = notesForExpedited('exp8-owasp', (id) => id === 'p3-owasp-top-10-for-llm-applications');
+assert.equal(owasp.length, 2);
+assert.deepEqual(owasp.map((n) => n.done).sort(), [false, true], 'only the Phase 3 copy is done');
+// shared items and items with no counterpart get no note
+['p2-the-unix-shell-absolute-beginner-navigation', 'p2-comptia-network-n10-009-free-course', 'p8-owasp-top-10-for-agentic-applications'].forEach((id) => {
+  assert.deepEqual(notesForExpedited(id, nothingDone), [], `${id}: shared, so nothing differs`);
+  assert.deepEqual(notesForRoadmap(id, nothingDone), [], `${id}: shared, so nothing differs`);
+});
+assert.deepEqual(notesForRoadmap('s3-switchlab', nothingDone), []);
+assert.equal(planNoteHtml([]), '');
+const doneHtml = planNoteHtml(notesForExpedited('exp4-linux', () => true));
+const notDoneHtml = planNoteHtml(notesForExpedited('exp4-linux', nothingDone));
+assert.ok(doneHtml.includes('You finished that one') && !doneHtml.includes('not finished'), 'the note says it is finished in words');
+assert.ok(notDoneHtml.includes('You have not finished that one'), 'the note says it is not finished in words');
+assert.ok(notDoneHtml.includes('All 34 Bandit levels'), 'the Expedited Bandit note spells out the roadmap goal');
+assert.ok(!planNoteHtml([{ where: '<b>x</b>', asks: '<script>', done: false }]).includes('<script>'), 'note text is escaped');
 
 // ---------- the frozen move from URL keys to ids ----------
 const roadmapAndExpIds = new Set([...allIds, ...expKeys]);

@@ -97,7 +97,8 @@ Engine reveals one at a time; each reveal costs 2 XP off the lesson award.
 
 ## Career Path progress (since 2026-10-08)
 - Every checkable resource in `career-path.js` (phases and `extras`) and `resources.js` has a permanent `id`; that id is its progress key. Change a link's `url` or `name` freely, never its `id`. New items get a new unique id (`p<phase>-…`, `x<group>-…`, `s<group>-…`). The same course listed on two pages shares one id (`ai-fluency`, `linkedin-genai-career-essentials`).
-- Expedited items use their `key`; the two Professor Messer courses and three same-scope items (shell navigation, PowerShell, OWASP Agentic Top 10) use the Full roadmap ids so one checkmark shows on both roadmaps. `shared-keys.js` carries a checkmark already saved under an old Expedited key over to the shared id once (`expedited-shared-2026-10-26`).
+- Expedited items use their `key`. Items that ask for exactly the roadmap's work use the roadmap id, so one checkmark shows on both pages: the two Professor Messer courses, shell navigation, PowerShell 101, OWASP Agentic Top 10, SwitchLab, KQL practice, KC7, and the PwC, Deloitte and Tata Forage simulations. `shared-keys.js` lists them (`EXPEDITED_SHARED_DIRECT`, `EXPEDITED_SHARED_V1`) and carries a checkmark already saved under an old Expedited key over to the shared id once (`expedited-shared-2026-10-26`).
+- Expedited links that start with `./pro.html#/` open Pro's own labs and practice exams in the same tab. The stage badge shows the number from the stage title (G1/G2 for the employment gates), not the list position.
 
 ### Expedited vs roadmap checkmarks: sharing rules
 A checkmark is saved under an item's key, so two items show one checkmark only when they use the same key. The rules live in `shared-keys.js` and `test/pro-career.test.js` enforces them:
@@ -108,6 +109,7 @@ A checkmark is saved under an item's key, so two items show one checkmark only w
 5. One Expedited key maps to at most one roadmap id; if the roadmap lists the same resource twice, the Expedited item stays separate.
 6. Every Expedited item whose link matches a roadmap, Extra or Studies link must be shared or listed in `EXPEDITED_KEPT_SEPARATE` with a reason, or the test fails.
 7. Moving an item from separate to shared needs a new carry-over migration (never edit the existing one) and must delete its `EXPEDITED_KEPT_SEPARATE` entry in the same change.
+8. Every separate item says in plain words what each plan asks for (`expeditedAsks` and `roadmap[].asks`). `plan-diff.js` shows that as a "Differs on the other plan" note under the item on BOTH pages: what the other plan asks, and whether you finished that other item ("You finished that one" / "You have not finished that one", in words, not colour alone). Shared items get no note because they are one checkmark.
 
 ### Kept separate on purpose (own `exp…` key, never a roadmap id)
 Checking either side never checks the other. Full wording is in `EXPEDITED_KEPT_SEPARATE`.
@@ -115,6 +117,7 @@ Checking either side never checks the other. Full wording is in `EXPEDITED_KEPT_
 - `exp4-windowslogs` vs `p2-event-viewer-inspect-windows-evidence`: Expedited is a wider Windows security lab (users and groups, logins, Event Viewer, exported evidence); the roadmap item is the Event Viewer part only (rule 3).
 - `exp4-linux` vs `p2-bandit-wargame`: Bandit through level 15 vs all 34 levels (rule 3).
 - `exp5-sysmon` vs `p3-sysmon`: Expedited installs Sysmon and identifies telemetry; the roadmap item also installs the Wazuh agent and forwards events, which Expedited tracks as `exp5-wazuh` (rules 1 and 3).
+- `exp5-wazuh` vs `p3-wazuh` and `s-approved-p3-wazuh`: run Wazuh on the HP and verify telemetry vs a reproducible setup with dashboards and a demo; the Studies entry is a reference with no task (rules 3 and 4).
 - `exp5-attack` vs `p3-att-and-ck-matrix`: simulate two techniques and map them vs a reference whose time also covers the coverage matrix and incident report (rules 1 and 4).
 - `exp8-owasp` vs `p8-owasp-top-10-for-llm-applications` and `p3-owasp-top-10-for-llm-applications`: the roadmap lists the resource twice with different work, and Expedited asks to reproduce prompt-injection cases (rules 4 and 5).
 - `exp8-atlas` vs `p8-mitre-atlas`: a mapping exercise vs a reference with no defined task (rule 4).
