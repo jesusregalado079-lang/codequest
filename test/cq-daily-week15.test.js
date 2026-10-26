@@ -55,7 +55,7 @@ for (const track of ['guided', 'standard']) {
   for (const date of ['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25']) {
     assert.equal(currentWeek(DAILY_WORK, track, date).id, 'week-15', `${track}: ${date}`);
   }
-  assert.equal(currentWeek(DAILY_WORK, track, '2026-10-26'), null);
+  assert.equal(currentWeek(DAILY_WORK, track, '2026-10-26').id, 'week-16'); // See cq-daily-week16.test.js.
   assert.deepEqual(week.days.monday.sheets[0], last.days.thursday.sheets[2], `${track}: Monday repeats Week 14 Thursday exactly`);
   assert.deepEqual(week.days.tuesday.sheets[0], last.days.friday.sheets[2], `${track}: Tuesday repeats Week 14 Friday exactly`);
 

@@ -133,6 +133,20 @@ From `Week 15 plan` and `Week 15 Bible reading` in Drive. `guided15` / `standard
 - **Parent review:** every question has a parent note. Correct letters and notes stay off kid sheets; the app does not mark answers for the boy.
 - **Tests:** `test/cq-daily-week15.test.js` covers schedule, exact content, Week 14 reuse, celebration blocks, choice lengths, and kid-render isolation. The Week 13/14, choice, daily-work, UI, page, and syntax-compat tests pass.
 
+## 2f. Week 16, 2026-10-26
+From Week 16 plan in Drive. guided16 / standard16, assigned Monday 2026-10-26; Week 15 stays available through Sunday 10/25 and Week 16 through Sunday 11/01.
+
+- Normal week: three sheets each weekday, Math first and Bible Reading third. Word Problems is second Monday, Thursday, and Friday; CodeQuest is second Tuesday and Wednesday.
+- Older son: decimal multiplication returns through tenths as dimes, hundredths as cents, decimal times decimal, then mixed practice and percent blocks.
+- Older son: Monday and Tuesday use stepped lines; Wednesday uses bigger/smaller checks; Thursday's 16- and 40-block bars show one-block values; Friday's bars show a few clues.
+- Younger son: multiplication facts build from 2s to 4s, nickels and dimes for 5s and 10s, and 5s plus 2s for 7s. Math stays at seven items Monday through Thursday and eight Friday.
+- Younger son: Tuesday includes a seven-nickel count-the-pile item in dollars; Friday includes one coin percent item and an ungraded 1-to-5 confidence scale.
+- Both sons: CodeQuest Day on Tuesday and Wednesday reuses the existing three-question sheet.
+- Both sons: Bible Reading reuses Week 15's exact Exodus and Daniel sheets, with the track-specific sentence count on typed days.
+- Memory verses: Psalm 119:105 (NLT), lamp and light, for younger son; Proverbs 3:5-6 (NLT), trust, understanding and path, for older son.
+- Parent notes preserve the plan's INTENTIONAL REPEAT statements. Kid-facing text and rendered sheets do not show parent notes or authoring markers.
+- Tests: cq-daily-week16.test.js independently derives answers, checks the 16- and 40-block views, Bible reuse, schedule, verses, and rendered pages. Week 15, Week 14, choice, celebration, daily-work, UI, page, and syntax compatibility tests pass.
+
 ## 3. Content data shape (per profile)
 ```
 DailyWorkContent = {

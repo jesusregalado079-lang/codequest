@@ -1029,9 +1029,230 @@ const week15 = (sentences) => Object.assign(Week('week-15', 'Week 15', [], {
 const guided15 = week15('Write 1 or 2 sentences.');
 const standard15 = week15('Write 2 sentences.');
 
+// Week 16 (Monday 2026-10-26): second pass on decimal multiplication and multiplication facts.
+// Math and Word Problems wording, examples, answers, and parent notes come from the approved Drive plan.
+const standard16 = Week('week-16', 'Week 16', [
+  Sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
+    Item('verse', 'fill-blank', "___ in the LORD with all your heart; do not depend on your own ___. Seek his will in all you do, and he will show you which ___ to take.", {
+      wordBank: ["trust","understanding","path"], answer: ["trust","understanding","path"],
+    }),
+  ], { citation: "Proverbs 3:5-6 (NLT)" }),
+], {
+  monday: Day([
+    Sheet("tenths-are-dimes", "math", "Tenths Are Dimes",
+      "A decimal is a whole number counted in smaller units, and money shows it well. One dime is a tenth of a dollar, so 0.3 means 3 tenths, which is 3 dimes. So 4 × 0.3 is 4 groups of 3 dimes, which is 12 dimes. Ten dimes make 1 whole dollar, so 12 dimes is 1 dollar and 2 dimes, which is 1.2. You can always do it in three steps: say how many tenths the decimal is, multiply the whole numbers, and then turn the tenths back into a decimal (10 tenths make 1 whole). Then check with an estimate.",
+      "5 × 0.4. 0.4 is 4 tenths. 5 × 4 tenths = 20 tenths. 20 tenths = 2 wholes. Answer: 2. Check: 0.4 is a little less than half, so 5 groups should be a little less than 2.5. 2 fits.\n\n4 × 0.8. 0.8 is 8 tenths. 4 × 8 tenths = 32 tenths. 32 tenths = 3.2 (3 wholes and 2 tenths). Answer: 3.2. Check: 0.8 is a little less than 1, so 4 groups should be a little less than 4. 3.2 fits.\n\n7 × 1.3. 1.3 is 13 tenths. 7 × 13 tenths = 91 tenths. 91 tenths = 9.1 (9 wholes and 1 tenth). Answer: 9.1. Check: 7 × 1 = 7, and the extra 0.3 in each group adds about 2 more, so about 9. 9.1 fits.", [
+        money("1a", "How many tenths is 0.6?", 6, "0.6 = 6 tenths."),
+        money("1b", "8 × 6 = ?", 48, "48 tenths."),
+        money("1c", "8 × 0.6 = ?", 4.8, "48 tenths = 4.8."),
+        money("2a", "How many tenths is 0.9?", 9, "0.9 = 9 tenths."),
+        money("2b", "7 × 9 = ?", 63, "63 tenths."),
+        money("2c", "7 × 0.9 = ?", 6.3, "63 tenths = 6.3."),
+        money("3a", "Multiply the tenths: 9 × 14 = ?", 126, "1.4 is 14 tenths. 9 × 14 = 126 tenths."),
+        money("3b", "9 × 1.4 = ?", 12.6, "126 tenths = 12.6."),
+        money("4", "6 × 0.7 = ?", 4.2, "6 × 0.7 = 4.2."),
+        money("5", "3 × 2.6 = ?", 7.8, "3 × 2.6 = 7.8."),
+      ]),
+    Sheet("tenths-in-money-and-measuring", "word-problems", "Tenths in Money and Measuring",
+      "Stories use decimals for money and for measuring. First find how many groups there are and how big each group is. Then multiply the same way as on the Math sheet: turn the decimal into tenths, multiply the whole numbers, and turn it back. Money gives you a check. $0.50 is 5 dimes, which is 5 tenths of a dollar, so 8 times $0.50 is 40 tenths of a dollar, which is $4.",
+      "A stick is 0.4 meters long. You line up 8 sticks end to end. How many meters long is the line? Step 1: 8 groups of 0.4 m. Step 2: 0.4 is 4 tenths. Step 3: 8 × 4 = 32 tenths. Step 4: 32 tenths = 3.2. Answer: 3.2 meters.", [
+        money("1a", "You clean the litter box ($0.50) 8 times this week. First, how many tenths of a dollar is $0.50?", 5, "$0.50 = 5 tenths of a dollar (5 dimes)."),
+        money("1b", "8 × 5 = ?", 40, "40 tenths of a dollar."),
+        money("1c", "How much do you earn, in dollars?", 4, "40 tenths = 4 dollars. Accept 4, 4.0 or 4.00."),
+        money("2", "A shelf board is 0.8 meters long. You need 7 boards. How many meters of board do you need?", 5.6, "7 × 8 = 56 tenths = 5.6."),
+        money("3", "You fold and put away laundry ($1.50) 3 times. How much do you earn, in dollars?", 4.5, "3 × 15 = 45 tenths = 4.50. Accept 4.5 or 4.50."),
+      ]),
+    bible14Choice('thursday'),
+  ]),
+  tuesday: Day([
+    Sheet("hundredths-are-cents-and-a-shortcut-that-always-works", "math", "Hundredths Are Cents, and a Shortcut That Always Works",
+      "Last time you counted tenths as dimes. Hundredths work the same way, just smaller: one cent is a hundredth of a dollar. So 1.35 is 135 cents, or 135 hundredths. That leads to a shortcut that always works. Ignore the decimal point and multiply as if the numbers were whole (4 × 135 = 540). Then count how many decimal places the number you started with had (1.35 has 2) and put the decimal point back so the answer has the same number of places (5.40, which is 5.4). It works because ignoring the point counts the small units, and putting the point back turns them into wholes. Before you start, ask 'bigger or smaller?': multiplying by a number bigger than 1 makes the answer bigger than the number you started with, and multiplying by a number smaller than 1 makes it smaller. Then check with an estimate.",
+      "6 × 2.5. Ignore the decimal point: 6 × 25 = 150. 2.5 has 1 decimal place, so the answer has 1: 15.0, which is 15. Check: 2.5 is between 2 and 3, so 6 groups is between 12 and 18. 15 fits.\n\n4 × 1.35. Ignore the decimal point: 4 × 135 = 540. 1.35 has 2 decimal places, so the answer has 2: 5.40, which is 5.4. Check: 1.35 is between 1 and 1.5, so 4 groups is between 4 and 6. 5.4 fits.\n\n9 × 0.35. Ignore the decimal point: 9 × 35 = 315. 0.35 has 2 decimal places, so the answer has 2: 3.15. Check: 0.35 is a little more than 0.3, so 9 groups is a little more than 2.7, which is about 3. 3.15 fits.", [
+        money("1a", "Ignore the decimal point: 6 × 14 = ?", 84, "6 × 14 = 84."),
+        money("1b", "How many decimal places does 1.4 have?", 1, "1.4 has 1."),
+        money("1c", "6 × 1.4 = ?", 8.4, "84 with 1 decimal place = 8.4."),
+        money("2a", "Ignore the decimal point: 5 × 125 = ?", 625, "5 × 125 = 625."),
+        money("2b", "How many decimal places does 1.25 have?", 2, "1.25 has 2."),
+        money("2c", "5 × 1.25 = ?", 6.25, "625 with 2 decimal places = 6.25."),
+        pick14("3a", "Is 8 × 0.45 bigger or smaller than 8?", ['bigger', 'smaller'], "smaller", "0.45 is less than 1, so the answer is smaller than 8."),
+        money("3b", "8 × 0.45 = ?", 3.6, "8 × 45 = 360; 2 places = 3.60. Accept 3.6 or 3.60."),
+        pick14("4a", "Is 4 × 2.75 bigger or smaller than 4?", ['bigger', 'smaller'], "bigger", "2.75 is more than 1, so the answer is bigger than 4."),
+        money("4b", "4 × 2.75 = ?", 11, "4 × 275 = 1100; 2 places = 11.00. Accept 11, 11.0 or 11.00."),
+      ]),
+    codeQuest13(),
+    bible14Fri("Write 2 sentences."),
+  ]),
+  wednesday: Day([
+    Sheet("decimal-times-decimal-a-dime-of-a-dime-is-a-penny", "math", "Decimal Times Decimal: A Dime of a Dime Is a Penny",
+      "Now both numbers are decimals. Think of 0.3 × 0.4 as 3 tenths of 4 tenths. A tenth of a dime is a penny, and a penny is a hundredth of a dollar, so a tenth of a tenth is a hundredth. The answer is in hundredths: 3 × 4 = 12 hundredths, which is 0.12. That is why the shortcut still works. Ignore the decimal points (3 × 4 = 12), count the decimal places in both numbers together (1 + 1 = 2), and put the decimal point back so the answer has that many places (0.12). Notice that 0.12 is smaller than 0.4. When you multiply by a number smaller than 1, you take only part of the other number, so the answer gets smaller. When you multiply by a number bigger than 1, the answer gets bigger. Ask 'bigger or smaller?' first, because it catches mistakes.",
+      "0.6 × 0.7. Ignore the decimal points: 6 × 7 = 42. 1 + 1 = 2 decimal places: 0.42. Check: 0.6 is smaller than 1, so the answer should be smaller than 0.7. 0.42 fits.\n\n0.5 × 0.6. Ignore the decimal points: 5 × 6 = 30. 1 + 1 = 2 decimal places: 0.30, which is 0.3. Check: 0.5 is one half, and half of 0.6 is 0.3. It fits.\n\n1.4 × 0.5. Ignore the decimal points: 14 × 5 = 70. 1 + 1 = 2 decimal places: 0.70, which is 0.7. Check: 0.5 is one half, and half of 1.4 is 0.7. It fits.", [
+        pick14("1a", "Is 0.4 × 0.9 bigger or smaller than 0.4?", ['bigger', 'smaller'], "smaller", "0.9 is less than 1, so the answer is smaller than 0.4."),
+        money("1b", "Ignore the decimal points: 4 × 9 = ?", 36, "4 × 9 = 36."),
+        money("1c", "How many decimal places in all? (0.4 has 1, 0.9 has 1)", 2, "1 + 1 = 2."),
+        money("1d", "0.4 × 0.9 = ?", 0.36, "36 with 2 decimal places = 0.36."),
+        pick14("2a", "Is 0.9 × 0.5 bigger or smaller than 0.9?", ['bigger', 'smaller'], "smaller", "0.5 is less than 1, so the answer is smaller than 0.9."),
+        money("2b", "Ignore the decimal points: 9 × 5 = ?", 45, "9 × 5 = 45."),
+        money("2c", "0.9 × 0.5 = ?", 0.45, "45 with 2 decimal places = 0.45."),
+        pick14("3a", "Is 1.3 × 1.2 bigger or smaller than 1.3?", ['bigger', 'smaller'], "bigger", "1.2 is more than 1, so the answer is bigger than 1.3."),
+        money("3b", "1.3 × 1.2 = ?", 1.56, "13 × 12 = 156; 2 places = 1.56."),
+        pick14("4a", "Is 0.7 × 3.5 bigger or smaller than 0.7?", ['bigger', 'smaller'], "bigger", "3.5 is more than 1, so the answer is bigger than 0.7."),
+        money("4b", "0.7 × 3.5 = ?", 2.45, "7 × 35 = 245; 2 places = 2.45."),
+      ]),
+    codeQuest13(),
+    bible15Choice('wednesday'),
+  ]),
+  thursday: Day([
+    Sheet("put-it-together-then-percent-blocks", "math", "Put It Together, Then Percent Blocks",
+      "Today you use all three ideas together, and then you use them on the percent blocks. The steps are the same every time: ask 'bigger or smaller?' or make an estimate, ignore the decimal points and multiply the whole numbers, count the decimal places, and put the decimal point back. On the percent blocks, one block is worth 100 divided by the number of blocks, and the percent is the number of shaded blocks times what one block is worth. That last step is decimal multiplication, so the shortcut does it for you. With 16 blocks one block is worth 6.25%, and with 40 blocks it is worth 2.5%. Items 1 to 3 are decimal multiplication on its own. Items 4 and 5 are percent blocks, and the picture tells you what one block is worth.",
+      "9 × 0.6. Estimate: 0.6 is a little more than 0.5, and 9 × 0.5 = 4.5, so the answer should be a little more than 4.5. Ignore the decimal point: 9 × 6 = 54. 0.6 has 1 decimal place: 5.4. It fits the estimate.\n\n4 × 3.15. Estimate: 3.15 is close to 3, so the answer is about 12. Ignore the decimal point: 4 × 315 = 1260. 3.15 has 2 decimal places: 12.60, which is 12.6. It fits the estimate.\n\n0.4 × 0.7. Smaller than 0.7, because 0.4 is less than 1. Ignore the decimal points: 4 × 7 = 28. 1 + 1 = 2 decimal places: 0.28.\n\nPercent blocks: 12 out of 40. One block is 100 ÷ 40 = 2.5%. Ignore the decimal point: 12 × 25 = 300. 2.5 has 1 decimal place: 30.0. Answer: 30%.", [
+        money("1a", "Estimate: round 0.9 to 1. 8 × 1 = ?", 8, "Close to the real answer, which is 7.2."),
+        money("1b", "8 × 0.9 = ?", 7.2, "8 × 9 = 72; 1 place = 7.2."),
+        money("2a", "Estimate: round 5.2 to 5. 6 × 5 = ?", 30, "Close to the real answer, which is 31.2."),
+        money("2b", "6 × 5.2 = ?", 31.2, "6 × 52 = 312; 1 place = 31.2."),
+        pick14("3a", "Is 0.8 × 0.4 bigger or smaller than 0.8?", ['bigger', 'smaller'], "smaller", "0.4 is less than 1, so the answer is smaller than 0.8."),
+        money("3b", "0.8 × 0.4 = ?", 0.32, "8 × 4 = 32; 2 places = 0.32."),
+        money("4a", "Ignore the decimal point: 12 × 625 = ?", 7500, "One block is 6.25%. 12 × 625 = 7500."),
+        withNote(wholeBlocks("4b", "12 out of 16 is what percent?", 12, 16, "unit"), "12 × 6.25 = 75."),
+        money("5a", "Ignore the decimal point: 19 × 25 = ?", 475, "One block is 2.5%. 19 × 25 = 475."),
+        withNote(wholeBlocks("5b", "19 out of 40 is what percent?", 19, 40, "unit"), "19 × 2.5 = 47.5."),
+      ]),
+    Sheet("decimals-in-stories", "word-problems", "Decimals in Stories",
+      "Stories with decimals usually give you a price or a measurement and a number of groups. Find the groups and the size of each one, multiply with the steps you learned, and check with an estimate. For money, remember that cents are hundredths of a dollar, so $0.75 is 75 hundredths.",
+      "You buy 7 pencils at $0.35 each. How much do you pay? Estimate: $0.35 is between $0.30 and $0.40, so the cost is between 7 × $0.30 = $2.10 and 7 × $0.40 = $2.80. Ignore the decimal point: 7 × 35 = 245. $0.35 has 2 decimal places: 2.45. Answer: $2.45, which is between the two estimates.", [
+        money("1", "You unload groceries ($0.75) 6 times this week. How much do you earn, in dollars?", 4.5, "6 × 75 = 450; 2 places = 4.50. Accept 4.5 or 4.50."),
+        money("2", "A notebook costs $3.25. You buy 5 notebooks. How much do you pay, in dollars?", 16.25, "5 × 325 = 1625; 2 places = 16.25."),
+        money("3", "A recipe needs 3.5 cups of milk. You make 0.6 of the recipe. How many cups of milk do you need?", 2.1, "35 × 6 = 210; 1 + 1 = 2 places = 2.10. Accept 2.1 or 2.10."),
+      ]),
+    bible15Choice('thursday'),
+  ]),
+  friday: Day([
+    Sheet("show-what-you-know", "math", "Show What You Know",
+      "No steps are written out today, so use them yourself: ask 'bigger or smaller?' or make an estimate, ignore the decimal points and multiply the whole numbers, count the decimal places, and put the decimal point back. On the percent blocks the picture only gives a few clues, so work out what one block is worth first.",
+      "4.5 × 1.2. Estimate: 4.5 × 1 = 4.5, so about 5. Ignore the decimal points: 45 × 12 = 540. 1 + 1 = 2 decimal places: 5.40, which is 5.4. It fits the estimate.\n\nPercent blocks: 24 out of 40. One block is 100 ÷ 40 = 2.5%. Ignore the decimal point: 24 × 25 = 600. 2.5 has 1 decimal place: 60.0. Answer: 60%.", [
+        money("1", "9 × 0.4 = ?", 3.6, "9 × 4 = 36; 1 place = 3.6."),
+        money("2", "6 × 3.7 = ?", 22.2, "6 × 37 = 222; 1 place = 22.2."),
+        money("3", "0.6 × 0.8 = ?", 0.48, "6 × 8 = 48; 2 places = 0.48."),
+        money("4", "1.6 × 3.5 = ?", 5.6, "16 × 35 = 560; 2 places = 5.60. Accept 5.6 or 5.60."),
+        withNote(wholeBlocks("5", "14 out of 16 is what percent?", 14, 16, "clues"), "14 × 6.25 = 87.5."),
+        withNote(wholeBlocks("6", "25 out of 40 is what percent?", 25, 40, "clues"), "25 × 2.5 = 62.5."),
+      ]),
+    Sheet("decimals-out-in-the-world", "word-problems", "Decimals Out in the World",
+      "Decimal multiplication shows up in shopping, measuring, cooking and percents. A price per pound times the pounds gives the cost. A length times a width gives the area. A percent is a decimal too. 20% means 20 out of 100, which is 0.20, so 20% of a number is 0.20 times that number. Read each story, decide what is being multiplied, and then use the steps.",
+      "Cheese costs $3.60 per pound. You buy 2.5 pounds. How much do you pay? Estimate: $3.60 is close to $4, and 4 × 2.5 = 10, so about $10. Write $3.60 as 3.6. Ignore the decimal points: 36 × 25 = 900. 1 + 1 = 2 decimal places: 9.00. Answer: $9.00, which is close to the estimate.", [
+        money("1", "Grapes cost $2.40 per pound. You buy 3.5 pounds. How much do you pay, in dollars?", 8.4, "Write $2.40 as 2.4. 24 × 35 = 840; 2 places = 8.40. Accept 8.4 or 8.40."),
+        money("2", "A poster is 1.2 meters long and 0.8 meters wide. What is its area in square meters?", 0.96, "12 × 8 = 96; 2 places = 0.96."),
+        money("3", "Find 20% of $35. Write 20% as 0.20 and multiply. How many dollars is it?", 7, "0.20 × 35: 20 × 35 = 700; 2 places = 7.00. Accept 7, 7.0 or 7.00."),
+        money("4", "A truck uses 6.5 gallons of gas at $3.40 per gallon. How much does the gas cost, in dollars?", 22.1, "Write $3.40 as 3.4. 65 × 34 = 2210; 1 + 1 = 2 places = 22.10. Accept 22.1 or 22.10."),
+      ]),
+    bible15Fri("Write 2 sentences."),
+  ]),
+}, '2026-10-26');
+const guided16 = Week('week-16', 'Week 16', [
+  Sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
+    Item('verse', 'fill-blank', "Your word is a ___ to guide my feet and a ___ for my path.", {
+      wordBank: ["lamp","light"], answer: ["lamp","light"],
+    }),
+  ], { citation: "Psalm 119:105 (NLT)" }),
+], {
+  monday: Day([
+    Sheet("fours-double-then-double-again", "math", "Fours: Double, Then Double Again",
+      "A multiplication fact is groups. 4 × 3 means 4 groups of 3. You already know your 2s, and 4 groups is 2 groups plus 2 more groups. So to find a 4s fact, find the 2s fact first and then double the answer. 4 × 3: 2 × 3 = 6, and double 6 is 6 + 6 = 12. Also, anything times 0 is 0, because zero groups, or groups with nothing in them, is nothing.",
+      "4 × 3. Step 1: 2 × 3 = 6. Step 2: double 6: 6 + 6 = 12. So 4 × 3 = 12.\n\n0 × 8 = 0. There are zero groups of 8, so there is nothing. 8 × 0 = 0 too.", [
+        money("1a", "2 × 4 = ?", 8, "4 + 4 = 8. INTENTIONAL REPEAT (Week 14): he needs to see facts more than once."),
+        money("1b", "Double it. 8 + 8 = ?", 16, "8 + 8 = 16."),
+        money("1c", "So 4 × 4 = ?", 16, "INTENTIONAL REPEAT (Week 13): he needs to see facts more than once."),
+        money("2a", "2 × 5 = ?", 10, "5 + 5 = 10. INTENTIONAL REPEAT (Week 14): he needs to see facts more than once."),
+        money("2b", "Double it. So 4 × 5 = ?", 20, "10 + 10 = 20."),
+        money("3", "4 × 6 = ? Hint: 2 × 6 = 12, then double it.", 24, "12 + 12 = 24."),
+        money("4", "9 × 0 = ?", 0, "Anything times 0 is 0."),
+      ]),
+    Sheet("groups-of-four", "word-problems", "Groups of Four",
+      "Some stories have equal groups. When every group is the same size and you want the total, you multiply. Read the story slowly, find how many groups there are and how many are in each group, and then multiply. Use your 4s: find the 2s fact first and double it.",
+      "A car has 4 wheels. There are 3 cars. How many wheels in all? Clue: 'a car has 4' and 'there are 3 cars' mean equal groups, so MULTIPLY. 4 × 3: 2 × 3 = 6, and 6 + 6 = 12. Answer: 12 wheels.", [
+        money("1", "A dog has 4 legs. There are 6 dogs. How many legs in all?", 24, "4 × 6 = 24. INTENTIONAL REPEAT (same fact as problem 3 on today's Math sheet): he needs to see facts more than once."),
+        money("2", "A table has 4 legs. There are 4 tables. How many legs in all?", 16, "4 × 4 = 16. INTENTIONAL REPEAT (Math problem 1c today and Week 13): he needs to see facts more than once."),
+        money("3", "Ivy has 5 bags. Each bag has 4 apples. How many apples in all?", 20, "5 × 4 = 20. INTENTIONAL REPEAT (Math problem 2b today): he needs to see facts more than once."),
+      ]),
+    bible14Choice('thursday'),
+  ]),
+  tuesday: Day([
+    Sheet("fives-and-tens-nickels-and-dimes", "math", "Fives and Tens: Nickels and Dimes",
+      "A nickel is worth 5 cents, so counting nickels is counting by 5s. 3 nickels: 5, 10, 15, so 5 × 3 = 15. A dime is worth 10 cents, so counting dimes is counting by 10s. 6 dimes: 10, 20, 30, 40, 50, 60, so 10 × 6 = 60. Here is a tip. Every 5s answer ends in 5 or 0, and every 10s answer ends in 0. Your 5s will help you tomorrow with your 7s.",
+      "5 × 3. Count 3 nickels: 5, 10, 15. 5 × 3 = 15.\n\n10 × 6. Count 6 dimes: 10, 20, 30, 40, 50, 60. 10 × 6 = 60.\n\n4 × 4. 2 × 4 = 8, and double 8 is 16. 4 × 4 = 16.", [
+        money("1", "5 × 2 = ?", 10, "2 nickels = 10. INTENTIONAL REPEAT (Week 14): he needs to see facts more than once."),
+        money("2", "5 × 6 = ?", 30, "6 nickels = 30."),
+        money("3", "5 × 8 = ?", 40, "8 nickels = 40."),
+        pile("4", "Count this pile of coins. Type the total in dollars, like 0.84: 7 nickels.", { nickel: 7 }, 35, "7 × 5 = 35 cents = 0.35. INTENTIONAL REPEAT (5 × 7, Weeks 13 and 14): he needs to see facts more than once."),
+        money("5", "10 × 8 = ?", 80, "8 dimes = 80."),
+        money("6", "4 × 6 = ?", 24, "2 × 6 = 12, double it. INTENTIONAL REPEAT (Monday): he needs to see facts more than once."),
+        money("7", "4 × 5 = ?", 20, "2 × 5 = 10, double it. INTENTIONAL REPEAT (Monday): he needs to see facts more than once."),
+      ]),
+    codeQuest13(),
+    bible14Fri("Write 1 or 2 sentences."),
+  ]),
+  wednesday: Day([
+    Sheet("sevens-five-groups-plus-two-groups", "math", "Sevens: Five Groups Plus Two Groups",
+      "Seven is five plus two. So 7 groups is 5 groups plus 2 more groups. You know your 5s from yesterday, and you know your 2s. To find a 7s fact, find the 5s fact, find the 2s fact, and add them. 7 × 4: 5 × 4 = 20, 2 × 4 = 8, and 20 + 8 = 28. Write the two parts, then add.",
+      "7 × 3. Step 1: 5 × 3 = 15. Step 2: 2 × 3 = 6. Step 3: 15 + 6 = 21. So 7 × 3 = 21.\n\n7 × 6. Step 1: 5 × 6 = 30. Step 2: 2 × 6 = 12. Step 3: 30 + 12 = 42. So 7 × 6 = 42.\n\n4 × 3. 2 × 3 = 6, and double 6 is 12. 4 × 3 = 12.", [
+        money("1a", "5 × 4 = ?", 20, "INTENTIONAL REPEAT (same fact as 4 × 5, Monday and Tuesday): he needs to see facts more than once."),
+        money("1b", "2 × 4 = ?", 8, "INTENTIONAL REPEAT (Monday and Week 14): he needs to see facts more than once."),
+        money("1c", "Add your two answers. 7 × 4 = ?", 28, "20 + 8 = 28. INTENTIONAL REPEAT (4 × 7, Weeks 13 and 14): he needs to see facts more than once."),
+        money("2a", "5 × 5 = ?", 25, "5 nickels = 25."),
+        money("2b", "2 × 5 = ?", 10, "INTENTIONAL REPEAT (Monday): he needs to see facts more than once."),
+        money("2c", "Add your two answers. 7 × 5 = ?", 35, "25 + 10 = 35. INTENTIONAL REPEAT (5 × 7, Weeks 13 and 14, and Tuesday's count-the-pile): he needs to see facts more than once."),
+        money("3", "7 × 10 = ? Hint: 5 × 10 = 50 and 2 × 10 = 20.", 70, "50 + 20 = 70. INTENTIONAL REPEAT (Week 13): he needs to see facts more than once."),
+      ]),
+    codeQuest13(),
+    bible15Choice('wednesday'),
+  ]),
+  thursday: Day([
+    Sheet("sevens-again-and-more-fours", "math", "Sevens Again, and More Fours",
+      "Today you use both tricks again. For a 7s fact, add a 5s fact and a 2s fact. For a 4s fact, find the 2s fact and double it. Doing the same steps again is how they stick. Notice that 4 × 7 and 7 × 4 are the same fact: 4 groups of 7 or 7 groups of 4 give the same total, 28.",
+      "7 × 8. Step 1: 5 × 8 = 40. Step 2: 2 × 8 = 16. Step 3: 40 + 16 = 56. So 7 × 8 = 56.\n\n4 × 7. Step 1: 2 × 7 = 14. Step 2: double 14: 14 + 14 = 28. So 4 × 7 = 28.\n\n4 × 8. Step 1: 2 × 8 = 16. Step 2: double 16: 16 + 16 = 32. So 4 × 8 = 32.", [
+        money("1", "7 × 2 = ?", 14, "7 + 7 = 14."),
+        money("2a", "5 × 6 = ?", 30, "INTENTIONAL REPEAT (Tuesday): he needs to see facts more than once."),
+        money("2b", "2 × 6 = ?", 12, "INTENTIONAL REPEAT (Week 14): he needs to see facts more than once."),
+        money("2c", "Add your two answers. 7 × 6 = ?", 42, "30 + 12 = 42. INTENTIONAL REPEAT (Wednesday's worked example): he needs to see facts more than once."),
+        money("3", "4 × 9 = ? Hint: 2 × 9 = 18, then double it.", 36, "18 + 18 = 36. INTENTIONAL REPEAT (Weeks 13 and 14): he needs to see facts more than once."),
+        money("4", "4 × 10 = ?", 40, "4 × 10 = 40. INTENTIONAL REPEAT (Week 14): he needs to see facts more than once."),
+        money("5", "7 × 3 = ?", 21, "5 × 3 + 2 × 3 = 15 + 6 = 21. INTENTIONAL REPEAT (Wednesday's worked example): he needs to see facts more than once."),
+      ]),
+    Sheet("groups-of-seven", "word-problems", "Groups of Seven",
+      "Read the story and find how many groups there are and how many are in each group. When the groups are equal and you want the total, multiply. For a 7s fact, add a 5s fact and a 2s fact.",
+      "A week has 7 days. There are 5 weeks. How many days in all? Clue: 'a week has 7' and 'there are 5 weeks' mean equal groups, so MULTIPLY. 7 × 5: 5 × 5 = 25, 2 × 5 = 10, and 25 + 10 = 35. Answer: 35 days.", [
+        money("1", "A week has 7 days. There are 4 weeks. How many days in all?", 28, "4 × 7 = 28. INTENTIONAL REPEAT (Wednesday and Thursday's worked example): he needs to see facts more than once."),
+        money("2", "Gus has 6 packs. Each pack has 7 stickers. How many stickers in all?", 42, "6 × 7 = 42. INTENTIONAL REPEAT (Math problem 2c today): he needs to see facts more than once."),
+        money("3", "A shelf holds 7 books. There are 3 shelves. How many books in all?", 21, "3 × 7 = 21. INTENTIONAL REPEAT (Math problem 5 today): he needs to see facts more than once."),
+      ]),
+    bible15Choice('thursday'),
+  ]),
+  friday: Day([
+    Sheet("show-what-you-know", "math", "Show What You Know",
+      "No steps are written out today, so use the tricks yourself. For a 4s fact, find the 2s fact and double it. For a 5s fact, count nickels. For a 7s fact, add a 5s fact and a 2s fact. If you get stuck, go back to the worked example and follow the same steps one at a time. The last item asks how sure you feel.",
+      "7 × 7. Step 1: 5 × 7 = 35. Step 2: 2 × 7 = 14. Step 3: 35 + 14 = 49. So 7 × 7 = 49.\n\nWhat percent of a dollar is 1 quarter and 1 nickel? 25 + 5 = 30 cents. 30 out of 100 is 30 percent. Answer: 30%.", [
+        money("1", "4 × 7 = ?", 28, "2 × 7 = 14, double it. INTENTIONAL REPEAT (Weeks 13 and 14, Wednesday, Thursday): he needs to see facts more than once."),
+        money("2", "5 × 9 = ?", 45, "9 nickels = 45. INTENTIONAL REPEAT (Weeks 13 and 14): he needs to see facts more than once."),
+        money("3", "7 × 6 = ?", 42, "30 + 12 = 42. INTENTIONAL REPEAT (Wednesday and Thursday): he needs to see facts more than once."),
+        money("4", "4 × 10 = ?", 40, "INTENTIONAL REPEAT (Week 14 and Thursday): he needs to see facts more than once."),
+        money("5", "8 × 5 = ?", 40, "INTENTIONAL REPEAT (5 × 8, Tuesday): he needs to see facts more than once."),
+        money("6", "7 × 8 = ?", 56, "40 + 16 = 56. INTENTIONAL REPEAT (Thursday's worked example): he needs to see facts more than once."),
+        money("7", "What percent of a dollar is 2 quarters and 1 dime? Type the number, like 10.", 60, "50 + 10 = 60 cents. 60 out of 100 = 60%. This is the only percent item this week."),
+        Item("8", 'scale', "How sure do you feel about your 4s facts? (1 = not sure, 5 = very sure)", { scaleMax: 5, parentNote: "Any number from 1 to 5 is fine. Jesse can use it to see how he feels." }),
+      ]),
+    Sheet("coins-and-groups", "word-problems", "Coins and Groups",
+      "Coins make equal groups. 6 nickels is 6 groups of 5 cents, so you multiply 5 × 6. Read the story, find how many groups there are and how many cents are in each group, and then multiply.",
+      "Luz has 6 nickels. How many cents does she have? A nickel is 5 cents. 6 groups of 5 means MULTIPLY. 5 × 6 = 30. Answer: 30 cents.", [
+        money("1", "Ana has 7 dimes. How many cents does she have?", 70, "7 × 10 = 70. INTENTIONAL REPEAT (Week 13 and Wednesday): he needs to see facts more than once."),
+        money("2", "Gus has 9 nickels. How many cents does he have?", 45, "9 × 5 = 45. INTENTIONAL REPEAT (Weeks 13 and 14, and Math problem 2 today): he needs to see facts more than once."),
+        money("3", "There are 8 bags with 5 oranges in each bag. How many oranges in all?", 40, "8 × 5 = 40. INTENTIONAL REPEAT (Tuesday and Math problem 5 today): he needs to see facts more than once."),
+      ]),
+    bible15Fri("Write 1 or 2 sentences."),
+  ]),
+}, '2026-10-26');
+
 export const DAILY_WORK = deepFreeze({
-  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14, 'week-15': guided15 } },
-  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14, 'week-15': standard15 } },
+  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14, 'week-15': guided15, 'week-16': guided16 } },
+  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14, 'week-15': standard15, 'week-16': standard16 } },
 });
 
 export function getWeek(track, weekId) {
