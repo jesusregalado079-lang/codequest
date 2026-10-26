@@ -304,4 +304,34 @@ export default [
       },
     ],
   },
+  {
+    title: 'Help-Desk Practice, Free Plan (2026)',
+    blurb:
+      'Tier 1 help desk is the entry job, and this browser simulator gives practice on the tickets interviews ask about (password reset, no internet, dead PC, locked account). Use the free plan daily; the paid plan is optional and not needed to start.',
+    source: { label: '@bigibz1 · Instagram reel', url: 'https://www.instagram.com/reel/DeztMMyp_KI/' },
+    links: [
+      {
+        id: 's3-servicedesk-simulator',
+        name: 'ServiceDesk Simulator',
+        by: 'ServiceDesk Simulator',
+        url: 'https://servicedesk-simulator.com',
+        note: 'Free plan ($0, no card): 5 ticket completions and 1 voice call a day, plus the desktop tools, past tickets and leaderboard. The AI mock interview, voicemails and team chat calls need Pro ($20/month or $199/year). The 16 written modules are free to read. Checked 2026-10-25; the "players who got hired" quotes on its home page are the site\'s own picks and it calls them individual experiences.',
+      },
+    ],
+  },
+  {
+    title: 'Downtime: Free IT Help-Desk Game Demo (2026)',
+    blurb:
+      'Optional downtime play, not a study block, and it does not count as study hours or resume evidence. The free Steam demo drops you into an IT office with randomized computer, network and printer tickets, so it reinforces the Windows and networking basics from Expedited Stage 1. Windows only, so play it on the HP, not the iMac. The full game is a paid Early Access title and is not needed.',
+    source: { label: 'El Taquero · Instagram reel', url: 'https://www.instagram.com/reel/DbTw3nXyTN4/' },
+    links: [
+      {
+        id: 's3-it-specialist-simulator-demo',
+        name: 'IT Specialist Simulator (free demo)',
+        by: 'Pixel Team RED',
+        url: 'https://store.steampowered.com/app/3388180/IT_Specialist_Simulator_Demo/',
+        note: 'Free demo ($0, Steam account needed). Covers an intro scene, a timed day of randomized tickets, setting a network address through NCPA.cpl, and a short job-market mini-game. Windows 10+ only; the listed minimums are an i5-6300HQ, 8 GB RAM and GTX 950-class graphics, so confirm it runs on the HP before counting on it. The full game ($13.99, Early Access) is optional. Checked 2026-10-25; the reviewer\'s "pretty accurate" claim is his own opinion.',
+      },
+    ],
+  },
 ];
