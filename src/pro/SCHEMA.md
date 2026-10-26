@@ -117,8 +117,9 @@ Checking either side never checks the other. Full wording is in `EXPEDITED_KEPT_
 - `exp2-interview` vs `s3-servicedesk-simulator`: Expedited is practice on six named interview scenarios; Studies is only the site, one tool for it (rule 4).
 - `exp4-windowslogs` vs `p2-event-viewer-inspect-windows-evidence`: Expedited is a wider Windows security lab (users and groups, logins, Event Viewer, exported evidence); the roadmap item is the Event Viewer part only (rule 3).
 - `exp4-linux` vs `p2-bandit-wargame`: Bandit through level 15 vs all 34 levels (rule 3).
-- `exp5-sysmon` vs `p3-sysmon`: Expedited installs Sysmon and identifies telemetry; the roadmap item also installs the Wazuh agent and forwards events, which Expedited tracks as `exp5-wazuh` (rules 1 and 3).
+- `exp5-sysmon` vs `p3-sysmon`: Expedited configures Sysmon (installed in the step before) and identifies telemetry; the roadmap item also installs the Wazuh agent and forwards events, which Expedited tracks as `exp5-wazuh` (rules 1 and 3).
 - `exp5-wazuh` vs `p3-wazuh` (roadmap and Studies): run Wazuh on the HP and verify telemetry vs a reproducible setup with dashboards and a demo (rule 3).
+- `exp5-detect` vs `p3-wazuh-custom-rules-deploy-and-test`: one custom rule with a false-positive write-up vs Sigma translation, wazuh-logtest, replayed lab actions and committed rule files (rule 3).
 - `exp5-attack` vs `p3-att-and-ck-matrix`: simulate two techniques and map them vs a reference whose time also covers the coverage matrix and incident report (rules 1 and 4).
 - `exp8-owasp` vs `p8-owasp-top-10-for-llm-applications` and `p3-owasp-top-10-for-llm-applications`: the roadmap lists the resource twice with different work, and Expedited asks to reproduce prompt-injection cases (rules 4 and 5).
 - `exp8-atlas` vs `p8-mitre-atlas`: a mapping exercise vs a reference with no defined task (rule 4).

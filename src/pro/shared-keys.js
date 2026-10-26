@@ -85,11 +85,11 @@ export const EXPEDITED_KEPT_SEPARATE = Object.freeze([
   },
   {
     key: 'exp5-sysmon',
-    expeditedAsks: 'Install and configure Sysmon and identify useful process, network and login telemetry. Sending it to Wazuh is its own separate Expedited item.',
+    expeditedAsks: 'Configure Sysmon (installed with a starter configuration in the step before) and identify useful process, network and login telemetry. Sending it to Wazuh is its own separate Expedited item.',
     roadmap: [
       { id: 'p3-sysmon', where: 'Phase 3', asks: 'Install Sysmon and the Wazuh agent on the HP, forward the events to the Wazuh manager, and verify collection before any Atomic test.' },
     ],
-    reason: 'Different scope. Expedited asks to install and configure Sysmon and identify useful process, network and login telemetry. The roadmap item also installs the Wazuh agent and forwards the events to the Wazuh manager, which Expedited tracks as its own separate item (exp5-wazuh). Neither completes the other (rules 1 and 3).',
+    reason: 'Different scope. Expedited asks to configure Sysmon (installed in the step before) and identify useful process, network and login telemetry. The roadmap item also installs the Wazuh agent and forwards the events to the Wazuh manager, which Expedited tracks as its own separate item (exp5-wazuh). Neither completes the other (rules 1 and 3).',
   },
   {
     key: 'exp5-wazuh',
@@ -98,6 +98,14 @@ export const EXPEDITED_KEPT_SEPARATE = Object.freeze([
       { id: 'p3-wazuh', where: 'Phase 3', asks: 'A bigger build: a reproducible single-node setup on the HP plus sanitized dashboards and a demo. Custom detections are a separate roadmap item.' },
     ],
     reason: 'Expedited asks only to run Wazuh on the HP and verify that telemetry arrives. The Phase 3 roadmap item also asks for a reproducible setup, sanitized dashboards and a demo, so finishing the Expedited step must not complete it (rule 3). The Studies Wazuh entry uses the roadmap id, so it shows the same note.',
+  },
+  {
+    key: 'exp5-detect',
+    expeditedAsks: 'Create or tune one Wazuh custom rule, test malicious and benign cases, and document one false positive and your adjustment.',
+    roadmap: [
+      { id: 'p3-wazuh-custom-rules-deploy-and-test', where: 'Phase 3', asks: 'A bigger job: translate Sigma rules to the fields Wazuh actually decodes, test with wazuh-logtest, replay lab actions, save alert evidence and commit the rule files.' },
+    ],
+    reason: 'Expedited asks for one custom rule with a false-positive write-up. The Phase 3 roadmap item also translates Sigma rules, tests them with wazuh-logtest, replays lab actions and commits the rule files, so finishing the Expedited step must not complete it (rule 3).',
   },
   {
     key: 'exp5-attack',
