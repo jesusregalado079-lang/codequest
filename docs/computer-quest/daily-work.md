@@ -147,6 +147,21 @@ From Week 16 plan in Drive. guided16 / standard16, assigned Monday 2026-10-26; W
 - Parent notes preserve the plan's INTENTIONAL REPEAT statements. Kid-facing text and rendered sheets do not show parent notes or authoring markers.
 - Tests: cq-daily-week16.test.js independently derives answers, checks the 16- and 40-block views, Bible reuse, schedule, verses, and rendered pages. Week 15, Week 14, choice, celebration, daily-work, UI, page, and syntax compatibility tests pass.
 
+## 2g. Week 17, 2026-11-02
+From the three Week 17 Drive docs. guided17 / standard17, assigned Monday 2026-11-02; Week 16 remains available through Sunday 11/01, and Week 17 through Sunday 11/08.
+
+- Normal week: Math every weekday; Word Problems Monday, Thursday and Friday; CodeQuest Tuesday and Wednesday.
+- Bible Reading appears Monday, Wednesday and Friday only, following the later plan update. Monday and Friday have three multiple-choice questions; Wednesday has one typed response per son.
+- Monday reads Exodus 19:1-14, then 19:16-25. Wednesday reads Exodus 20:1-21. Friday reads Matthew 22:34-40, then Luke 10:25-37.
+- Older son: percent as decimal multiplication, sales tax, discounts, mixed estimates and Friday independent practice. Percent answers use typing boxes, never shading grids.
+- Older son: stepped lines are separate items. Tuesday tax and totals, Wednesday pay-percent and sale-price lines, and Thursday estimate lines are retained as written.
+- Younger son: 4s use double-double or five groups minus one; 7s use five groups plus two. Math stays at seven or eight items.
+- Both sons: CodeQuest Day reuses the exact three-question sheet from Week 13; their Bible multiple-choice questions and keys match.
+- Memory verses: Philippians 4:13 (NLT), Christ and strength, for younger son; Philippians 4:6-7 (NLT), pray, thank and peace, for older son.
+- Parent notes preserve INTENTIONAL REPEAT statements. Worked examples omit that marker, and kid pages contain no parent notes.
+- Four Bible wrong choices were lengthened for Monday q1/q3 and Friday q1/q2 to meet the answer-length rule; all edits are listed in the K17 report.
+- Week 17 test independently derives numeric answers and checks schedule, sheet counts, verses, choice balance, and parent-note isolation. Requested regression and syntax tests pass.
+
 ## 3. Content data shape (per profile)
 ```
 DailyWorkContent = {

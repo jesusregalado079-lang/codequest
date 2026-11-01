@@ -1250,9 +1250,224 @@ const guided16 = Week('week-16', 'Week 16', [
   ]),
 }, '2026-10-26');
 
+// Week 17 (Monday 2026-11-02): percent of an amount and multiplication facts.
+// Math, Word Problems, and Bible Reading wording and parent notes come from the Week 17 Drive docs.
+const bible17Monday = () => bibleChoice('Exodus 19:1-14, then 19:16-25', [
+  choice("q1", "At the start of Exodus 19, what did God remind the people He had done for them?", ["He carried them out of Egypt on eagles' wings and brought them to Himself","He built them a city to live in, with strong walls and a home for every family","He gave them a king to lead them"], "A", "Exodus 19:4. God reminded them that He carried them out of Egypt on eagles' wings and brought them to Himself. He rescued them first, before giving any rules."),
+  choice("q2", "God said that if they obeyed Him, what would they be?", ["The richest nation on earth","His treasured possession","The rulers over Egypt"], "B", "Exodus 19:5-6. If they obeyed Him and kept His covenant, they would be His treasured possession, a kingdom of priests and a holy nation."),
+  choice("q3", "What happened on the third day at the mountain?", ["A soft rain fell and everything was quiet, so the people packed up and went home before noon","Nothing happened, and Moses came down early","Thunder, lightning, a thick cloud and a loud trumpet, and the whole mountain shook"], "C", "Exodus 19:16-18. On the third day there was thunder and lightning, a thick cloud, a very loud trumpet and smoke, and the whole mountain shook."),
+]);
+const bible17Friday = () => bibleChoice('Matthew 22:34-40, then Luke 10:25-37', [
+  choice("q1", "An expert in the law asked Jesus which commandment is the greatest. What did Jesus say?", ["Never work on the Sabbath, because resting is the greatest commandment of all","Love the Lord your God with all your heart, soul and mind","Give away everything you own"], "B", "Matthew 22:34-38. Jesus said the first and greatest commandment is to love the Lord your God with all your heart, soul and mind."),
+  choice("q2", "What did Jesus say the second commandment is?", ["Obey the king","Pray three times a day without fail","Love your neighbor as yourself"], "C", "Matthew 22:39. The second is like the first: love your neighbor as yourself. Verse 40 says all the Law and the Prophets hang on these two commandments, which is the Sunday lesson point."),
+  choice("q3", "In Jesus' story, a hurt man lay on the road. Who stopped to help him?", ["A priest","A Levite","A Samaritan"], "C", "Luke 10:30-37. The priest and the Levite both walked past. The Samaritan stopped, cared for the man and paid for his room. Jesus ends by saying the neighbor is the one who showed mercy, and to go and do the same."),
+]);
+const bible17Wednesday = (guided) => bibleReading('Exodus 20:1-21',
+  guided ? "Exodus 20 gives ten commands. Pick one command about how to treat God and one about how to treat people. Say what each one asks you to do. Write 1 or 2 sentences." : "Exodus 20 gives ten commands. Pick one command about how to treat God and one about how to treat people. Say what each one asks you to do. Write 2 sentences.",
+  "A good answer picks one command about God (verses 3-11: no other gods, no idols, do not misuse God's name, keep the Sabbath day) and one about people (verses 12-17: honor your father and mother, and no murder, adultery, stealing, lying or coveting), and says what each one asks in plain words. Any one from each group is right. If the boys ask: verse 2 comes first on purpose, because God says He brought them out of Egypt before He gives any rule. Adultery (verse 14) means being unfaithful to a husband or wife. Coveting (verse 17) means wanting what belongs to someone else. Verses 5-6 are tricky. A simple way to say it is that sin hurts families, and God's love lasts far longer.");
+const standard17 = Week('week-17', 'Week 17', [
+  Sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
+    Item('verse', 'fill-blank', "Don't worry about anything; instead, ___ about everything. Tell God what you need, and ___ him for all he has done. Then you will experience God's ___, which exceeds anything we can understand. His peace will guard your hearts and minds as you live in Christ Jesus.", { wordBank: ["pray","thank","peace"], answer: ["pray","thank","peace"] }),
+  ], { citation: "Philippians 4:6-7 (NLT)" }),
+], {
+  monday: Day([
+    Sheet("percent-is-a-decimal", "math", "Percent Is a Decimal",
+      "Percent means 'out of 100'. 35% is 35 out of 100, which is 0.35. So finding 35% of 60 is the same as multiplying: 0.35 × 60. You already know how: ignore the decimal point and multiply (35 × 60 = 2100), then count the decimal places in 0.35 (two) and put the decimal point back: 21.00, which is 21. Use your benchmark percents to check the answer. 35% is between 25% and 50%. 25% of 60 is 15 and 50% of 60 is 30, so the answer should be between 15 and 30. 21 fits.",
+      "35% of 60. Write 35% as 0.35. Ignore the decimal point: 35 × 60 = 2100. 0.35 has 2 decimal places: 21.00, which is 21. Check: 25% of 60 is 15 and 50% of 60 is 30, and 21 is between them.\n\n8% of 50. Write 8% as 0.08. Ignore the decimal point: 8 × 50 = 400. 0.08 has 2 decimal places: 4.00, which is 4. Check: 10% of 50 is 5, and 8% is a little less. 4 fits.", [
+        money("1a", "Write 45% as a decimal.", 0.45, "45 out of 100 = 0.45."),
+        money("1b", "What is 45% of 40?", 18, "0.45 × 40: 45 × 40 = 1800; 2 places = 18.00. Accept 18, 18.0 or 18.00."),
+        money("2a", "Write 6% as a decimal.", 0.06, "6 out of 100 = 0.06."),
+        money("2b", "What is 6% of 25?", 1.5, "0.06 × 25: 6 × 25 = 150; 2 places = 1.50. Accept 1.5 or 1.50."),
+        money("3a", "Write 15% as a decimal.", 0.15, "15 out of 100 = 0.15."),
+        money("3b", "What is 15% of 80?", 12, "0.15 × 80: 15 × 80 = 1200; 2 places = 12.00. Accept 12, 12.0 or 12.00."),
+        money("4", "What is 20% of 85?", 17, "0.20 × 85: 20 × 85 = 1700; 2 places = 17.00. Check: 10% of 85 is 8.5, so 20% is 17."),
+        money("5", "What is 75% of 36?", 27, "0.75 × 36: 75 × 36 = 2700; 2 places = 27.00. Check: 75% is three quarters, and 36 ÷ 4 = 9, so 9 × 3 = 27."),
+      ]),
+    Sheet("tithe-savings-and-spending", "word-problems", "Tithe, Savings and Spending",
+      "Money stories often use percents. Your tithe is 10% of what you earn. A savings jar might get 25%. To find the amount, write the percent as a decimal and multiply by what you earned. 10% is 0.10, and 25% is 0.25. Use a benchmark to check: 10% is one tenth of the total, and 25% is one quarter.",
+      "You earned $38 this month. Your tithe is 10%. How much is your tithe? Write 10% as 0.10. Ignore the decimal point: 10 × 38 = 380. 0.10 has 2 decimal places: 3.80. Answer: $3.80. Check: one tenth of 38 is a little less than 4. It fits.", [
+        money("1", "You earned $65 this month. Your tithe is 10%. How much is your tithe, in dollars?", 6.5, "0.10 × 65 = 6.50. Accept 6.5 or 6.50."),
+        money("2", "You earned $48. You save 25% of it. How much do you save, in dollars?", 12, "0.25 × 48 = 12.00. Check: one quarter of 48 is 12. Accept 12, 12.0 or 12.00."),
+        money("3", "You earned $72. You spend 70% of it. How much do you spend, in dollars?", 50.4, "0.70 × 72: 70 × 72 = 5040; 2 places = 50.40. Accept 50.4 or 50.40."),
+      ]),
+    bible17Monday(),
+  ]),
+  tuesday: Day([
+    Sheet("sales-tax-a-percent-on-top-of-the-price", "math", "Sales Tax: A Percent on Top of the Price",
+      "Sales tax is a percent of the price that the store adds on top. If the tax is 8% and the price is $25, the tax is 0.08 × 25 = 2.00. Then add it to the price to find the total: 25 + 2 = 27. The steps are: write the percent as a decimal, multiply to find the tax, then add the tax to the price. Check with a benchmark: 8% is a little less than 10%, and 10% of 25 is 2.50, so the tax should be a little less than $2.50. $2 fits.",
+      "A $20 book with 8% tax. Tax: 0.08 × 20. Ignore the decimal point: 8 × 20 = 160. 2 decimal places: 1.60. The tax is $1.60. Total: 20 + 1.60 = 21.60. Answer: $21.60.\n\nA $45 shirt with 6% tax. Tax: 0.06 × 45. Ignore the decimal point: 6 × 45 = 270. 2 decimal places: 2.70. The tax is $2.70. Total: 45 + 2.70 = 47.70. Answer: $47.70.", [
+        money("1a", "Write 7% as a decimal.", 0.07, "7 out of 100 = 0.07."),
+        money("1b", "A jacket costs $30. The tax is 7%. How much is the tax, in dollars?", 2.1, "0.07 × 30: 7 × 30 = 210; 2 places = 2.10. Accept 2.1 or 2.10."),
+        money("1c", "What is the total for the jacket, in dollars?", 32.1, "30 + 2.10 = 32.10. Accept 32.1 or 32.10."),
+        money("2a", "Write 9% as a decimal.", 0.09, "9 out of 100 = 0.09."),
+        money("2b", "A game costs $50. The tax is 9%. How much is the tax, in dollars?", 4.5, "0.09 × 50: 9 × 50 = 450; 2 places = 4.50. Accept 4.5 or 4.50."),
+        money("2c", "What is the total for the game, in dollars?", 54.5, "50 + 4.50 = 54.50. Accept 54.5 or 54.50."),
+        money("3a", "A bike helmet costs $80. The tax is 5%. How much is the tax, in dollars?", 4, "0.05 × 80: 5 × 80 = 400; 2 places = 4.00. Accept 4, 4.0 or 4.00."),
+        money("3b", "What is the total for the helmet, in dollars?", 84, "80 + 4 = 84."),
+        money("4", "A pair of shoes costs $24. The tax is 8%. How much is the tax, in dollars?", 1.92, "0.08 × 24: 8 × 24 = 192; 2 places = 1.92."),
+      ]),
+    codeQuest13(),
+  ]),
+  wednesday: Day([
+    Sheet("percent-off-pay-what-is-left", "math", "Percent Off: Pay What Is Left",
+      "When a sale takes 20% off, you still pay the other 80%. 100% − 20% = 80%. So the sale price is 0.80 times the original price. The steps are: subtract the discount from 100% to find what percent you pay, write that percent as a decimal, then multiply by the price. Check with a benchmark: 25% off means you pay three quarters, and 50% off means you pay half.",
+      "$40 shoes, 25% off. You pay 100% − 25% = 75%. Write 75% as 0.75. Ignore the decimal point: 75 × 40 = 3000. 2 decimal places: 30.00. Answer: $30. Check: three quarters of 40 is 30.\n\n$55 game, 20% off. You pay 100% − 20% = 80%. Write 80% as 0.80. Ignore the decimal point: 80 × 55 = 4400. 2 decimal places: 44.00. Answer: $44. Check: 10% of 55 is 5.50, so 20% off is about 11 less, and 55 − 11 = 44.", [
+        money("1a", "A backpack costs $60 and is 30% off. What percent do you pay?", 70, "100 − 30 = 70."),
+        money("1b", "How much do you pay for the backpack, in dollars?", 42, "0.70 × 60: 70 × 60 = 4200; 2 places = 42.00. Accept 42, 42.0 or 42.00."),
+        money("2a", "A jacket costs $90 and is 10% off. What percent do you pay?", 90, "100 − 10 = 90."),
+        money("2b", "How much do you pay for the jacket, in dollars?", 81, "0.90 × 90: 90 × 90 = 8100; 2 places = 81.00. Check: 10% of 90 is 9, and 90 − 9 = 81."),
+        money("3", "A shirt costs $44 and is 25% off. How much do you pay, in dollars?", 33, "0.75 × 44: 75 × 44 = 3300; 2 places = 33.00. Check: one quarter of 44 is 11, and 44 − 11 = 33."),
+        money("4", "A bike costs $120 and is 15% off. How much do you pay, in dollars?", 102, "100 − 15 = 85. 0.85 × 120: 85 × 120 = 10200; 2 places = 102.00. Check: 10% of 120 is 12 and 5% is 6, so 18 off, and 120 − 18 = 102."),
+        money("5", "A lamp costs $35 and is 20% off. How much do you pay, in dollars?", 28, "0.80 × 35: 80 × 35 = 2800; 2 places = 28.00. Check: 20% of 35 is 7, and 35 − 7 = 28."),
+      ]),
+    codeQuest13(),
+    bible17Wednesday(false),
+  ]),
+  thursday: Day([
+    Sheet("estimate-first-then-find-the-exact-answer", "math", "Estimate First, Then Find the Exact Answer",
+      "Estimate first, because it catches mistakes. Round the percent to a benchmark you know (10%, 25%, 50%), find that, and then work out the exact answer with a decimal. For 18% of 50, round to 20%: 20% of 50 is 10, so the answer should be a little less than 10. The exact answer is 0.18 × 50 = 9. The same steps work for tax (add it to the price), for discounts (pay what is left), and for tips and tithes.",
+      "18% of 50. Estimate: 18% is close to 20%, and 20% of 50 is 10, so a little less than 10. Exact: 0.18 × 50. Ignore the decimal point: 18 × 50 = 900. 2 decimal places: 9.00, which is 9. It fits the estimate.\n\n$80 shoes, 35% off. Estimate: 35% is between 25% and 50%, so the discount is between 20 and 40. Exact: 0.35 × 80. Ignore the decimal point: 35 × 80 = 2800. 2 decimal places: 28.00. You save $28, so you pay 80 − 28 = $52.\n\n$90 headphones with 7% tax. Estimate: 7% is a little less than 10%, and 10% of 90 is 9, so the tax is a little less than 9. Exact: 0.07 × 90. Ignore the decimal point: 7 × 90 = 630. 2 decimal places: 6.30. The tax is $6.30, so the total is 90 + 6.30 = $96.30.", [
+        money("1a", "Estimate: round 48% to 50%. What is half of 90?", 45, "90 ÷ 2 = 45."),
+        money("1b", "What is 48% of 90?", 43.2, "0.48 × 90: 48 × 90 = 4320; 2 places = 43.20. Accept 43.2 or 43.20. It should be a little less than 45."),
+        money("2a", "Estimate: round 11% to 10%. What is 10% of 70?", 7, "70 ÷ 10 = 7."),
+        money("2b", "What is 11% of 70?", 7.7, "0.11 × 70: 11 × 70 = 770; 2 places = 7.70. Accept 7.7 or 7.70. It should be a little more than 7."),
+        money("3", "A jacket costs $52 and is 15% off. How much do you pay, in dollars?", 44.2, "100 − 15 = 85. 0.85 × 52: 85 × 52 = 4420; 2 places = 44.20. Accept 44.2 or 44.20."),
+        money("4", "A game costs $75. The tax is 6%. What is the total, in dollars?", 79.5, "0.06 × 75 = 4.50. 75 + 4.50 = 79.50. Accept 79.5 or 79.50."),
+        money("5", "A TV costs $140 and is 20% off. How much do you pay, in dollars?", 112, "0.80 × 140: 80 × 140 = 11200; 2 places = 112.00. Check: 20% of 140 is 28, and 140 − 28 = 112."),
+        money("6", "The tax is 5% on a $36 purchase. How much is the tax, in dollars?", 1.8, "0.05 × 36: 5 × 36 = 180; 2 places = 1.80. Accept 1.8 or 1.80."),
+      ]),
+    Sheet("percents-in-real-life", "word-problems", "Percents in Real Life",
+      "A story may use a percent for a tithe, savings, a tip or a sale. Find the percent and the amount it applies to. Write the percent as a decimal, multiply, and check with a benchmark. When the story has several steps, do them in order and write each answer where it belongs.",
+      "You earn $56. You give 10% as your tithe and save 25%. How much is left? Step 1: tithe = 0.10 × 56 = 5.60. Step 2: savings = 0.25 × 56 = 14.00. Step 3: left = 56 − 5.60 − 14.00 = 36.40. Answer: $36.40.", [
+        money("1", "You earn $80. You give 10%, save 20%, and spend the rest. How much do you spend, in dollars?", 56, "Give: 0.10 × 80 = 8. Save: 0.20 × 80 = 16. Spend: 80 − 8 − 16 = 56. Check: 70% of 80 is 56."),
+        money("2", "A restaurant bill is $40. You leave a 15% tip. How much is the tip, in dollars?", 6, "0.15 × 40: 15 × 40 = 600; 2 places = 6.00. Check: 10% of 40 is 4 and 5% is 2, so 6."),
+        money("3", "You buy a $32 game with 8% tax. What is the total, in dollars?", 34.56, "Tax: 0.08 × 32: 8 × 32 = 256; 2 places = 2.56. Total: 32 + 2.56 = 34.56."),
+      ]),
+  ]),
+  friday: Day([
+    Sheet("show-what-you-know", "math", "Show What You Know",
+      "No steps are written out today, so use them yourself. Estimate with a benchmark, write the percent as a decimal, ignore the decimal point and multiply, count the decimal places, and put the point back. For discounts, remember to pay what is left. For tax, remember to add it to the price.",
+      "65% of 80. Estimate: 65% is between 50% and 75%, so between 40 and 60. Exact: 0.65 × 80. Ignore the decimal point: 65 × 80 = 5200. 2 decimal places: 52.00. Answer: 52.\n\n$90 coat, 30% off. You pay 100% − 30% = 70%. 0.70 × 90: 70 × 90 = 6300; 2 decimal places: 63.00. Answer: $63.", [
+        money("1", "What is 45% of 60?", 27, "0.45 × 60: 45 × 60 = 2700; 2 places = 27.00."),
+        money("2", "What is 12% of 75?", 9, "0.12 × 75: 12 × 75 = 900; 2 places = 9.00."),
+        money("3", "A shirt costs $85 and is 20% off. How much do you pay, in dollars?", 68, "0.80 × 85: 80 × 85 = 6800; 2 places = 68.00."),
+        money("4", "A meal costs $44. The tax is 9%. What is the total, in dollars?", 47.96, "Tax: 0.09 × 44: 9 × 44 = 396; 2 places = 3.96. Total: 44 + 3.96 = 47.96."),
+        money("5", "What is 35% of $140? Type the number of dollars.", 49, "0.35 × 140: 35 × 140 = 4900; 2 places = 49.00."),
+        money("6", "What is 6% of 250?", 15, "0.06 × 250: 6 × 250 = 1500; 2 places = 15.00."),
+      ]),
+    Sheet("percent-stories-on-your-own", "word-problems", "Percent Stories on Your Own",
+      "Read each story twice. Find the percent and the amount it applies to, write the percent as a decimal, multiply, and check with a benchmark. There are no steps written out today, because you know them now.",
+      "You earn $120 doing chores in a month. You give 10% and save 30%. How much is left? Step 1: tithe = 0.10 × 120 = 12. Step 2: savings = 0.30 × 120 = 36. Step 3: left = 120 − 12 − 36 = 72. Answer: $72.", [
+        money("1", "A game costs $64 and is 25% off. What is the sale price, in dollars?", 48, "0.75 × 64: 75 × 64 = 4800; 2 places = 48.00. Check: one quarter of 64 is 16, and 64 − 16 = 48."),
+        money("2", "You earn $150. You save 30% of it. How much do you save, in dollars?", 45, "0.30 × 150: 30 × 150 = 4500; 2 places = 45.00."),
+        money("3", "A meal costs $20 and you leave a 15% tip. What is the total with the tip, in dollars?", 23, "Tip: 0.15 × 20 = 3.00. Total: 20 + 3 = 23."),
+        note("4", "In one sentence, explain why finding 20% off is the same as paying 80%.", "A good answer says that if 20% comes off, the other 80% is what is left to pay, so you can multiply by 0.80."),
+      ]),
+    bible17Friday(),
+  ]),
+}, '2026-11-02');
+const guided17 = Week('week-17', 'Week 17', [
+  Sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
+    Item('verse', 'fill-blank', "For I can do everything through ___, who gives me ___.", { wordBank: ["Christ","strength"], answer: ["Christ","strength"] }),
+  ], { citation: "Philippians 4:13 (NLT)" }),
+], {
+  monday: Day([
+    Sheet("fours-two-ways", "math", "Fours Two Ways",
+      "There are two ways to find a 4s fact, and they check each other. Way 1: find the 2s fact and double it. 4 × 7: 2 × 7 = 14, and 14 + 14 = 28. Way 2: find the 5s fact and take away one group. You know your 5s. 4 × 7: 5 × 7 = 35, and 35 − 7 = 28. Both ways give 28. If your two ways match, you can trust the answer.",
+      "4 × 7. Way 1: 2 × 7 = 14, and 14 + 14 = 28. Way 2: 5 × 7 = 35, and 35 − 7 = 28. Both give 28. So 4 × 7 = 28.\n\n4 × 8. Way 1: 2 × 8 = 16, and 16 + 16 = 32. Way 2: 5 × 8 = 40, and 40 − 8 = 32. Both give 32. So 4 × 8 = 32.", [
+        withNote(times("1a", 5, 6), "INTENTIONAL REPEAT (Week 16): he needs to see facts more than once."),
+        money("1b", "Take away one group of 6. 30 − 6 = ?", 24, "30 − 6 = 24."),
+        money("1c", "So 4 × 6 = ?", 24, "INTENTIONAL REPEAT (Weeks 16 and earlier): he needs to see facts more than once."),
+        withNote(times("2a", 5, 9), "INTENTIONAL REPEAT (Weeks 13, 14 and 16): he needs to see facts more than once."),
+        money("2b", "Take away one group of 9. 45 − 9 = ?", 36, "45 − 9 = 36."),
+        money("2c", "So 4 × 9 = ?", 36, "INTENTIONAL REPEAT (Weeks 13, 14 and 16): he needs to see facts more than once."),
+        withNote(times("3", 4, 10), "INTENTIONAL REPEAT (Weeks 14 and 16): he needs to see facts more than once."),
+      ]),
+    Sheet("groups-of-four", "word-problems", "Groups of Four",
+      "When every group is the same size and you want the total, you multiply. Read the story slowly, find how many groups there are and how many are in each group, and then multiply. Use your two ways for the 4s: double the 2s fact, or take one group away from the 5s fact.",
+      "A chair has 4 legs. There are 7 chairs. How many legs in all? Clue: 'a chair has 4' and 'there are 7 chairs' mean equal groups, so MULTIPLY. 4 × 7: 5 × 7 = 35, and 35 − 7 = 28. Answer: 28 legs.", [
+        money("1", "A cow has 4 legs. There are 9 cows. How many legs in all?", 36, "4 × 9 = 36. INTENTIONAL REPEAT (Math problem 2c today): he needs to see facts more than once."),
+        money("2", "A pack has 4 pencils. Cal buys 8 packs. How many pencils in all?", 32, "4 × 8 = 32. INTENTIONAL REPEAT (Math worked example today): he needs to see facts more than once."),
+        money("3", "Rae has 6 boxes. Each box has 4 crayons. How many crayons in all?", 24, "6 × 4 = 24. INTENTIONAL REPEAT (Math problem 1c today): he needs to see facts more than once."),
+      ]),
+    bible17Monday(),
+  ]),
+  tuesday: Day([
+    Sheet("sevens-again-five-groups-plus-two-groups", "math", "Sevens Again: Five Groups Plus Two Groups",
+      "Seven is five plus two. So a 7s fact is a 5s fact plus a 2s fact. You know your 5s and your 2s. 7 × 4: 5 × 4 = 20, 2 × 4 = 8, and 20 + 8 = 28. Write the two parts, then add. Last week you did this with smaller facts. Today the facts get bigger, and the steps are the same.",
+      "7 × 9. Step 1: 5 × 9 = 45. Step 2: 2 × 9 = 18. Step 3: 45 + 18 = 63. So 7 × 9 = 63.\n\n7 × 4. Step 1: 5 × 4 = 20. Step 2: 2 × 4 = 8. Step 3: 20 + 8 = 28. So 7 × 4 = 28.", [
+        withNote(times("1a", 5, 8), "INTENTIONAL REPEAT (Weeks 16 and earlier): he needs to see facts more than once."),
+        withNote(times("1b", 2, 8), "8 + 8 = 16."),
+        money("1c", "Add your two answers. 7 × 8 = ?", 56, "40 + 16 = 56. INTENTIONAL REPEAT (Week 16): he needs to see facts more than once."),
+        withNote(times("2a", 5, 6), "INTENTIONAL REPEAT (Week 16): he needs to see facts more than once."),
+        withNote(times("2b", 2, 6), "6 + 6 = 12."),
+        money("2c", "Add your two answers. 7 × 6 = ?", 42, "30 + 12 = 42. INTENTIONAL REPEAT (Week 16): he needs to see facts more than once."),
+        money("3", "7 × 7 = ? Hint: 5 × 7 = 35 and 2 × 7 = 14.", 49, "35 + 14 = 49. INTENTIONAL REPEAT (Week 16 Friday's worked example): he needs to see facts more than once."),
+      ]),
+    codeQuest13(),
+  ]),
+  wednesday: Day([
+    Sheet("fours-and-sevens-mixed", "math", "Fours and Sevens Mixed",
+      "Today the 4s and 7s are mixed together. For a 4s fact, find the 5s fact and take away one group, or double the 2s fact. For a 7s fact, add a 5s fact and a 2s fact. Only the first problem has the steps written out. On the others, do the steps yourself.",
+      "7 × 10. Step 1: 5 × 10 = 50. Step 2: 2 × 10 = 20. Step 3: 50 + 20 = 70. So 7 × 10 = 70.\n\n4 × 4. Step 1: 5 × 4 = 20. Step 2: take away one group of 4: 20 − 4 = 16. So 4 × 4 = 16. Check with double-double: 2 × 4 = 8, and 8 + 8 = 16.", [
+        withNote(times("1a", 5, 7), "INTENTIONAL REPEAT (Weeks 13, 14 and 16): he needs to see facts more than once."),
+        money("1b", "Take away one group of 7. 35 − 7 = ?", 28, "35 − 7 = 28."),
+        money("1c", "So 4 × 7 = ?", 28, "INTENTIONAL REPEAT (Weeks 13, 14 and 16): he needs to see facts more than once."),
+        withNote(times("2", 7, 3), "5 × 3 + 2 × 3 = 15 + 6 = 21. INTENTIONAL REPEAT (Week 16): he needs to see facts more than once."),
+        withNote(times("3", 4, 8), "5 × 8 − 8 = 40 − 8 = 32. INTENTIONAL REPEAT (Week 16's worked example and Monday): he needs to see facts more than once."),
+        withNote(times("4", 7, 9), "45 + 18 = 63. INTENTIONAL REPEAT (Tuesday's worked example): he needs to see facts more than once."),
+        withNote(times("5", 4, 6), "5 × 6 − 6 = 24. INTENTIONAL REPEAT (Monday and Week 16): he needs to see facts more than once."),
+      ]),
+    codeQuest13(),
+    bible17Wednesday(true),
+  ]),
+  thursday: Day([
+    Sheet("fours-and-sevens-again", "math", "Fours and Sevens Again",
+      "Today you do the 4s and 7s again, and a few 5s and 10s keep those facts warm. If you get stuck on a 4s fact, take one group away from the 5s fact. If you get stuck on a 7s fact, add a 5s fact and a 2s fact. Doing the same steps again and again is how facts stick. The last problem has its steps written out.",
+      "7 × 6. Step 1: 5 × 6 = 30. Step 2: 2 × 6 = 12. Step 3: 30 + 12 = 42. So 7 × 6 = 42.\n\n4 × 3. Step 1: 5 × 3 = 15. Step 2: take away one group of 3: 15 − 3 = 12. So 4 × 3 = 12.", [
+        withNote(times("1", 7, 4), "INTENTIONAL REPEAT (Weeks 13, 14 and 16): he needs to see facts more than once."),
+        withNote(times("2", 4, 9), "INTENTIONAL REPEAT (Weeks 13, 14 and 16): he needs to see facts more than once."),
+        withNote(times("3", 5, 7), "INTENTIONAL REPEAT (Weeks 13, 14 and 16): he needs to see facts more than once."),
+        withNote(times("4", 10, 6), "INTENTIONAL REPEAT (Weeks 13 and 16): he needs to see facts more than once."),
+        withNote(times("5a", 5, 8), "INTENTIONAL REPEAT (Week 16): he needs to see facts more than once."),
+        withNote(times("5b", 2, 8), "8 + 8 = 16."),
+        money("5c", "Add your two answers. 7 × 8 = ?", 56, "40 + 16 = 56. INTENTIONAL REPEAT (Week 16 and Tuesday): he needs to see facts more than once."),
+      ]),
+    Sheet("groups-of-seven", "word-problems", "Groups of Seven",
+      "Read the story and find how many groups there are and how many are in each group. When the groups are equal and you want the total, multiply. For a 7s fact, add a 5s fact and a 2s fact.",
+      "A week has 7 days. There are 6 weeks. How many days in all? Clue: 'a week has 7' and 'there are 6 weeks' mean equal groups, so MULTIPLY. 7 × 6: 5 × 6 = 30, 2 × 6 = 12, and 30 + 12 = 42. Answer: 42 days.", [
+        money("1", "A box has 7 crayons. Jax has 4 boxes. How many crayons in all?", 28, "4 × 7 = 28. INTENTIONAL REPEAT (Math problem 1 today): he needs to see facts more than once."),
+        money("2", "Fay has 7 bags. Each bag has 5 stickers. How many stickers in all?", 35, "7 × 5 = 35. INTENTIONAL REPEAT (Math problem 3 today): he needs to see facts more than once."),
+        money("3", "A shelf has 7 books. There are 8 shelves. How many books in all?", 56, "7 × 8 = 56. INTENTIONAL REPEAT (Math problem 5c today): he needs to see facts more than once."),
+      ]),
+  ]),
+  friday: Day([
+    Sheet("show-what-you-know", "math", "Show What You Know",
+      "No steps are written out today, so use the tricks yourself. For a 4s fact, take one group away from the 5s fact, or double the 2s fact. For a 7s fact, add a 5s fact and a 2s fact. If you get stuck, go back to the worked example and follow the same steps one at a time. The last item asks how sure you feel.",
+      "7 × 8. Step 1: 5 × 8 = 40. Step 2: 2 × 8 = 16. Step 3: 40 + 16 = 56. So 7 × 8 = 56.\n\n4 × 9. Step 1: 5 × 9 = 45. Step 2: take away one group of 9: 45 − 9 = 36. So 4 × 9 = 36.", [
+        withNote(times("1", 4, 6), "INTENTIONAL REPEAT (Monday and Wednesday): he needs to see facts more than once."),
+        withNote(times("2", 7, 5), "INTENTIONAL REPEAT (Weeks 13, 14 and 16): he needs to see facts more than once."),
+        withNote(times("3", 4, 8), "INTENTIONAL REPEAT (Monday and Wednesday): he needs to see facts more than once."),
+        withNote(times("4", 7, 9), "INTENTIONAL REPEAT (Tuesday and Wednesday): he needs to see facts more than once."),
+        withNote(times("5", 10, 7), "INTENTIONAL REPEAT (Week 13, Week 16 and Wednesday): he needs to see facts more than once."),
+        withNote(times("6", 4, 7), "INTENTIONAL REPEAT (Weeks 13, 14 and 16, and Monday and Wednesday): he needs to see facts more than once."),
+        withNote(times("7", 7, 6), "INTENTIONAL REPEAT (Tuesday and Thursday): he needs to see facts more than once."),
+        Item("8", 'scale', "How sure do you feel about your 4s and 7s? (1 = not sure, 5 = very sure)", { scaleMax: 5, parentNote: "Any number from 1 to 5 is fine. Jesse can use it to see how he feels." }),
+      ]),
+    Sheet("groups-and-coins", "word-problems", "Groups and Coins",
+      "Equal groups show up in stories about coins and counting. 7 nickels is 7 groups of 5 cents, so you multiply 5 × 7. Read the story, find how many groups there are and how many are in each group, and then multiply.",
+      "Mo has 7 nickels. How many cents does he have? A nickel is 5 cents. 7 groups of 5 means MULTIPLY. 5 × 7 = 35. Answer: 35 cents.", [
+        money("1", "Cal has 4 bags. Each bag has 9 marbles. How many marbles in all?", 36, "4 × 9 = 36. INTENTIONAL REPEAT (Monday, Thursday and Week 16): he needs to see facts more than once."),
+        money("2", "A week has 7 days. There are 8 weeks. How many days in all?", 56, "7 × 8 = 56. INTENTIONAL REPEAT (Tuesday and Thursday): he needs to see facts more than once."),
+        money("3", "Nia has 7 dimes. How many cents does she have?", 70, "7 × 10 = 70. INTENTIONAL REPEAT (Week 13, Week 16 and Wednesday): he needs to see facts more than once."),
+      ]),
+    bible17Friday(),
+  ]),
+}, '2026-11-02');
+
 export const DAILY_WORK = deepFreeze({
-  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14, 'week-15': guided15, 'week-16': guided16 } },
-  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14, 'week-15': standard15, 'week-16': standard16 } },
+  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14, 'week-15': guided15, 'week-16': guided16, 'week-17': guided17 } },
+  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14, 'week-15': standard15, 'week-16': standard16, 'week-17': standard17 } },
 });
 
 export function getWeek(track, weekId) {

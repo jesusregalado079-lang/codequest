@@ -87,7 +87,7 @@ for (const track of ['guided', 'standard']) {
   for (const date of ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01']) {
     assert.equal(currentWeek(DAILY_WORK, track, date).id, 'week-16', track + '/' + date);
   }
-  assert.equal(currentWeek(DAILY_WORK, track, '2026-11-02'), null);
+  assert.equal(currentWeek(DAILY_WORK, track, '2026-11-02').id, 'week-17');
   assert.deepEqual(DAYS.map((day) => week.days[day].sheets.map((x) => x.subject)), SUBJECTS);
   assert.deepEqual(DAYS.map((day) => week.days[day].sheets.map((x) => x.items.length)), COUNTS[track]);
   assert.deepEqual(DAYS.map((day) => week.days[day].sheets.filter((x) => x.subject === 'math' || x.subject === 'word-problems').map((x) => x.title)), TITLES[track]);
