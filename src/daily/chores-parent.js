@@ -7,6 +7,8 @@ const money = (cents) => `$${(cents / 100).toFixed(2)}`;
 const dateObj = (iso) => new Date(`${iso}T12:00:00Z`);
 const shortDate = (iso) => dateObj(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 const fullDate = (iso) => dateObj(iso).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const dayLabel = (iso) => dateObj(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+const monthName = (key) => key ? dateObj(`${key}-01`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
 const time = (iso) => new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
 const stampDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 const disabled = (paid) => paid ? ' disabled' : '';
@@ -90,14 +92,14 @@ function payHtml(store, state, todayIso) {
   const monthSum = summarize(Object.values(chores.entries).filter((entry) => monthKey(entry.date) === month && entry.date <= todayIso));
   return `<section class="cqd-chore-parent-card"><h2>Pay the week</h2><div class="cqd-chore-parent-table-wrap"><table><thead><tr><th>Day</th><th>Jobs</th><th>Not done</th><th>Confirmed</th></tr></thead><tbody>${dates.map((date) => {
     const day = summarize(dayEntries(chores, date));
-    return `<tr><th>${esc(shortDate(date))}</th><td>${day.confirmedJobs + day.waitingJobs + day.declinedJobs}</td><td>${day.declinedJobs}</td><td>${money(day.confirmedCents)}</td></tr>`;
+    return `<tr><th>${esc(dayLabel(date))}</th><td>${day.confirmedJobs + day.waitingJobs + day.declinedJobs}</td><td>${day.declinedJobs}</td><td>${money(day.confirmedCents)}</td></tr>`;
   }).join('')}<tr class="is-total"><th>Week</th><td>${entries.length}</td><td>${sum.declinedJobs}</td><td>${money(sum.confirmedCents)}</td></tr></tbody></table></div>
   ${split ? `<div class="cqd-chore-parent-split"><div><strong>${money(split.give)}</strong><small>Give 10%</small></div><div><strong>${money(split.save)}</strong><small>Save 20%</small></div><div><strong>${money(split.spend)}</strong><small>Spend 70%</small></div></div><p class="cqd-chore-parent-note">The 10/20/70 split is a guide.</p>` : '<p class="cqd-chore-parent-note">Guide unavailable for this amount.</p>'}</section>
   <section class="cqd-chore-parent-card"><div class="cqd-chore-parent-pay-actions">${button('chores-pay-week', `Mark the week as paid · ${money(sum.confirmedCents)}`, `${disabled(!!paid || !!sum.waitingJobs || !sum.confirmedJobs)}`, 'is-green')}
   ${store.track === 'guided' && (paid || sum.confirmedCents > 0) ? button('chores-open-payday', `Open the Payday Helper with ${money(sum.confirmedCents)}`, `${disabled(!!paid?.helperUsedAt)}`) : ''}</div>
   ${paid ? '<p>Week paid and locked.</p>' : sum.waitingJobs ? `<p>Check the ${sum.waitingJobs} waiting jobs first.</p>` : !sum.confirmedJobs ? '<p>Nothing confirmed yet.</p>' : '<p>Marking paid locks this week and keeps a record.</p>'}
   ${store.track === 'standard' ? '<p>His money stays here and adds up for the month.</p>' : ''}</section>
-  <section class="cqd-chore-parent-card"><h2>Paid so far</h2><div class="cqd-chore-parent-table-wrap"><table><thead><tr><th>Week</th><th>Paid on</th><th>Amount</th></tr></thead><tbody>${history.map(([monday, record]) => `<tr><th>${esc(shortDate(monday))}</th><td>${esc(stampDate(record.paidAt))}</td><td>${money(record.cents)}</td></tr>`).join('') || '<tr><td colspan="3">No paid weeks yet.</td></tr>'}</tbody></table></div><p class="cqd-chore-parent-month">This month (${esc(month)}): ${money(monthSum.confirmedCents)} confirmed</p></section>`;
+  <section class="cqd-chore-parent-card"><h2>Paid so far</h2><div class="cqd-chore-parent-table-wrap"><table><thead><tr><th>Week</th><th>Paid on</th><th>Amount</th></tr></thead><tbody>${history.map(([monday, record]) => `<tr><th>Week of ${esc(shortDate(monday))}</th><td>${esc(stampDate(record.paidAt))}</td><td>${money(record.cents)}</td></tr>`).join('') || '<tr><td colspan="3">No paid weeks yet.</td></tr>'}</tbody></table></div><p class="cqd-chore-parent-month">This month (${esc(monthName(month))}): ${money(monthSum.confirmedCents)} confirmed</p></section>`;
 }
 
 function jobsHtml(store) {
@@ -120,5 +122,6 @@ export function renderChoresParent(store, state, todayIso) {
       <label>Import a backup file<input type="file" accept=".json,application/json" data-chores-backup-file></label>
       <label><input type="checkbox" data-chores-backup-replace> Replace everything here</label>
       ${button('chores-import-backup', 'Import a backup file')}
+      <p class="cqd-chore-parent-message cqd-chore-backup-message" data-backup-status role="status" aria-live="polite">${esc(state.backupMessage || '')}</p>
     </section></section>`;
 }

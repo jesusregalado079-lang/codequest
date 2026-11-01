@@ -18,7 +18,7 @@ const esc = (value) => String(value).replace(/[&<>"']/g, (char) => `&#${char.cha
 
 export function createParentState() {
   return { open: false, selectedDay: null, pinMessage: '', resetting: false,
-    view: 'work', choresView: 'check', weekMonday: null, day: null, choreMessage: '' };
+    view: 'work', choresView: 'check', weekMonday: null, day: null, choreMessage: '', backupMessage: '' };
 }
 
 export function gradeSuggestion(item, value) {

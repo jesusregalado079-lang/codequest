@@ -46,7 +46,7 @@ export function renderChores(store, todayIso, selectedIso = todayIso, message = 
         : `<span class="cqd-chore-chip wait">⏳ ${group.cents === null ? 'Waiting, a grown-up picks the price' : 'Waiting for a grown-up'}</span>`;
     return `<li class="cqd-chore-row"><span class="cqd-chore-row-icon" aria-hidden="true">${esc(group.icon)}</span>
       <span class="cqd-chore-name">${esc(group.name)}${group.count > 1 ? ` x${group.count}` : ''}<small>${esc(group.es)}</small></span>
-      <span class="cqd-chore-amount">${group.cents === null ? '' : money(group.cents * group.count)}</span>${chip}
+      <span class="cqd-chore-meta"><span class="cqd-chore-amount">${group.cents === null ? '' : money(group.cents * group.count)}</span>${chip}</span>
       ${removableEntry ? `<button type="button" class="cqd-chore-remove" data-action="chore-remove" data-id="${esc(removableEntry.id)}" data-date="${todayIso}" aria-label="Remove one ${esc(group.name)} entry">×</button>` : ''}</li>`;
   }).join('');
   return `<div class="cqd-sheet-nav"><button type="button" class="cqd-link-button" data-action="back-to-calendar">← This week</button></div>

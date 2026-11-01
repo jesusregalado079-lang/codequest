@@ -68,7 +68,7 @@ function writeParentChores(apply, success) {
 
 function parentChoreAction(button, action) {
   if (route.screen !== 'parent' || !parentUnlocked(store, Date.now())) return;
-  if (action === 'chores-view-work') { parentState.view = 'work'; parentState.choreMessage = ''; render(); return; }
+  if (action === 'chores-view-work') { parentState.view = 'work'; parentState.choreMessage = ''; parentState.backupMessage = ''; render(); return; }
   if (action === 'chores-view-chores') { parentState.view = 'chores'; parentState.choresView = 'check'; render(); return; }
   if (parentState.view !== 'chores') return;
   if (action === 'chores-jobs' || action === 'chores-check') {
@@ -91,7 +91,7 @@ function parentChoreAction(button, action) {
   }
   if (action === 'chores-export-backup') {
     const backup = exportChores(store, new Date().toISOString());
-    if (backup.error) { parentState.choreMessage = backup.error; render(); return; }
+    if (backup.error) { parentState.backupMessage = backup.error; render(); return; }
     const name = `codequest-chores-${store.track === 'guided' ? 'younger' : 'older'}-${todayIso()}.json`;
     const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -99,32 +99,32 @@ function parentChoreAction(button, action) {
     anchor.href = url; anchor.download = name;
     document.body.appendChild(anchor); anchor.click(); anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    parentState.choreMessage = `Backup file saved (${name}). Keep it somewhere safe, like your Google Drive.`;
+    parentState.backupMessage = `Backup file saved (${name}). Keep it somewhere safe, like your Google Drive.`;
     render(); return;
   }
   if (action === 'chores-import-backup') {
     const file = app.querySelector('[data-chores-backup-file]')?.files?.[0];
     const mode = app.querySelector('[data-chores-backup-replace]')?.checked ? 'replace' : 'merge';
-    if (!file) { parentState.choreMessage = 'Choose a JSON backup file first.'; render(); return; }
+    if (!file) { parentState.backupMessage = 'Choose a JSON backup file first.'; render(); return; }
     if (file.size > 2 * 1024 * 1024 || !(/\.json$/i.test(file.name) || file.type === 'application/json')) {
-      parentState.choreMessage = 'Choose a JSON backup file under 2 MB.'; render(); return;
+      parentState.backupMessage = 'Choose a JSON backup file under 2 MB.'; render(); return;
     }
     const session = parentSession;
     file.text().then((content) => {
       if (session !== parentSession || route.screen !== 'parent' || !parentUnlocked(store, Date.now())) return;
       let backup;
-      try { backup = JSON.parse(content); } catch { parentState.choreMessage = 'This backup file is not valid JSON.'; render(); return; }
+      try { backup = JSON.parse(content); } catch { parentState.backupMessage = 'This backup file is not valid JSON.'; render(); return; }
       const result = importChores(choresOf(store), backup, mode, store.track);
-      if (result.error) { parentState.choreMessage = result.error; render(); return; }
+      if (result.error) { parentState.backupMessage = result.error; render(); return; }
       let writeError = '';
       persist((s) => {
         const latest = importChores(choresOf(s), backup, mode, s.track);
         if (latest.error) { writeError = latest.error; return s; }
         return withChores(s, () => latest);
       });
-      parentState.choreMessage = writeError || `Added ${result.added} jobs, skipped ${result.skipped}.`;
+      parentState.backupMessage = writeError || `Added ${result.added} jobs, skipped ${result.skipped}.`;
       render();
-    }).catch(() => { parentState.choreMessage = 'Could not read that backup file.'; render(); });
+    }).catch(() => { parentState.backupMessage = 'Could not read that backup file.'; render(); });
     return;
   }
   if (parentState.choresView === 'jobs') {
