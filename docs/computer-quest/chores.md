@@ -42,3 +42,11 @@ Chores are tracked on paper (monthly packet, one per boy, `Chore_Money_Packet_*.
 10. Backup export file for the chore records: yes.
 11. Fix the "$5" bill icon covering "Payday Helper" on the younger son's calendar: yes, with this work.
 Pictures 1, 2, 4, 6 and 7 approved as shown (job list: memory verse price per boy as in 2). Picture 3 changes as in 3. Picture 5 changes as in 7 and 8: no Payday Helper button for the older son, and a "This month" total on both boys' chore screens.
+
+## How it works now
+
+Each boy taps jobs he did today in My Chores. He can see earlier days, but only a grown-up can add a job for an earlier day. The grown-up uses the PIN to confirm jobs, set a price for Something else, mark jobs not done, and mark a week paid. A paid week is locked until the grown-up reopens it.
+
+On the younger son's iPad, an unused paid week appears on the first Payday Helper screen. He can use its amount or type a different one. The grown-up can also open the Helper from that week's pay screen. Using a paid total marks it used once. The older son's iPad has no Helper link.
+
+Parent Mode can export a JSON backup file and import one by merging or replacing chore records. Each iPad accepts backups for its own boy only. Import requires pressing the button. Chore records live in this iPad's `codequest-daily-v1` browser storage, so keep a backup file somewhere safe. Confirmed entries keep their original price. Merge never replaces an existing entry or a paid record, and reopening a paid week removes its payment and Helper-used flag.

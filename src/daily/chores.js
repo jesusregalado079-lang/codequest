@@ -92,6 +92,7 @@ export function normalizeChores(value) {
     const cents = ids.reduce((sum, id) => sum + result.entries[id].cents, 0);
     if (cents !== p.cents) continue;
     result.paid[monday] = { cents, paidAt: p.paidAt, entryIds: [...ids] };
+    if (validStamp(p.helperUsedAt)) result.paid[monday].helperUsedAt = p.helperUsedAt;
   }
   return result;
 }
@@ -232,6 +233,70 @@ export function reopenWeek(chores, mondayIso) {
   const paid = { ...chores.paid };
   delete paid[mondayIso];
   return { chores: { ...chores, paid } };
+}
+export function markPaidUsed(chores, mondayIso, nowIso) {
+  if (!validMonday(mondayIso) || !validStamp(nowIso) || !own(chores.paid, mondayIso)) return error('Week is not paid');
+  if (chores.paid[mondayIso].helperUsedAt) return error('This week was already used');
+  return { chores: { ...chores, paid: { ...chores.paid,
+    [mondayIso]: { ...chores.paid[mondayIso], helperUsedAt: nowIso } } } };
+}
+export function latestUnusedPaidWeek(chores) {
+  const mondayIso = Object.keys(chores.paid).filter((monday) => !chores.paid[monday].helperUsedAt).sort().slice(-1)[0];
+  if (!mondayIso) return null;
+  const paid = chores.paid[mondayIso];
+  return { mondayIso, cents: paid.cents, jobs: paid.entryIds.length, paidAt: paid.paidAt };
+}
+
+export function exportChores(store, nowIso) {
+  if (!validStamp(nowIso) || !['guided', 'standard'].includes(store?.track)) return error('Cannot make a backup');
+  return { format: 'codequest-chores', version: 1, exportedAt: nowIso,
+    track: store.track, chores: normalizeChores(store.chores) };
+}
+
+export function importChores(chores, backup, mode, track) {
+  const source = object(backup);
+  if (source.format !== 'codequest-chores' || source.version !== 1 || !validStamp(source.exportedAt)
+    || !['guided', 'standard'].includes(source.track) || !['merge', 'replace'].includes(mode)) return error('This is not a chore backup file');
+  if (source.track !== track) return error(`This backup is from the ${source.track === 'guided' ? 'younger' : 'older'} son's iPad`);
+  const raw = object(source.chores);
+  if (!own(source, 'chores') || object(source.chores) !== source.chores || !Object.keys(raw).length
+    || (own(raw, 'entries') && object(raw.entries) !== raw.entries)
+    || (own(raw, 'jobs') && object(raw.jobs) !== raw.jobs)
+    || (own(raw, 'paid') && object(raw.paid) !== raw.paid)
+    || Object.keys(object(raw.entries)).length > MAX_ENTRIES
+    || (Array.isArray(object(raw.jobs).custom) && raw.jobs.custom.length > MAX_CUSTOM)
+    || Object.keys(object(raw.paid)).length > MAX_ENTRIES) return error('This backup has too many records or missing chores');
+  const incoming = normalizeChores(raw);
+  const current = normalizeChores(chores);
+  if (mode === 'replace') return { chores: incoming,
+    added: Object.keys(incoming.entries).length, skipped: 0 };
+  const merged = { jobs: { overrides: { ...current.jobs.overrides }, custom: [...current.jobs.custom] },
+    entries: { ...current.entries }, paid: { ...current.paid } };
+  let added = 0;
+  let skipped = 0;
+  for (const [id, value] of Object.entries(incoming.jobs.overrides)) {
+    if (own(merged.jobs.overrides, id)) skipped++;
+    else { merged.jobs.overrides[id] = value; added++; }
+  }
+  const jobIds = new Set(merged.jobs.custom.map((job) => job.id));
+  for (const job of incoming.jobs.custom) {
+    if (jobIds.has(job.id) || merged.jobs.custom.length >= MAX_CUSTOM) skipped++;
+    else { merged.jobs.custom.push(job); jobIds.add(job.id); added++; }
+  }
+  for (const [id, entry] of Object.entries(incoming.entries)) {
+    if (own(merged.entries, id) || own(current.paid, weekMonday(entry.date))
+      || Object.keys(merged.entries).length >= MAX_ENTRIES) skipped++;
+    else { merged.entries[id] = entry; added++; }
+  }
+  for (const [monday, paid] of Object.entries(incoming.paid)) {
+    if (own(merged.paid, monday) || paid.entryIds.some((id) => !own(merged.entries, id)
+      || merged.entries[id].status !== 'confirmed' || weekMonday(merged.entries[id].date) !== monday
+      || merged.entries[id].cents !== incoming.entries[id]?.cents)
+      || Object.values(merged.entries).some((entry) => weekMonday(entry.date) === monday
+        && (entry.status === 'waiting' || (entry.status === 'confirmed' && !paid.entryIds.includes(entry.id))))) skipped++;
+    else { merged.paid[monday] = paid; added++; }
+  }
+  return { chores: normalizeChores(merged), added, skipped };
 }
 export function setJobPrice(chores, jobId, cents) {
   if (!priceOk(cents)) return error('Invalid price');

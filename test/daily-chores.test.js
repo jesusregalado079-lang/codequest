@@ -202,6 +202,42 @@ const validPaid = c.normalizeChores({ entries: { good: clean.entries.good }, pai
 } });
 assert.deepEqual(validPaid.paid[MON], { cents: 75, paidAt: later, entryIds: ['good'] });
 assert.deepEqual(c.normalizeChores(validPaid), validPaid);
+const usedPaid = ok(c.markPaidUsed(validPaid, MON, later));
+assert.equal(usedPaid.paid[MON].helperUsedAt, later);
+assert.equal(c.latestUnusedPaidWeek(usedPaid), null);
+rejected(c.markPaidUsed(usedPaid, MON, later), 'paid week cannot be reused');
+rejected(c.markPaidUsed(validPaid, '2026-11-02', later), 'unpaid week cannot be used');
+assert.deepEqual(c.latestUnusedPaidWeek(validPaid), { mondayIso: MON, cents: 75, jobs: 1, paidAt: later });
+assert.equal(c.normalizeChores(usedPaid).paid[MON].helperUsedAt, later);
+assert.equal(c.normalizeChores({ ...usedPaid, paid: { [MON]: { ...usedPaid.paid[MON], helperUsedAt: 'bad' } } }).paid[MON].helperUsedAt, undefined);
+assert.equal(ok(c.reopenWeek(usedPaid, MON)).paid[MON], undefined);
+const backup = c.exportChores({ track: 'guided', chores: usedPaid }, later);
+assert.deepEqual(backup, { format: 'codequest-chores', version: 1, exportedAt: later, track: 'guided', chores: usedPaid });
+assert.deepEqual(c.importChores(c.emptyChores(), backup, 'replace', 'guided').chores, usedPaid);
+assert.deepEqual(c.importChores(c.emptyChores(), backup, 'merge', 'guided').chores, usedPaid);
+assert.match(c.importChores(c.emptyChores(), backup, 'merge', 'standard').error, /younger son's iPad/);
+assert.match(c.importChores(c.emptyChores(), { ...backup, track: 'standard' }, 'merge', 'guided').error, /older son's iPad/);
+for (const invalid of [null, 5, [], { ...backup, format: 'other' }, { ...backup, version: 2 },
+  { ...backup, chores: { entries: Array.from({ length: 5001 }) } },
+  { ...backup, chores: { entries: Object.fromEntries(Array.from({ length: 5001 }, (_, i) => [`e${i}`, clean.entries.good])) } }]) {
+  rejected(c.importChores(validPaid, invalid, 'merge', 'guided'), 'hostile backup');
+}
+const downgraded = { ...backup, chores: { ...backup.chores, entries: {
+  good: { ...clean.entries.good, status: 'waiting', checkedAt: null, cents: 0 },
+  newone: { ...clean.entries.good, id: 'newone', date: '2026-11-02' },
+} } };
+const preserved = c.importChores(validPaid, downgraded, 'merge', 'guided');
+assert.equal(preserved.chores.entries.good.status, 'confirmed', 'merge must not downgrade confirmed entries');
+assert.equal(preserved.chores.entries.good.cents, 75);
+assert.equal(preserved.chores.entries.newone.status, 'confirmed');
+const unpaidPreserved = c.importChores({ ...validPaid, paid: {} }, downgraded, 'merge', 'guided');
+assert.equal(unpaidPreserved.chores.entries.good.status, 'confirmed', 'unpaid confirmed entry cannot be downgraded');
+const paidCollision = c.importChores(usedPaid, { ...backup, chores: { ...backup.chores, entries: {
+  outsider: { ...clean.entries.good, id: 'outsider' },
+} } }, 'merge', 'guided');
+assert.equal(paidCollision.chores.entries.outsider, undefined, 'merge cannot add into a paid week');
+const prototypeBackup = JSON.parse(JSON.stringify(backup).replace('"entries":{', '"entries":{"__proto__":{"bad":true},'));
+assert.equal(Object.prototype.hasOwnProperty.call(c.importChores(c.emptyChores(), prototypeBackup, 'replace', 'guided').chores.entries, '__proto__'), false);
 const manyEntries = {};
 for (let i = 0; i < 5100; i++) manyEntries[`id${i}`] = { ...clean.entries.good, id: `id${i}` };
 assert.equal(Object.keys(c.normalizeChores({ entries: manyEntries }).entries).length, 5000);

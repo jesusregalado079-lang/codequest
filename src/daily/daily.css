@@ -1585,3 +1585,12 @@ button.pd-stack:active { transform: translateY(2px); box-shadow: 0 1px 0 #dfe3dc
   .cqd-chore-parent-split strong { font-size:.9rem; }
 }
 @media (prefers-reduced-motion:reduce) { .cqd-chore-parent button { transition:none; } }
+.pd-chore-suggestion { margin:16px 0; padding:16px; border:2px solid #b9dec9; border-radius:18px; background:#f2faf5; box-shadow:0 3px 0 #d7e7dc; }
+.pd-chore-suggestion h2 { margin:0 0 9px; font-size:1.05rem; color:#1d4560; }
+.pd-chore-suggestion p { margin:8px 0; color:#62717b; font-weight:700; }
+.pd-chore-suggestion button { width:100%; background:#176a3e; color:white; font-weight:800; }
+.pd-chore-message { color:#8b261d; font-weight:800; }
+.cqd-chore-backup { display:grid; gap:12px; }
+.cqd-chore-backup label { display:grid; gap:5px; font-weight:700; }
+.cqd-chore-backup input[type=file] { max-width:100%; }
+.cqd-chore-backup label:has(input[type=checkbox]) { display:flex; align-items:center; }

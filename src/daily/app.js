@@ -2,7 +2,7 @@ import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
 import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
 import { blockFillFor, celebrationSeen, choresOf, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, setBlockFill, snapshotHistory, withChores, withTrack } from './store.js';
-import { addCustomJob, addEntry, confirmDay, confirmWeek, payWeek, removeCustomJob, removeEntry, reopenWeek, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, weekDates, weekMonday } from './chores.js';
+import { addCustomJob, addEntry, confirmDay, confirmWeek, exportChores, importChores, latestUnusedPaidWeek, markPaidUsed, payWeek, removeCustomJob, removeEntry, reopenWeek, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, summarize, weekDates, weekEntries, weekMonday } from './chores.js';
 import { renderChores } from './chores-view.js';
 import { blockPlan, nextFill } from './blocks.js';
 import { currentWeekSnapshots, renderCalendar, renderVerseScreen } from './calendar.js';
@@ -13,6 +13,7 @@ import { celebrationForSheet, celebrationHtml, trophyButtonHtml } from './celebr
 import { act as paydayReduce, newSession as newPayday } from '../payday/session.js';
 import { abandonOpen, actOnOpen, addSession, openSession } from '../payday/state.js';
 import { renderPayday } from '../payday/view.js';
+import { MIN_EARNED, MAX_EARNED } from '../payday/logic.js';
 import { lockParent, parentUnlocked, resetParentPin } from './pin.js';
 import {
   RESET_PHRASE, checkDailyParentPin, createParentState, gradeDailyWork, renderParent, setDailyParentPin,
@@ -37,6 +38,7 @@ const revealKey = (week, day, sheet, item) => `${week}|${day}|${sheet}|${item}`;
 let paydayDraft = null;
 let paydayAsk = false; // the "Start a new payday?" question is showing
 let paydayDoneId = null; // the payday he just finished stays on screen until he starts a new one
+let paydayMessage = '';
 
 function todayIso() {
   const date = new Date();
@@ -73,7 +75,58 @@ function parentChoreAction(button, action) {
     parentState.choresView = action === 'chores-jobs' ? 'jobs' : 'check';
     parentState.choreMessage = ''; render(); return;
   }
-  if (action === 'chores-open-payday') return; // Prefill is wired in C4.
+  if (action === 'chores-open-payday') {
+    if (store.track !== 'guided' || parentState.choresView === 'jobs') return;
+    const monday = parentState.weekMonday;
+    const chores = choresOf(store);
+    const paid = chores.paid[monday];
+    const cents = paid ? paid.cents : summarize(weekEntries(chores, monday)).confirmedCents;
+    if (!useChoreAmount(monday, cents)) { parentState.choreMessage = paydayMessage; render(); return; }
+    parentSession += 1;
+    parentState = createParentState();
+    paydayDoneId = null;
+    paydayAsk = false;
+    route = { screen: 'payday', dayKey: null, sheetIndex: 0 };
+    render(); return;
+  }
+  if (action === 'chores-export-backup') {
+    const backup = exportChores(store, new Date().toISOString());
+    if (backup.error) { parentState.choreMessage = backup.error; render(); return; }
+    const name = `codequest-chores-${store.track === 'guided' ? 'younger' : 'older'}-${todayIso()}.json`;
+    const blob = new Blob([JSON.stringify(backup)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url; anchor.download = name;
+    document.body.appendChild(anchor); anchor.click(); anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    parentState.choreMessage = `Backup file saved (${name}). Keep it somewhere safe, like your Google Drive.`;
+    render(); return;
+  }
+  if (action === 'chores-import-backup') {
+    const file = app.querySelector('[data-chores-backup-file]')?.files?.[0];
+    const mode = app.querySelector('[data-chores-backup-replace]')?.checked ? 'replace' : 'merge';
+    if (!file) { parentState.choreMessage = 'Choose a JSON backup file first.'; render(); return; }
+    if (file.size > 2 * 1024 * 1024 || !(/\.json$/i.test(file.name) || file.type === 'application/json')) {
+      parentState.choreMessage = 'Choose a JSON backup file under 2 MB.'; render(); return;
+    }
+    const session = parentSession;
+    file.text().then((content) => {
+      if (session !== parentSession || route.screen !== 'parent' || !parentUnlocked(store, Date.now())) return;
+      let backup;
+      try { backup = JSON.parse(content); } catch { parentState.choreMessage = 'This backup file is not valid JSON.'; render(); return; }
+      const result = importChores(choresOf(store), backup, mode, store.track);
+      if (result.error) { parentState.choreMessage = result.error; render(); return; }
+      let writeError = '';
+      persist((s) => {
+        const latest = importChores(choresOf(s), backup, mode, s.track);
+        if (latest.error) { writeError = latest.error; return s; }
+        return withChores(s, () => latest);
+      });
+      parentState.choreMessage = writeError || `Added ${result.added} jobs, skipped ${result.skipped}.`;
+      render();
+    }).catch(() => { parentState.choreMessage = 'Could not read that backup file.'; render(); });
+    return;
+  }
   if (parentState.choresView === 'jobs') {
     if (action === 'chores-toggle-job') {
       const job = button.dataset.id;
@@ -304,9 +357,49 @@ function paydayCurrent() {
   return done || openSession(store.payday) || paydayDraft || (paydayDraft = newPayday(new Date().toISOString()));
 }
 
+function useChoreAmount(monday, cents) {
+  paydayMessage = '';
+  if (store.track !== 'guided' || !weekDates(monday).length || !Number.isInteger(cents)
+    || cents < MIN_EARNED || cents > MAX_EARNED) {
+    paydayMessage = 'Ask a grown-up about this amount.'; return false;
+  }
+  return paydayAct({ type: 'earn-submit', text: (cents / 100).toFixed(2) }, monday, cents);
+}
+
 // One tap in the Payday Helper. The rules live in src/payday/session.js; this only saves the result.
-function paydayAct(action) {
+function paydayAct(action, choreMonday = null, choreCents = null) {
   const now = new Date().toISOString();
+  if (choreMonday) {
+    let failure = '';
+    const result = commit(store, (s) => {
+      if (s.track !== 'guided') { failure = 'Payday Helper is unavailable here.'; return s; }
+      const chores = choresOf(s);
+      const paid = chores.paid[choreMonday];
+      const cents = paid ? paid.cents : summarize(weekEntries(chores, choreMonday)).confirmedCents;
+      if (cents !== choreCents || cents < MIN_EARNED || cents > MAX_EARNED || paid?.helperUsedAt) {
+        failure = paid?.helperUsedAt ? 'This week was already used.' : 'The chore amount changed. Try again.'; return s;
+      }
+      const current = openSession(s.payday);
+      const base = current?.screen === 'earn' ? current : newPayday(now);
+      const next = paydayReduce(base, action, now);
+      if (next.screen !== 'handed' || next.earned !== cents) { failure = 'Check the amount and try again.'; return s; }
+      const marked = paid ? markPaidUsed(chores, choreMonday, now) : { chores };
+      if (marked.error) { failure = marked.error; return s; }
+      const payday = current?.screen === 'earn'
+        ? actOnOpen(s.payday, action, now)
+        : addSession(current ? abandonOpen(s.payday) : s.payday, next);
+      return { ...withChores(s, () => marked), payday };
+    });
+    if (failure || !result.core?.ok) {
+      paydayMessage = failure || 'This iPad could not save. Try again.';
+      return false;
+    }
+    store = result.store;
+    saveOk = true; showSaveAlert();
+    paydayDraft = null;
+    paydayDoneId = null;
+    return true;
+  }
   try {
     if (openSession(store.payday)) {
       persist((s) => ({ ...s, payday: actOnOpen(s.payday, action, now) }));
@@ -320,6 +413,7 @@ function paydayAct(action) {
   const top = store.payday.sessions[0];
   if (top && top.screen === 'done') paydayDoneId = top.id;
   render();
+  return true;
 }
 
 const paydayText = (key) => { const input = app.querySelector(`[data-payday-input="${key}"]`); return input ? input.value : ''; };
@@ -333,6 +427,12 @@ function handlePayday(button, action) {
   };
   if (simple[action]) return paydayAct({ type: simple[action] });
   switch (action) {
+    case 'payday-use-chores': {
+      if (store.track !== 'guided' || route.screen !== 'payday' || paydayCurrent().screen !== 'earn') return;
+      const suggestion = latestUnusedPaidWeek(choresOf(store));
+      if (!suggestion || !useChoreAmount(suggestion.mondayIso, suggestion.cents)) { paydayMessage = paydayMessage || 'This week is no longer available.'; render(); return; }
+      render(); return;
+    }
     case 'payday-earn-submit': return paydayAct({ type: 'earn-submit', text: paydayText('earn') });
     case 'payday-add-answer': return paydayAct({ type: 'add-answer', text: paydayText('add') });
     case 'payday-spend-answer': return paydayAct({ type: 'spend-answer', text: paydayText('spend') });
@@ -371,7 +471,12 @@ function render(motionIntent) {
   }
   else if (route.screen === 'sheet') { app.innerHTML = sheetScreenHtml(); setupDrawing(); }
   else if (route.screen === 'chores') { app.innerHTML = renderChores(store, todayIso(), choreDay || todayIso(), choreMessage); }
-  else if (route.screen === 'payday') { app.innerHTML = renderPayday(paydayCurrent(), { confirmRestart: paydayAsk }); }
+  else if (route.screen === 'payday') {
+    const suggestion = store.track === 'guided' ? latestUnusedPaidWeek(choresOf(store)) : null;
+    app.innerHTML = `${paydayMessage ? `<p class="pd-chore-message" role="alert">${paydayMessage}</p>` : ''}${renderPayday(paydayCurrent(), {
+      confirmRestart: paydayAsk, suggestion: suggestion ? { cents: suggestion.cents, jobs: suggestion.jobs, label: suggestion.mondayIso } : null,
+    })}`;
+  }
   else if (route.screen === 'verse') {
     const verse = renderVerseScreen(store, todayIso());
     if (verse) app.innerHTML = `<div class="cqd-sheet-nav"><button type="button" class="cqd-link-button" data-action="back-to-calendar">← This week</button></div>${verse}`;

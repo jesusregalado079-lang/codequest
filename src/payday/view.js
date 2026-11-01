@@ -2,7 +2,7 @@
 // session.js; every tap is a data-action that app.js turns into a session action. Kid-facing text rules (spec v2): never
 // name a person, never say easy/guided/hard/standard, never show the answer to the question he is on, money in dollars.
 import {
-  MAX_HANDED, MAX_REPLACEMENT, PIECES, PIECE_IDS, describePieces, formatMoney, pieceCents, pieceName, piecesTotal,
+  MAX_HANDED, MAX_REPLACEMENT, MIN_EARNED, MAX_EARNED, PIECES, PIECE_IDS, describePieces, formatMoney, pieceCents, pieceName, piecesTotal,
 } from './logic.js';
 import { COPY, view as derive } from './session.js';
 
@@ -81,9 +81,13 @@ function trayChips(items) {
   return `<ul class="pd-tray-items">${items.map((item) => `<li><button type="button" class="pd-chip" data-action="${item.action}" ${item.data} aria-label="${esc(item.label)}">${item.art || ''}<span>${esc(item.text)}</span><b aria-hidden="true">✕</b></button></li>`).join('')}</ul>`;
 }
 
-function earnScreen(state) {
+function earnScreen(state, suggestion) {
+  const valid = suggestion && Number.isInteger(suggestion.cents) && suggestion.cents >= MIN_EARNED && suggestion.cents <= MAX_EARNED;
+  const card = suggestion ? `<div class="pd-chore-suggestion"><h2>💵 Your chores this week</h2><p>A grown-up checked these. You earned ${esc(formatMoney(suggestion.cents))} from ${esc(suggestion.jobs)} jobs.</p>
+    ${valid ? `<button type="button" class="cqd-button" data-action="payday-use-chores">Use ${esc(formatMoney(suggestion.cents))}</button><p>Or type a different amount below if a grown-up gave you something else.</p>` : '<p>That is more than the Payday Helper can split. Ask a grown-up.</p>'}</div>` : '';
   return `<h1>How much did you earn?</h1>
     <p class="pd-lead">How much money did you earn this week? Type it in dollars, like 6.50.</p>
+    ${card}
     ${moneyField('earn', 'Money I earned', state.earned === null ? '' : (state.earned / 100).toFixed(2))}
     <div id="pd-note">${note(state.feedback)}</div>
     <div class="pd-actions"><button type="button" class="cqd-button cqd-primary" data-action="payday-earn-submit">Next</button></div>`;
@@ -207,7 +211,7 @@ export function renderPayday(state, ui = {}) {
   const nav = '<div class="cqd-sheet-nav"><button type="button" class="cqd-link-button" data-action="back-to-calendar">← This week</button></div>';
   let body;
   if (state.feedback && state.feedback.kind === 'stuck') body = stuckScreen();
-  else if (state.screen === 'earn') body = earnScreen(state);
+  else if (state.screen === 'earn') body = earnScreen(state, ui.suggestion);
   else if (state.screen === 'handed') body = handedScreen(state, v);
   else if (state.screen === 'recap') body = recapScreen(state);
   else if (state.screen === 'jars') body = jarsScreen(state);
