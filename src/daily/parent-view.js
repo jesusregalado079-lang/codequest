@@ -11,12 +11,14 @@ import { canPayExactly, choiceLabel, coinCounts, coinSummary, coinTotal, display
 import { checkParentPin, hasParentPin, parentUnlocked, recentPinResets, setParentPin } from './pin.js';
 import { dayStatus } from './calendar.js';
 import { sheetsForDay } from './sheet-view.js';
+import { choreWaitingCount, renderChoresParent } from './chores-parent.js';
 
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const esc = (value) => String(value).replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 
 export function createParentState() {
-  return { open: false, selectedDay: null, pinMessage: '', resetting: false };
+  return { open: false, selectedDay: null, pinMessage: '', resetting: false,
+    view: 'work', choresView: 'check', weekMonday: null, day: null, choreMessage: '' };
 }
 
 export function gradeSuggestion(item, value) {
@@ -232,5 +234,10 @@ function checkWorkHtml(store, state, todayIso, content) {
 }
 
 export function renderParent(store, state, todayIso, now = Date.now(), content = DAILY_WORK) {
-  return parentUnlocked(store, now) ? checkWorkHtml(store, state, todayIso, content) : pinGateHtml(store, state);
+  if (!parentUnlocked(store, now)) return pinGateHtml(store, state);
+  const count = choreWaitingCount(store);
+  const switchHtml = `<div class="cqd-chore-parent-switch" role="group" aria-label="Parent Mode view">
+    <button type="button" data-action="chores-view-work" aria-label="Check work" aria-pressed="${state.view !== 'chores'}">Check work</button>
+    <button type="button" data-action="chores-view-chores" aria-label="Chores${count ? `, ${count} to check` : ''}" aria-pressed="${state.view === 'chores'}">Chores${count ? ` <span class="cqd-chore-parent-badge">${count} to check</span>` : ''}</button></div>`;
+  return `${switchHtml}${state.view === 'chores' ? `${pinResetNotice(store)}${renderChoresParent(store, state, todayIso)}` : checkWorkHtml(store, state, todayIso, content)}`;
 }

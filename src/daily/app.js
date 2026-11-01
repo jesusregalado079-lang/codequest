@@ -2,7 +2,7 @@ import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
 import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
 import { blockFillFor, celebrationSeen, choresOf, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, setBlockFill, snapshotHistory, withChores, withTrack } from './store.js';
-import { addEntry, removeEntry, weekDates, weekMonday } from './chores.js';
+import { addCustomJob, addEntry, confirmDay, confirmWeek, payWeek, removeCustomJob, removeEntry, reopenWeek, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, weekDates, weekMonday } from './chores.js';
 import { renderChores } from './chores-view.js';
 import { blockPlan, nextFill } from './blocks.js';
 import { currentWeekSnapshots, renderCalendar, renderVerseScreen } from './calendar.js';
@@ -41,6 +41,104 @@ let paydayDoneId = null; // the payday he just finished stays on screen until he
 function todayIso() {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function chorePrice(value) {
+  const raw = String(value ?? '').trim();
+  if (!/^(?:\d{1,4})(?:\.\d{1,2})?$/.test(raw)) return null;
+  const [dollars, fraction = ''] = raw.split('.');
+  const cents = Number(dollars) * 100 + Number(fraction.padEnd(2, '0'));
+  return cents <= 100000 ? cents : null;
+}
+
+function writeParentChores(apply, success) {
+  const checked = apply(choresOf(store));
+  if (checked.error) { parentState.choreMessage = checked.error; render(); return; }
+  let writeError = '';
+  persist((s) => {
+    const result = apply(choresOf(s));
+    if (result.error) { writeError = result.error; return s; }
+    return withChores(s, () => result);
+  });
+  parentState.choreMessage = writeError || success || '';
+  render();
+}
+
+function parentChoreAction(button, action) {
+  if (route.screen !== 'parent' || !parentUnlocked(store, Date.now())) return;
+  if (action === 'chores-view-work') { parentState.view = 'work'; parentState.choreMessage = ''; render(); return; }
+  if (action === 'chores-view-chores') { parentState.view = 'chores'; parentState.choresView = 'check'; render(); return; }
+  if (parentState.view !== 'chores') return;
+  if (action === 'chores-jobs' || action === 'chores-check') {
+    parentState.choresView = action === 'chores-jobs' ? 'jobs' : 'check';
+    parentState.choreMessage = ''; render(); return;
+  }
+  if (action === 'chores-open-payday') return; // Prefill is wired in C4.
+  if (parentState.choresView === 'jobs') {
+    if (action === 'chores-toggle-job') {
+      const job = button.dataset.id;
+      const active = button.getAttribute('aria-pressed') !== 'true';
+      writeParentChores((chores) => setJobActive(chores, job, active), `${active ? 'On' : 'Off'} for future jobs.`);
+    } else if (action === 'chores-remove-job') {
+      writeParentChores((chores) => removeCustomJob(chores, button.dataset.id), 'Job removed from the list.');
+    } else if (action === 'chores-add-job') {
+      const cents = chorePrice(app.querySelector('[data-custom-price]')?.value);
+      if (cents === null) { parentState.choreMessage = 'Enter a price from $0 to $1000.'; render(); return; }
+      const name = app.querySelector('[data-custom-name]')?.value || '';
+      const es = app.querySelector('[data-custom-es]')?.value || '';
+      const icon = app.querySelector('[data-custom-icon]')?.value || '⭐';
+      const id = `job-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+      writeParentChores((chores) => addCustomJob(chores, { id, name, es, icon, cents }), 'Job added.');
+    }
+    return;
+  }
+  if (action === 'chores-prev-week' || action === 'chores-next-week') {
+    const date = new Date(`${parentState.weekMonday}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + (action === 'chores-prev-week' ? -7 : 7));
+    parentState.weekMonday = date.toISOString().slice(0, 10);
+    parentState.day = weekDates(parentState.weekMonday).includes(todayIso()) ? todayIso() : parentState.weekMonday;
+    parentState.choreMessage = ''; render(); return;
+  }
+  if (action === 'chores-day') {
+    if (weekDates(parentState.weekMonday).includes(button.dataset.date)) { parentState.day = button.dataset.date; parentState.choreMessage = ''; render(); }
+    return;
+  }
+  const monday = parentState.weekMonday;
+  const day = parentState.day;
+  const nowIso = new Date().toISOString();
+  if (action === 'chores-entry-status' || action === 'chores-remove-entry' || action === 'chores-set-entry-price') {
+    const entry = choresOf(store).entries[button.dataset.id];
+    if (!entry || weekMonday(entry.date) !== monday) return;
+    if (action === 'chores-entry-status') {
+      writeParentChores((chores) => setEntryStatus(chores, entry.id, button.dataset.status, nowIso), 'Job checked.');
+    } else if (action === 'chores-remove-entry') {
+      writeParentChores((chores) => removeEntry(chores, entry.id, { by: 'parent' }), 'Job removed.');
+    } else {
+      const cents = chorePrice(app.querySelector(`[data-entry-price="${entry.id}"]`)?.value);
+      if (cents === null) { parentState.choreMessage = 'Enter a price from $0 to $1000.'; render(); return; }
+      writeParentChores((chores) => setEntryPrice(chores, entry.id, cents), 'Price set.');
+    }
+  } else if (action === 'chores-confirm-day') {
+    const result = confirmDay(choresOf(store), day, nowIso);
+    writeParentChores((chores) => confirmDay(chores, day, nowIso), result.error ? '' : `Day checked. ${result.skipped} unpriced ${result.skipped === 1 ? 'job' : 'jobs'} skipped.`);
+  } else if (action === 'chores-confirm-week') {
+    const result = confirmWeek(choresOf(store), monday, nowIso);
+    writeParentChores((chores) => confirmWeek(chores, monday, nowIso), result.error ? '' : `Week checked. ${result.skipped} unpriced ${result.skipped === 1 ? 'job' : 'jobs'} skipped.`);
+  } else if (action === 'chores-add-entry') {
+    const jobId = app.querySelector('[data-chores-add-job]')?.value;
+    const otherName = app.querySelector('[data-chores-other-name]')?.value;
+    const cents = jobId === 'other' ? chorePrice(app.querySelector('[data-chores-other-price]')?.value) : null;
+    if (jobId === 'other' && cents === null) { parentState.choreMessage = 'Enter a price from $0 to $1000.'; render(); return; }
+    const id = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    writeParentChores((chores) => {
+      const added = addEntry(chores, { track: store.track, date: day, todayIso: todayIso(), jobId, otherName, by: 'parent', nowIso, id });
+      return added.error || jobId !== 'other' ? added : setEntryPrice(added.chores, id, cents);
+    }, 'Job added.');
+  } else if (action === 'chores-pay-week') {
+    writeParentChores((chores) => payWeek(chores, monday, nowIso), 'Week marked paid.');
+  } else if (action === 'chores-reopen-week') {
+    writeParentChores((chores) => reopenWeek(chores, monday), 'Week reopened.');
+  }
 }
 
 const today = new Date();
@@ -305,6 +403,7 @@ function onClick(event) {
   if (action === 'close-celebration') { closeCelebration(); return; }
   if (openCelebrationMessage) return;
   if (action === 'open-celebration') { showCelebration(currentCelebration(), button); return; }
+  if (action.indexOf('chores-') === 0) { parentChoreAction(button, action); return; }
 
   if (action === 'pick-track') {
     persist((s) => withTrack(s, button.dataset.track));
@@ -580,6 +679,14 @@ app.addEventListener('keydown', (event) => {
   if (main) handlePayday(main, main.dataset.action);
 });
 app.addEventListener('click', onClick);
+app.addEventListener('change', (event) => {
+  const input = event.target;
+  if (!input.matches?.('[data-job-price]') || route.screen !== 'parent' || parentState.view !== 'chores'
+    || parentState.choresView !== 'jobs' || !parentUnlocked(store, Date.now())) return;
+  const cents = chorePrice(input.value);
+  if (cents === null) { parentState.choreMessage = 'Enter a price from $0 to $1000.'; render(); return; }
+  writeParentChores((chores) => setJobPrice(chores, input.dataset.jobPrice, cents), 'Price saved for future jobs.');
+});
 app.addEventListener('click', onGridClick);
 app.addEventListener('input', onInput);
 app.addEventListener('focusin', checkFocusedAnswer);

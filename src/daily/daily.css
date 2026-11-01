@@ -1516,3 +1516,72 @@ button.pd-stack:active { transform: translateY(2px); box-shadow: 0 1px 0 #dfe3dc
 
 .cqd-pin-notice { margin: 0 0 14px; padding: 12px 16px; border: 1px solid #e6c987; border-radius: 14px; background: var(--cqd-gold-soft); color: #6d4a0c; font-weight: 800; }
 .cqd-parent-gate p { max-width: 36rem; }
+
+/* Grown-up chore tracker, adapted from the approved parent mockups. */
+.cqd-chore-parent-switch { display:flex; overflow:hidden; margin:0 0 8px; border:2px solid var(--cqd-border); border-radius:14px; }
+.cqd-chore-parent-switch button { flex:1; min-width:0; min-height:48px; border:0; background:var(--cqd-card); color:var(--cqd-muted); font:inherit; font-weight:900; cursor:pointer; }
+.cqd-chore-parent-switch button[aria-pressed="true"] { background:#2b4557; color:#fff; }
+.cqd-chore-parent-badge { display:inline-block; margin-left:6px; padding:1px 8px; border-radius:99px; background:var(--cqd-gold); color:#fff; font-size:.76rem; }
+.cqd-chore-parent { --cqd-chore-green:#1d6b3c; }
+.cqd-chore-parent .cqd-calendar-head { min-height:64px; margin-bottom:16px; }
+.cqd-chore-parent-message { min-height:1.3em; margin:0 0 6px; color:#875223; font-weight:800; }
+.cqd-chore-parent-heading { display:flex; align-items:start; justify-content:space-between; gap:12px; margin-bottom:16px; }
+.cqd-chore-parent h1 { margin:0; color:var(--cqd-ink); font-family:'Baloo 2',sans-serif; font-size:2rem; line-height:1.15; }
+.cqd-chore-parent-heading p { margin:0; color:var(--cqd-muted); font-weight:700; }
+.cqd-chore-parent-week { display:flex; align-items:center; justify-content:center; gap:10px; margin:0 0 12px; color:var(--cqd-ink); }
+.cqd-chore-parent-week button { min-width:48px; min-height:44px; border:2px solid var(--cqd-border); border-radius:12px; background:#fff; color:var(--cqd-ink); font:inherit; font-weight:900; cursor:pointer; }
+.cqd-chore-parent-days { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:7px; margin-bottom:14px; }
+.cqd-chore-parent-days button { min-width:0; min-height:66px; padding:5px 2px; border:2px solid var(--cqd-border); border-radius:14px; background:var(--cqd-card); color:var(--cqd-muted); font:inherit; font-weight:800; cursor:pointer; }
+.cqd-chore-parent-days button[aria-pressed="true"] { border-color:var(--cqd-ink); color:var(--cqd-ink); box-shadow:0 3px 0 var(--cqd-border); }
+.cqd-chore-parent-days button.is-today { background:#fff7e5; }
+.cqd-chore-parent-days small { display:block; font-size:.65rem; line-height:1.2; }
+.cqd-chore-parent-card { min-width:0; margin:0 0 16px; padding:16px; border:2px solid var(--cqd-border); border-radius:20px; background:var(--cqd-card); box-shadow:var(--cqd-shadow); }
+.cqd-chore-parent-card h2 { margin:0 0 10px; color:var(--cqd-ink); font-family:'Baloo 2',sans-serif; font-size:1.25rem; }
+.cqd-chore-parent-card p { margin:8px 0; }
+.cqd-chore-parent-item { display:flex; align-items:center; gap:12px; min-width:0; padding:12px 0; border-top:1px solid var(--cqd-line); }
+.cqd-chore-parent-item:first-of-type { border-top:0; }
+.cqd-chore-parent-icon { flex:none; font-size:1.55rem; }
+.cqd-chore-parent-name { flex:1; min-width:0; overflow-wrap:anywhere; color:var(--cqd-ink); }
+.cqd-chore-parent-name strong { display:block; font-weight:900; }
+.cqd-chore-parent-name small { display:block; color:var(--cqd-muted); font-weight:700; }
+.cqd-chore-parent-controls { display:grid; gap:6px; justify-items:end; }
+.cqd-chore-parent-pick, .cqd-chore-parent-job-controls, .cqd-chore-parent-pay-actions { display:flex; align-items:center; flex-wrap:wrap; gap:7px; }
+.cqd-chore-parent-button, .cqd-chore-parent-toggle { min-height:44px; padding:7px 13px; border:2px solid var(--cqd-border); border-radius:12px; background:#fff; color:var(--cqd-ink); font:inherit; font-weight:900; cursor:pointer; }
+.cqd-chore-parent-button.is-green { background:var(--cqd-chore-green); border-color:var(--cqd-chore-green); color:#fff; }
+.cqd-chore-parent-button.is-confirmed, .cqd-chore-parent-toggle[aria-pressed="true"] { background:var(--cqd-chore-green); border-color:var(--cqd-chore-green); color:#fff; }
+.cqd-chore-parent-button.is-declined { background:#a1432b; border-color:#a1432b; color:#fff; }
+.cqd-chore-parent-trash { min-width:44px; padding:6px; }
+.cqd-chore-parent-button:disabled, .cqd-chore-parent-form :disabled { opacity:.55; cursor:not-allowed; }
+.cqd-chore-parent-money { display:inline-flex; align-items:center; gap:3px; min-height:44px; padding:0 7px; border:2px solid var(--cqd-border); border-radius:11px; background:#fff; font-weight:900; }
+.cqd-chore-parent-money input { width:72px; min-width:0; border:0; background:transparent; color:var(--cqd-text); font:inherit; font-weight:800; }
+.cqd-chore-parent-form { display:flex; flex-wrap:wrap; align-items:end; gap:10px; }
+.cqd-chore-parent-form > label { display:grid; gap:4px; min-width:145px; flex:1; font-weight:800; }
+.cqd-chore-parent-form > label.cqd-chore-parent-money { display:flex; flex:0; min-width:100px; }
+.cqd-chore-parent-form input:not([type=number]), .cqd-chore-parent-form select { width:100%; min-height:44px; padding:7px 10px; border:2px solid var(--cqd-border); border-radius:11px; background:#fff; color:var(--cqd-text); font:inherit; }
+.cqd-chore-parent-banner { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin:0 0 14px; padding:10px 14px; border:2px dashed #d6b565; border-radius:14px; background:var(--cqd-gold-soft); color:#875710; font-weight:900; }
+.cqd-chore-parent-note { color:var(--cqd-muted); font-size:.83rem; font-weight:700; }
+.cqd-chore-parent-table-wrap { max-width:100%; overflow-x:auto; }
+.cqd-chore-parent table { width:100%; border-collapse:collapse; color:var(--cqd-text); font-weight:800; }
+.cqd-chore-parent th, .cqd-chore-parent td { padding:9px 5px; border-bottom:1px solid var(--cqd-line); text-align:left; }
+.cqd-chore-parent th:last-child, .cqd-chore-parent td:last-child { text-align:right; }
+.cqd-chore-parent thead { color:var(--cqd-muted); font-size:.75rem; text-transform:uppercase; }
+.cqd-chore-parent .is-total { font-weight:900; }
+.cqd-chore-parent-split { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:15px; }
+.cqd-chore-parent-split div { min-width:0; padding:10px 4px; border-radius:15px; background:#fcebf0; color:#ba204d; text-align:center; }
+.cqd-chore-parent-split div:nth-child(2) { background:#e7f8ef; color:#00875b; }
+.cqd-chore-parent-split div:nth-child(3) { background:#edf2ff; color:#2459dc; }
+.cqd-chore-parent-split strong, .cqd-chore-parent-split small { display:block; }
+.cqd-chore-parent-split small { font-size:.72rem; font-weight:900; text-transform:uppercase; }
+.cqd-chore-parent-month { font-weight:900; }
+.cqd-chore-parent button:focus-visible, .cqd-chore-parent input:focus-visible, .cqd-chore-parent select:focus-visible, .cqd-chore-parent-switch button:focus-visible { outline:3px solid var(--cqd-gold); outline-offset:2px; }
+@media (max-width:620px) {
+  .cqd-chore-parent-heading, .cqd-chore-parent-item { flex-wrap:wrap; }
+  .cqd-chore-parent-controls, .cqd-chore-parent-job-controls { width:100%; justify-items:start; }
+  .cqd-chore-parent-days { gap:3px; }
+  .cqd-chore-parent-days button { min-height:58px; font-size:.72rem; }
+  .cqd-chore-parent-days small { font-size:.55rem; }
+  .cqd-chore-parent-card { padding:12px; }
+  .cqd-chore-parent th, .cqd-chore-parent td { padding:7px 2px; font-size:.78rem; }
+  .cqd-chore-parent-split strong { font-size:.9rem; }
+}
+@media (prefers-reduced-motion:reduce) { .cqd-chore-parent button { transition:none; } }
