@@ -10,7 +10,8 @@
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
 import { allItems, hasFixes, isComplete, storedDay, storedItem } from '../cq/daily-work/daily-work-ui.js';
-import { historyFor } from './store.js';
+import { choresOf, historyFor } from './store.js';
+import { weekEntries, weekMonday } from './chores.js';
 import { sheetsForDay, weekVerse } from './sheet-view.js';
 import { bibleCoverMark, bibleMark, bookMark, calendarRobot, monthIllustration, seasonMark, statusMark } from './calendar-art.js';
 
@@ -173,6 +174,12 @@ export function renderCalendar(store, todayIso, viewedYear, viewedMonth, content
         <span class="cqd-verse-open-arrow" aria-hidden="true">↗</span>
       </button>`
     : '';
+  const waiting = weekEntries(choresOf(store), weekMonday(todayIso)).filter((entry) => entry.status === 'waiting').length;
+  const choresButton = `<button type="button" class="cqd-button cqd-payday-open" data-action="open-chores">
+    <span class="cqd-payday-open-icon cqd-chore-open-icon" aria-hidden="true">🧹</span>
+    <span class="cqd-payday-open-copy">My Chores${waiting ? ` <span class="cqd-chore-badge">${waiting} waiting</span>` : ''}<small>Tell us what you did so you get paid.</small></span>
+    <span class="cqd-verse-open-arrow" aria-hidden="true">↗</span>
+  </button>`;
   const [ty, tm] = partsOf(todayIso);
   const monthsFromToday = (viewedYear - ty) * 12 + (viewedMonth - (tm - 1));
   const prevDisabled = monthsFromToday <= -MONTH_NAV_BACK ? 'disabled' : '';
@@ -204,6 +211,7 @@ export function renderCalendar(store, todayIso, viewedYear, viewedMonth, content
     </div>
     <ul class="cqd-month-key" aria-label="Day status key">${Object.entries(STATUS_LABELS).map(([status, label]) => `<li class="cqd-month-key-item cqd-status-${status}"><span class="cqd-month-dot" aria-hidden="true">${statusMark(status)}</span>${esc(label)}</li>`).join('')}</ul>
     ${verseButton}
+    ${choresButton}
     ${paydayButton}
   </section>`;
 }

@@ -1,7 +1,9 @@
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
 import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
-import { blockFillFor, celebrationSeen, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, setBlockFill, snapshotHistory, withTrack } from './store.js';
+import { blockFillFor, celebrationSeen, choresOf, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, setBlockFill, snapshotHistory, withChores, withTrack } from './store.js';
+import { addEntry, removeEntry, weekDates, weekMonday } from './chores.js';
+import { renderChores } from './chores-view.js';
 import { blockPlan, nextFill } from './blocks.js';
 import { currentWeekSnapshots, renderCalendar, renderVerseScreen } from './calendar.js';
 import { applyDailyAction, dayComplete, dayReady, dayReopened, renderSheetArticle, sheetsForDay } from './sheet-view.js';
@@ -20,6 +22,8 @@ const app = document.getElementById('app');
 const motion = createDailyMotion(app);
 let store = load();
 let route = { screen: 'calendar', dayKey: null, sheetIndex: 0 };
+let choreDay = null;
+let choreMessage = '';
 let parentState = createParentState();
 let drawingController = null;
 let pinPending = false;
@@ -268,6 +272,7 @@ function render(motionIntent) {
     app.innerHTML = `<div class="cqd-parent-exit"><button type="button" class="cqd-link-button" data-action="daily-parent-exit">← Exit Parent Mode</button>${parentUnlocked(store, now) ? '<button type="button" class="cqd-parent-lock" data-action="daily-parent-lock">🔒 Lock now</button>' : ''}</div>${renderParent(store, parentState, todayIso(), now)}`;
   }
   else if (route.screen === 'sheet') { app.innerHTML = sheetScreenHtml(); setupDrawing(); }
+  else if (route.screen === 'chores') { app.innerHTML = renderChores(store, todayIso(), choreDay || todayIso(), choreMessage); }
   else if (route.screen === 'payday') { app.innerHTML = renderPayday(paydayCurrent(), { confirmRestart: paydayAsk }); }
   else if (route.screen === 'verse') {
     const verse = renderVerseScreen(store, todayIso());
@@ -316,6 +321,43 @@ function onClick(event) {
   if (action === 'back-to-calendar') {
     detachDrawing();
     route = { screen: 'calendar', dayKey: null, sheetIndex: 0 };
+    render();
+    return;
+  }
+  if (action === 'open-chores') {
+    detachDrawing();
+    choreDay = todayIso();
+    choreMessage = '';
+    route = { screen: 'chores', dayKey: null, sheetIndex: 0 };
+    render();
+    return;
+  }
+  if (action === 'chore-day' && route.screen === 'chores') {
+    const date = button.dataset.date;
+    if (!weekDates(weekMonday(todayIso())).includes(date) || date > todayIso()) return;
+    choreDay = date;
+    choreMessage = '';
+    render();
+    return;
+  }
+  if ((action === 'chore-add' || action === 'chore-add-other' || action === 'chore-remove') && route.screen === 'chores') {
+    const current = todayIso();
+    if (choreDay !== current || button.dataset.date !== current) return;
+    const otherName = action === 'chore-add-other' ? app.querySelector('[data-chore-other]')?.value : undefined;
+    const id = `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const apply = (chores) => action === 'chore-remove'
+      ? removeEntry(chores, button.dataset.id, { by: 'kid', todayIso: current })
+      : addEntry(chores, { track: store.track, date: button.dataset.date, todayIso: current,
+        jobId: action === 'chore-add-other' ? 'other' : button.dataset.job, otherName, by: 'kid', nowIso: new Date().toISOString(), id });
+    const checked = apply(choresOf(store));
+    if (checked.error) { choreMessage = checked.error; render(); return; }
+    let writeError = '';
+    persist((s) => {
+      const result = apply(choresOf(s));
+      if (result.error) { writeError = result.error; return s; }
+      return withChores(s, () => result);
+    });
+    choreMessage = writeError;
     render();
     return;
   }

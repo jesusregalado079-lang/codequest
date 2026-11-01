@@ -7,6 +7,7 @@
 import { emptyDailyWorkState, normalizeDailyWork } from '../cq/daily-work/state.js';
 import { isValidDay, isValidIso } from '../cq/iso.js';
 import { emptyPayday, normalizePayday } from '../payday/state.js';
+import { emptyChores, normalizeChores } from './chores.js';
 
 const KEY = 'codequest-daily-v1';
 // Drawings live under their own key. Answers (KEY) are small and must ALWAYS save; ink is big scratch
@@ -186,6 +187,8 @@ function normalize(value, { ink = true } = {}) {
     payday: normalizePayday(s.payday),
     // Keep the exact legacy empty-store shape until a celebration has actually been recorded.
     ...(Object.prototype.hasOwnProperty.call(s, 'celebrationsSeen') ? { celebrationsSeen: normalizeCelebrationsSeen(s.celebrationsSeen) } : {}),
+    // Same rule for chores: an iPad that has never logged one keeps the exact legacy store shape.
+    ...(Object.prototype.hasOwnProperty.call(s, 'chores') ? { chores: normalizeChores(s.chores) } : {}),
   };
 }
 
@@ -335,6 +338,16 @@ export function load() {
 export function withTrack(store, track) {
   if (!TRACKS.includes(track)) throw new Error('unknown track');
   return { ...store, track };
+}
+
+export function choresOf(store) {
+  return store.chores || emptyChores();
+}
+
+export function withChores(store, fn) {
+  const result = fn(choresOf(store));
+  if (result && result.error) throw new Error(result.error);
+  return result && result.chores ? { ...store, chores: result.chores } : { ...store, chores: result };
 }
 
 export function setTrack(track) {
