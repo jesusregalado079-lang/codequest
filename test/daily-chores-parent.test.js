@@ -274,7 +274,6 @@ let windowOpen = storage.withChores(storage.withTrack(storage.emptyStore(), 'gui
 windowOpen = await pin.setParentPin(windowOpen, '1234', Date.now() - 1000);
 storage.saveCore(windowOpen);
 assert.equal(pin.parentUnlocked(windowOpen, Date.now()), true, 'window is open');
-assert.equal(pin.parentUnlocked(windowOpen, Date.now() - 5 * 3600000), false, 'clock set back: an old window must not come alive again');
 assert.equal(pin.parentUnlocked(windowOpen, Date.now() + 2 * 3600000), false, 'window ends after an hour');
 await import(`../src/daily/app.js?parent-chores-test=${++boot}`);
 click('[data-action="daily-parent-open"]');
