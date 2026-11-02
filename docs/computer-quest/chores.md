@@ -15,7 +15,7 @@ Chores are tracked on paper (monthly packet, one per boy, `Chore_Money_Packet_*.
 - Known small bug found while preparing: on the younger son's calendar home the "$5" bill icon covers the first letters of "Payday Helper" at iPad width.
 
 ## Proposed behavior
-- Boy: new "My Chores" button on the calendar home. Tap a job card to log it for a day (today by default; earlier days of the current week allowed). He can take a job off with x until a grown-up has checked it. He sees Waiting / Confirmed / "Ask Mom or Dad" and his totals. He never sets a price.
+- Boy: new "My Chores" button on the calendar home. Tap a job card to log it for a day (today by default; earlier days of the current week allowed). He can take a job off with x until a grown-up has checked it. He sees Waiting / Confirmed / "Ask a grown-up" and his totals. He never sets a price.
 - Grown-up (PIN): new "Chores" tab next to "Check work". Per job Confirm or Not done, "Confirm all of <day>", "Confirm the whole week". Nothing is deleted when a job is not confirmed.
 - Pay: week table, 10/20/70 guide, "Mark the week as paid" (locks it, keeps who/what/when), and for the younger son "Open the Payday Helper with $X" which offers "Use $X" on its first step.
 - Prices are copied onto each entry when it is logged, so changing a price later never rewrites an old week.
@@ -47,6 +47,13 @@ Pictures 1, 2, 4, 6 and 7 approved as shown (job list: memory verse price per bo
 
 Each boy taps jobs he did today in My Chores. He can see earlier days, but only a grown-up can add a job for an earlier day. The grown-up uses the PIN to confirm jobs, set a price for Something else, mark jobs not done, and mark a week paid. A paid week is locked until the grown-up reopens it.
 
-On the younger son's iPad, an unused paid week appears on the first Payday Helper screen. He can use its amount or type a different one. The grown-up can also open the Helper from that week's pay screen. Using a paid total marks it used once. The older son's iPad has no Helper link.
+On the younger son's iPad, an unused paid week appears on the first Payday Helper screen. He can use its amount or type a different one. The grown-up can also open the Helper from that week's pay screen, but only once the week is marked paid (an unpaid week could otherwise go through the Helper twice). Using a paid total marks it used once. Reopening a week that was already used clears that mark, so Parent Mode says so and the grown-up tells him to type only the new part. The older son's iPad has no Helper link.
 
 Parent Mode can export a JSON backup file and import one by merging or replacing chore records. Each iPad accepts backups for its own boy only. Import requires pressing the button. Chore records live in this iPad's `codequest-daily-v1` browser storage, so keep a backup file somewhere safe. Confirmed entries keep their original price. Merge never replaces an existing entry or a paid record, and reopening a paid week removes its payment and Helper-used flag.
+
+## Trust rules added after the blind review (11/1)
+- The Chores part of Parent Mode asks for the PIN in every visit, even when the one-hour window from an earlier visit is still open. Check work still opens straight in. This stops a boy from reopening Parent Mode right after a grown-up leaves it and pricing or paying his own jobs.
+- An unlock window can never be longer than one hour: if the iPad clock is set back, an old window does not come alive again.
+- A boy never sees a system error. Any refused tap shows "That did not work. Ask a grown-up."
+- A paid week never holds a waiting job, and a custom job cannot reuse the built-in "other" id; backups that say otherwise are cleaned on load.
+- The device clock decides what "today" is. Setting it forward lets a boy log future days; paid weeks stay locked either way.

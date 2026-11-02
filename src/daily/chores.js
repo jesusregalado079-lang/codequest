@@ -59,6 +59,7 @@ export function normalizeChores(value) {
     if (Object.keys(override).length) result.jobs.overrides[id] = override;
   }
   const used = new Set([...CHORE_CATALOG.guided, ...CHORE_CATALOG.standard].map((j) => j.id));
+  used.add('other');
   for (const rawJob of (Array.isArray(jobs.custom) ? jobs.custom : []).slice(0, MAX_CUSTOM)) {
     const j = object(rawJob);
     const name = cleanText(j.name);
@@ -93,6 +94,10 @@ export function normalizeChores(value) {
     if (cents !== p.cents) continue;
     result.paid[monday] = { cents, paidAt: p.paidAt, entryIds: [...ids] };
     if (validStamp(p.helperUsedAt)) result.paid[monday].helperUsedAt = p.helperUsedAt;
+  }
+  for (const id of Object.keys(result.entries)) {
+    // Paying needs every job checked, and a paid week takes no new jobs, so a waiting job here is bad data that could never be removed.
+    if (result.entries[id].status === 'waiting' && result.paid[weekMonday(result.entries[id].date)]) delete result.entries[id];
   }
   return result;
 }

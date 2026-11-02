@@ -96,8 +96,8 @@ function payHtml(store, state, todayIso) {
   }).join('')}<tr class="is-total"><th>Week</th><td>${entries.length}</td><td>${sum.declinedJobs}</td><td>${money(sum.confirmedCents)}</td></tr></tbody></table></div>
   ${split ? `<div class="cqd-chore-parent-split"><div><strong>${money(split.give)}</strong><small>Give 10%</small></div><div><strong>${money(split.save)}</strong><small>Save 20%</small></div><div><strong>${money(split.spend)}</strong><small>Spend 70%</small></div></div><p class="cqd-chore-parent-note">The 10/20/70 split is a guide.</p>` : '<p class="cqd-chore-parent-note">Guide unavailable for this amount.</p>'}</section>
   <section class="cqd-chore-parent-card"><div class="cqd-chore-parent-pay-actions">${button('chores-pay-week', `Mark the week as paid · ${money(sum.confirmedCents)}`, `${disabled(!!paid || !!sum.waitingJobs || !sum.confirmedJobs)}`, 'is-green')}
-  ${store.track === 'guided' && (paid || sum.confirmedCents > 0) ? button('chores-open-payday', `Open the Payday Helper with ${money(sum.confirmedCents)}`, `${disabled(!!paid?.helperUsedAt)}`) : ''}</div>
-  ${paid ? '<p>Week paid and locked.</p>' : sum.waitingJobs ? `<p>Check the ${sum.waitingJobs} waiting jobs first.</p>` : !sum.confirmedJobs ? '<p>Nothing confirmed yet.</p>' : '<p>Marking paid locks this week and keeps a record.</p>'}
+  ${store.track === 'guided' && paid ? button('chores-open-payday', `Open the Payday Helper with ${money(paid.cents)}`, `${disabled(!!paid.helperUsedAt)}`) : ''}</div>
+  ${paid ? `<p>Week paid and locked.${store.track === 'guided' ? (paid.helperUsedAt ? ' It already went through the Payday Helper.' : ' The Payday Helper can use it once.') : ''}</p>` : sum.waitingJobs ? `<p>Check the ${sum.waitingJobs} waiting jobs first.</p>` : !sum.confirmedJobs ? '<p>Nothing confirmed yet.</p>' : '<p>Marking paid locks this week and keeps a record.</p>'}
   ${store.track === 'standard' ? '<p>His money stays here and adds up for the month.</p>' : ''}</section>
   <section class="cqd-chore-parent-card"><h2>Paid so far</h2><div class="cqd-chore-parent-table-wrap"><table><thead><tr><th>Week</th><th>Paid on</th><th>Amount</th></tr></thead><tbody>${history.map(([monday, record]) => `<tr><th>Week of ${esc(shortDate(monday))}</th><td>${esc(stampDate(record.paidAt))}</td><td>${money(record.cents)}</td></tr>`).join('') || '<tr><td colspan="3">No paid weeks yet.</td></tr>'}</tbody></table></div><p class="cqd-chore-parent-month">This month (${esc(monthName(month))}): ${money(monthSum.confirmedCents)} confirmed</p></section>`;
 }
@@ -120,7 +120,8 @@ export function renderChoresParent(store, state, todayIso) {
     <section class="cqd-chore-parent-card cqd-chore-backup"><h2>Backup</h2>
       ${button('chores-export-backup', 'Export backup file')}
       <label>Import a backup file<input type="file" accept=".json,application/json" data-chores-backup-file></label>
-      <label><input type="checkbox" data-chores-backup-replace> Replace everything here</label>
+      <label class="cqd-chore-backup-replace"><input type="checkbox" data-chores-backup-replace> Replace everything here</label>
+      <p class="cqd-chore-parent-note">Replace erases the chores on this iPad and uses the file instead. Leave it unchecked to only add what is missing.</p>
       ${button('chores-import-backup', 'Import a backup file')}
       <p class="cqd-chore-parent-message cqd-chore-backup-message" data-backup-status role="status" aria-live="polite">${esc(state.backupMessage || '')}</p>
     </section></section>`;

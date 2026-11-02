@@ -99,6 +99,23 @@ for (const track of ['guided', 'standard']) {
   forged.dataset.action = 'chore-add'; forged.dataset.job = 'trash'; forged.dataset.date = YESTERDAY;
   document.querySelector('#app').append(forged); forged.click();
   assert.equal(Object.keys(store.load().chores.entries).length, 2, 'forged past-day action cannot add');
+  // a forged click for a day that has not come yet is ignored
+  const future = document.createElement('button');
+  future.dataset.action = 'chore-day'; future.dataset.date = '2026-11-06';
+  document.querySelector('#app').append(future); future.click();
+  assert.match(document.querySelector('.cqd-chore-banner').textContent, /You can only add jobs for today/, 'still looking back, not moved to a future day');
+  // back on today, a bad job shows one plain sentence, never a logic error
+  click(`[data-action="chore-day"][data-date="${TODAY}"]`);
+  const bad = document.createElement('button');
+  bad.dataset.action = 'chore-add'; bad.dataset.job = 'not-a-job'; bad.dataset.date = TODAY;
+  document.querySelector('#app').append(bad); bad.click();
+  assert.match(document.querySelector('.cqd-chore-screen').textContent, /That did not work\. Ask a grown-up\./);
+  assert.doesNotMatch(document.querySelector('.cqd-chore-screen').textContent, /Unknown|inactive|Invalid|Entry ID|Week is paid/);
+  assert.equal(Object.keys(store.load().chores.entries).length, 2, 'bad job adds nothing');
+  // a job card reads its price and how often it was added, aloud
+  const vac = document.querySelector('[data-job="vacuum"]').getAttribute('aria-label');
+  assert.match(vac, /Vacuum or sweep, 1 dollar, tap to add/);
+  assert.match(document.querySelector('[data-job="table"]').getAttribute('aria-label'), /50 cents, added once today, tap to add again/);
 }
 
 let prepared = store.withTrack(store.emptyStore(), 'guided');

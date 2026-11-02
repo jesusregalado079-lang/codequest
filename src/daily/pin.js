@@ -29,7 +29,8 @@ export function hasParentPin(store = load()) {
 
 export function parentUnlocked(store, now = Date.now()) {
   const until = store.parent.unlockedUntil;
-  return Number.isFinite(until) && until > 0 && now < until;
+  // A window can never be longer than UNLOCK_MS: if the iPad clock is set back, an old window must not come alive again.
+  return Number.isFinite(until) && until > 0 && now < until && until - now <= UNLOCK_MS;
 }
 
 export function lockParent(store) {

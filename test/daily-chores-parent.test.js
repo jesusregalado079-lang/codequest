@@ -10,9 +10,10 @@ const MONDAY = '2026-11-02';
 const TUESDAY = '2026-11-03';
 const NOW = '2026-11-04T12:00:00.000Z';
 const RealDate = Date;
+let clockOffset = 0; // lets a test move the iPad clock without changing the day
 globalThis.Date = class extends RealDate {
   constructor(...args) { super(...(args.length ? args : [`${TODAY}T12:00:00Z`])); }
-  static now() { return RealDate.parse(`${TODAY}T12:00:00Z`); }
+  static now() { return RealDate.parse(`${TODAY}T12:00:00Z`) + clockOffset; }
 };
 const dom = new JSDOM('<!doctype html><main id="app"></main>', { url: 'https://local.test/daily.html', pretendToBeVisual: true });
 globalThis.window = dom.window;
@@ -95,7 +96,7 @@ assert.ok(document.querySelector('[data-action="chores-open-payday"]') === null,
 click('[data-action="chores-entry-status"][data-id="tue-wait"][data-status="confirmed"]');
 assert.equal(storage.load().chores.entries['tue-wait'].status, 'confirmed');
 assert.equal(document.querySelector('[data-id="tue-wait"][data-status="confirmed"]').getAttribute('aria-pressed'), 'true');
-assert.ok(document.querySelector('[data-action="chores-open-payday"]'), 'younger son sees Payday link with confirmed money');
+assert.equal(document.querySelector('[data-action="chores-open-payday"]'), null, 'no Payday link until the week is paid (a week must only go through the Helper once)');
 click('[data-action="chores-entry-status"][data-id="tue-wait"][data-status="declined"]');
 assert.equal(storage.load().chores.entries['tue-wait'].status, 'declined');
 click('[data-action="chores-entry-status"][data-id="tue-wait"][data-status="confirmed"]');
@@ -160,6 +161,7 @@ click(`[data-action="chores-entry-status"][data-id="${unpricedId}"][data-status=
 click('[data-action="chores-pay-week"]');
 assert.ok(storage.load().chores.paid[MONDAY], 'paid record saved');
 assert.match(document.querySelector('.cqd-chore-parent-banner').textContent, /Paid on/);
+assert.equal(document.querySelector('[data-action="chores-open-payday"]').disabled, false, 'paid and unused: the grown-up can open the Payday Helper');
 assert.equal(document.querySelector('[data-action="chores-confirm-week"]').disabled, true);
 assert.equal(document.querySelector('[data-action="chores-add-entry"]').disabled, true);
 assert.equal(document.querySelector('[data-action="chores-remove-entry"]').disabled, true);
@@ -263,6 +265,53 @@ document.querySelector('[data-chores-backup-replace]').checked = true;
 click('[data-action="chores-import-backup"]');
 await waitImport();
 assert.deepEqual(storage.load().chores, exported.chores, 'replace restores exact export');
+
+// ---- A boy must not reach the money screens through a PIN window a grown-up left open.
+let guard = storage.choresOf(storage.emptyStore());
+guard = addEntry(guard, { track: 'guided', date: TODAY, todayIso: TODAY, jobId: 'trash', by: 'kid', nowIso: NOW, id: 'guard-wait' }).chores;
+guard = addEntry(guard, { track: 'guided', date: TODAY, todayIso: TODAY, jobId: 'other', otherName: 'Washed the car', by: 'kid', nowIso: NOW, id: 'guard-other' }).chores;
+document.body.innerHTML = '<main id="app"></main>';
+let windowOpen = storage.withChores(storage.withTrack(storage.emptyStore(), 'guided'), () => ({ chores: guard }));
+windowOpen = await pin.setParentPin(windowOpen, '1234', Date.now() - 1000);
+storage.saveCore(windowOpen);
+assert.equal(pin.parentUnlocked(windowOpen, Date.now()), true, 'window is open');
+assert.equal(pin.parentUnlocked(windowOpen, Date.now() - 5 * 3600000), false, 'clock set back: an old window must not come alive again');
+assert.equal(pin.parentUnlocked(windowOpen, Date.now() + 2 * 3600000), false, 'window ends after an hour');
+await import(`../src/daily/app.js?parent-chores-test=${++boot}`);
+click('[data-action="daily-parent-open"]');
+assert.equal(document.querySelector('.cqd-parent-gate'), null, 'window open: Parent Mode opens without a PIN, as before');
+click('[data-action="chores-view-chores"]');
+assert.ok(document.querySelector('.cqd-parent-gate'), 'Chores asks for the PIN when it was not typed in this visit');
+assert.equal(document.querySelector('[data-action="chores-pay-week"]'), null, 'no money controls behind the gate');
+for (const action of ['chores-confirm-week', 'chores-confirm-day', 'chores-pay-week', 'chores-entry-status', 'chores-set-entry-price', 'chores-add-entry', 'chores-remove-entry', 'chores-reopen-week', 'chores-toggle-job', 'chores-add-job', 'chores-export-backup', 'chores-import-backup']) {
+  forged(action, { id: 'guard-wait', status: 'confirmed', date: TODAY, jobPrice: '9' });
+}
+assert.deepEqual(storage.load().chores, guard, 'forged grown-up clicks change nothing without the PIN typed in this visit');
+click('[data-action="chores-view-work"]');
+assert.equal(document.querySelector('.cqd-parent-gate'), null, 'Check work still opens without a PIN');
+click('[data-action="chores-view-chores"]');
+field('[data-parent-pin="enter"]', '1234');
+click('[data-action="daily-parent-enter-pin"]');
+for (let attempt = 0; attempt < 20 && !document.querySelector('.cqd-chore-parent-card'); attempt += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+assert.ok(document.querySelector('[data-action="chores-pay-week"]'), 'typing the PIN opens Chores');
+// The window ends while Chores is open: forged clicks must stop working.
+clockOffset = 2 * 3600000;
+forged('chores-confirm-week');
+forged('chores-entry-status', { id: 'guard-wait', status: 'confirmed' });
+assert.deepEqual(storage.load().chores, guard, 'an expired window blocks grown-up actions');
+clockOffset = 0;
+click('[data-action="daily-parent-exit"]');
+click('[data-action="daily-parent-open"]');
+click('[data-action="chores-view-chores"]');
+assert.ok(document.querySelector('.cqd-parent-gate'), 'leaving Parent Mode forgets the PIN: a new visit asks again');
+// Locked outright: forged clicks on the gate do nothing either.
+click('[data-action="chores-view-work"]');
+click('[data-action="daily-parent-lock"]');
+click('[data-action="daily-parent-open"]');
+assert.ok(document.querySelector('.cqd-parent-gate'), 'locked Parent Mode shows the gate');
+forged('chores-confirm-week');
+forged('chores-entry-status', { id: 'guard-wait', status: 'confirmed' });
+assert.deepEqual(storage.load().chores, guard, 'forged clicks on a locked Parent Mode change nothing');
 URL.createObjectURL = originalCreateObjectURL;
 URL.revokeObjectURL = originalRevokeObjectURL;
 dom.window.HTMLAnchorElement.prototype.click = originalAnchorClick;

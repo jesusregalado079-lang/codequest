@@ -1561,6 +1561,7 @@ button.pd-stack:active { transform: translateY(2px); box-shadow: 0 1px 0 #dfe3dc
 .cqd-chore-parent-money input { width:72px; min-width:0; border:0; background:transparent; color:var(--cqd-text); font:inherit; font-weight:800; }
 .cqd-chore-parent-form { display:flex; flex-wrap:wrap; align-items:end; gap:10px; }
 .cqd-chore-parent-form > label { display:grid; gap:4px; min-width:145px; flex:1; font-weight:800; }
+.cqd-chore-parent-form > label:has(select) { flex:2 1 260px; }
 .cqd-chore-parent-form > label.cqd-chore-parent-money { display:flex; flex:0; min-width:100px; }
 .cqd-chore-parent-form input:not([type=number]), .cqd-chore-parent-form select { width:100%; min-height:44px; padding:7px 10px; border:2px solid var(--cqd-border); border-radius:11px; background:#fff; color:var(--cqd-text); font:inherit; }
 .cqd-chore-parent-banner { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin:0 0 14px; padding:10px 14px; border:2px dashed #d6b565; border-radius:14px; background:var(--cqd-gold-soft); color:#875710; font-weight:900; }
@@ -1573,7 +1574,7 @@ button.pd-stack:active { transform: translateY(2px); box-shadow: 0 1px 0 #dfe3dc
 .cqd-chore-parent .is-total { font-weight:900; }
 .cqd-chore-parent-split { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:15px; }
 .cqd-chore-parent-split div { min-width:0; padding:10px 4px; border-radius:15px; background:#fcebf0; color:#ba204d; text-align:center; }
-.cqd-chore-parent-split div:nth-child(2) { background:#e7f8ef; color:#00875b; }
+.cqd-chore-parent-split div:nth-child(2) { background:#e7f8ef; color:#00694a; }
 .cqd-chore-parent-split div:nth-child(3) { background:#edf2ff; color:#2459dc; }
 .cqd-chore-parent-split strong, .cqd-chore-parent-split small { display:block; }
 .cqd-chore-parent-split small { font-size:.72rem; font-weight:900; text-transform:uppercase; }
@@ -1598,4 +1599,5 @@ button.pd-stack:active { transform: translateY(2px); box-shadow: 0 1px 0 #dfe3dc
 .cqd-chore-backup { display:grid; gap:12px; }
 .cqd-chore-backup label { display:grid; gap:5px; font-weight:700; }
 .cqd-chore-backup input[type=file] { max-width:100%; }
-.cqd-chore-backup label:has(input[type=checkbox]) { display:flex; align-items:center; }
+.cqd-chore-backup label:has(input[type=checkbox]) { display:flex; align-items:center; gap:10px; min-height:44px; }
+.cqd-chore-backup input[type=checkbox] { width:24px; height:24px; flex:none; }

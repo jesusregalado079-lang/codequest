@@ -18,7 +18,7 @@ const esc = (value) => String(value).replace(/[&<>"']/g, (char) => `&#${char.cha
 
 export function createParentState() {
   return { open: false, selectedDay: null, pinMessage: '', resetting: false,
-    view: 'work', choresView: 'check', weekMonday: null, day: null, choreMessage: '', backupMessage: '' };
+    view: 'work', choresView: 'check', weekMonday: null, day: null, choreMessage: '', backupMessage: '', pinEntered: false };
 }
 
 export function gradeSuggestion(item, value) {
@@ -130,7 +130,7 @@ function pinResetNotice(store) {
   return `<p class="cqd-pin-notice" role="status">⚠️ The grown-up PIN was reset on ${esc(resets.map((time) => new Date(time).toLocaleString()).join(', '))}. If that was not you, someone else may have changed it.</p>`;
 }
 
-function pinGateHtml(store, state) {
+function pinGateHtml(store, state, note = '') {
   if (state.resetting) return resetGateHtml(state);
   if (!hasParentPin(store)) {
     return `<section class="cqd-parent-gate"><h1>Set a grown-up PIN</h1>
@@ -142,7 +142,7 @@ function pinGateHtml(store, state) {
   }
   const remaining = Math.max(0, store.parent.lockUntil - Date.now());
   const locked = remaining > 0;
-  return `<section class="cqd-parent-gate"><h1>Grown-ups only</h1>
+  return `<section class="cqd-parent-gate"><h1>Grown-ups only</h1>${note ? `<p>${esc(note)}</p>` : ''}
     <label class="cqd-field"><span>4-digit PIN</span><input class="cqd-input" type="password" inputmode="numeric" maxlength="4" data-parent-pin="enter" aria-label="4 digit PIN" ${locked ? 'disabled' : ''}></label>
     <p class="cqd-parent-error" aria-live="polite">${esc(locked ? `Too many tries — wait ${Math.ceil(remaining / 1000)} seconds` : state.pinMessage || '')}</p>
     <button type="button" class="cqd-button cqd-primary" data-action="daily-parent-enter-pin" ${locked ? 'disabled' : ''}>Enter</button>
@@ -239,5 +239,6 @@ export function renderParent(store, state, todayIso, now = Date.now(), content =
   const switchHtml = `<div class="cqd-chore-parent-switch" role="group" aria-label="Parent Mode view">
     <button type="button" data-action="chores-view-work" aria-label="Check work" aria-pressed="${state.view !== 'chores'}">Check work</button>
     <button type="button" data-action="chores-view-chores" aria-label="Chores${count ? `, ${count} to check` : ''}" aria-pressed="${state.view === 'chores'}">Chores${count ? ` <span class="cqd-chore-parent-badge">${count} to check</span>` : ''}</button></div>`;
+  if (state.view === 'chores' && !state.pinEntered) return `${switchHtml}${pinGateHtml(store, state, 'Chores handle money. Type the PIN to open them.')}`;
   return `${switchHtml}${state.view === 'chores' ? `${pinResetNotice(store)}${renderChoresParent(store, state, todayIso)}` : checkWorkHtml(store, state, todayIso, content)}`;
 }

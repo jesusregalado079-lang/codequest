@@ -81,9 +81,15 @@ function trayChips(items) {
   return `<ul class="pd-tray-items">${items.map((item) => `<li><button type="button" class="pd-chip" data-action="${item.action}" ${item.data} aria-label="${esc(item.label)}">${item.art || ''}<span>${esc(item.text)}</span><b aria-hidden="true">✕</b></button></li>`).join('')}</ul>`;
 }
 
+function choreHeading(weekIso) {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(weekIso)) ? new Date(`${weekIso}T12:00:00Z`) : null;
+  if (!date || Number.isNaN(date.getTime())) return 'Your chores';
+  return `Your chores, week of ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}`;
+}
+
 function earnScreen(state, suggestion) {
   const valid = suggestion && Number.isInteger(suggestion.cents) && suggestion.cents >= MIN_EARNED && suggestion.cents <= MAX_EARNED;
-  const card = suggestion ? `<div class="pd-chore-suggestion"><h2>💵 Your chores this week</h2><p>A grown-up checked these. You earned ${esc(formatMoney(suggestion.cents))} from ${esc(suggestion.jobs)} jobs.</p>
+  const card = suggestion ? `<div class="pd-chore-suggestion"><h2>💵 ${esc(choreHeading(suggestion.label))}</h2><p>A grown-up checked these. You earned ${esc(formatMoney(suggestion.cents))} from ${esc(suggestion.jobs)} ${suggestion.jobs === 1 ? 'job' : 'jobs'}.</p>
     ${valid ? `<button type="button" class="cqd-button" data-action="payday-use-chores">Use ${esc(formatMoney(suggestion.cents))}</button><p>Or type a different amount below if a grown-up gave you something else.</p>` : '<p>That is more than the Payday Helper can split. Ask a grown-up.</p>'}</div>` : '';
   return `<h1>How much did you earn?</h1>
     <p class="pd-lead">How much money did you earn this week? Type it in dollars, like 6.50.</p>

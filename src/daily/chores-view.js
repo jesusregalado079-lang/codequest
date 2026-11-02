@@ -3,6 +3,13 @@ import { choresOf } from './store.js';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
 const money = (cents) => `$${(cents / 100).toFixed(2)}`;
+// Read aloud: "1 dollar 50 cents", never "150 cents".
+const spoken = (cents) => {
+  const dollars = Math.floor(cents / 100); const rest = cents % 100; const parts = [];
+  if (dollars) parts.push(`${dollars} ${dollars === 1 ? 'dollar' : 'dollars'}`);
+  if (rest) parts.push(`${rest} ${rest === 1 ? 'cent' : 'cents'}`);
+  return parts.join(' ') || 'no money';
+};
 const shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const longDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 function dateLabel(iso, weekday = 'long') {
@@ -32,7 +39,7 @@ export function renderChores(store, todayIso, selectedIso = todayIso, message = 
   const jobs = isToday ? `<section class="cqd-chore-card"><h2>Tap the jobs you did</h2>
     <div class="cqd-chore-grid">${activeJobs(store.track, chores).map((job) => {
       const count = loggedToday.filter((entry) => entry.jobId === job.id).length;
-      return `<button type="button" class="cqd-chore-job ${count ? 'done' : ''}" data-action="chore-add" data-job="${esc(job.id)}" data-date="${todayIso}" aria-label="${esc(job.name)}, ${job.cents} cents, tap to add">
+      return `<button type="button" class="cqd-chore-job ${count ? 'done' : ''}" data-action="chore-add" data-job="${esc(job.id)}" data-date="${todayIso}" aria-label="${esc(job.name)}, ${spoken(job.cents)}, ${count ? `added ${count === 1 ? 'once' : `${count} times`} today, tap to add again` : 'tap to add'}">
         <span class="cqd-chore-job-icon" aria-hidden="true">${esc(job.icon)}</span><span class="cqd-chore-price">${money(job.cents)}</span>
         <b>${esc(job.name)}</b><i>${esc(job.es)}</i>${count ? `<span class="cqd-chore-added">${count > 1 ? `x${count}` : '✓ Added'}</span>` : ''}</button>`;
     }).join('')}</div>
@@ -42,7 +49,7 @@ export function renderChores(store, todayIso, selectedIso = todayIso, message = 
     const removable = isToday && group.status === 'waiting' && group.entries.some((entry) => entry.by === 'kid');
     const removableEntry = removable ? group.entries.find((entry) => entry.by === 'kid') : null;
     const chip = group.status === 'confirmed' ? '<span class="cqd-chore-chip ok">✓ Confirmed</span>'
-      : group.status === 'declined' ? '<span class="cqd-chore-chip back">↩ Ask Mom or Dad</span>'
+      : group.status === 'declined' ? '<span class="cqd-chore-chip back">↩ Ask a grown-up</span>'
         : `<span class="cqd-chore-chip wait">⏳ ${group.cents === null ? 'Waiting, a grown-up picks the price' : 'Waiting for a grown-up'}</span>`;
     return `<li class="cqd-chore-row"><span class="cqd-chore-row-icon" aria-hidden="true">${esc(group.icon)}</span>
       <span class="cqd-chore-name">${esc(group.name)}${group.count > 1 ? ` x${group.count}` : ''}<small>${esc(group.es)}</small></span>

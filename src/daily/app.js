@@ -2,7 +2,7 @@ import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
 import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
 import { blockFillFor, celebrationSeen, choresOf, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, setBlockFill, snapshotHistory, withChores, withTrack } from './store.js';
-import { addCustomJob, addEntry, confirmDay, confirmWeek, exportChores, importChores, latestUnusedPaidWeek, markPaidUsed, payWeek, removeCustomJob, removeEntry, reopenWeek, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, summarize, weekDates, weekEntries, weekMonday } from './chores.js';
+import { addCustomJob, addEntry, confirmDay, confirmWeek, exportChores, importChores, latestUnusedPaidWeek, markPaidUsed, payWeek, removeCustomJob, removeEntry, reopenWeek, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, weekDates, weekMonday } from './chores.js';
 import { renderChores } from './chores-view.js';
 import { blockPlan, nextFill } from './blocks.js';
 import { currentWeekSnapshots, renderCalendar, renderVerseScreen } from './calendar.js';
@@ -70,7 +70,7 @@ function parentChoreAction(button, action) {
   if (route.screen !== 'parent' || !parentUnlocked(store, Date.now())) return;
   if (action === 'chores-view-work') { parentState.view = 'work'; parentState.choreMessage = ''; parentState.backupMessage = ''; render(); return; }
   if (action === 'chores-view-chores') { parentState.view = 'chores'; parentState.choresView = 'check'; render(); return; }
-  if (parentState.view !== 'chores') return;
+  if (parentState.view !== 'chores' || !parentState.pinEntered) return;
   if (action === 'chores-jobs' || action === 'chores-check') {
     parentState.choresView = action === 'chores-jobs' ? 'jobs' : 'check';
     parentState.choreMessage = ''; render(); return;
@@ -80,8 +80,8 @@ function parentChoreAction(button, action) {
     const monday = parentState.weekMonday;
     const chores = choresOf(store);
     const paid = chores.paid[monday];
-    const cents = paid ? paid.cents : summarize(weekEntries(chores, monday)).confirmedCents;
-    if (!useChoreAmount(monday, cents)) { parentState.choreMessage = paydayMessage; render(); return; }
+    if (!paid) { parentState.choreMessage = 'Mark the week as paid first. Then the Payday Helper can use it.'; render(); return; }
+    if (!useChoreAmount(monday, paid.cents)) { parentState.choreMessage = paydayMessage; render(); return; }
     parentSession += 1;
     parentState = createParentState();
     paydayDoneId = null;
@@ -111,7 +111,7 @@ function parentChoreAction(button, action) {
     }
     const session = parentSession;
     file.text().then((content) => {
-      if (session !== parentSession || route.screen !== 'parent' || !parentUnlocked(store, Date.now())) return;
+      if (session !== parentSession || route.screen !== 'parent' || !parentState.pinEntered || !parentUnlocked(store, Date.now())) return;
       let backup;
       try { backup = JSON.parse(content); } catch { parentState.backupMessage = 'This backup file is not valid JSON.'; render(); return; }
       const result = importChores(choresOf(store), backup, mode, store.track);
@@ -190,7 +190,8 @@ function parentChoreAction(button, action) {
   } else if (action === 'chores-pay-week') {
     writeParentChores((chores) => payWeek(chores, monday, nowIso), 'Week marked paid.');
   } else if (action === 'chores-reopen-week') {
-    writeParentChores((chores) => reopenWeek(chores, monday), 'Week reopened.');
+    const wasUsed = !!choresOf(store).paid[monday]?.helperUsedAt;
+    writeParentChores((chores) => reopenWeek(chores, monday), wasUsed ? 'Week reopened. It already went through the Payday Helper, so when you pay it again, tell him to type only the new part.' : 'Week reopened.');
   }
 }
 
@@ -357,6 +358,8 @@ function paydayCurrent() {
   return done || openSession(store.payday) || paydayDraft || (paydayDraft = newPayday(new Date().toISOString()));
 }
 
+const KID_CHORE_ERROR = 'That did not work. Ask a grown-up.';
+
 function useChoreAmount(monday, cents) {
   paydayMessage = '';
   if (store.track !== 'guided' || !weekDates(monday).length || !Number.isInteger(cents)
@@ -375,15 +378,16 @@ function paydayAct(action, choreMonday = null, choreCents = null) {
       if (s.track !== 'guided') { failure = 'Payday Helper is unavailable here.'; return s; }
       const chores = choresOf(s);
       const paid = chores.paid[choreMonday];
-      const cents = paid ? paid.cents : summarize(weekEntries(chores, choreMonday)).confirmedCents;
-      if (cents !== choreCents || cents < MIN_EARNED || cents > MAX_EARNED || paid?.helperUsedAt) {
-        failure = paid?.helperUsedAt ? 'This week was already used.' : 'The chore amount changed. Try again.'; return s;
+      if (!paid) { failure = 'This week is not paid yet.'; return s; }
+      const cents = paid.cents;
+      if (cents !== choreCents || cents < MIN_EARNED || cents > MAX_EARNED || paid.helperUsedAt) {
+        failure = paid.helperUsedAt ? 'This week was already used.' : 'The chore amount changed. Try again.'; return s;
       }
       const current = openSession(s.payday);
       const base = current?.screen === 'earn' ? current : newPayday(now);
       const next = paydayReduce(base, action, now);
       if (next.screen !== 'handed' || next.earned !== cents) { failure = 'Check the amount and try again.'; return s; }
-      const marked = paid ? markPaidUsed(chores, choreMonday, now) : { chores };
+      const marked = markPaidUsed(chores, choreMonday, now);
       if (marked.error) { failure = marked.error; return s; }
       const payday = current?.screen === 'earn'
         ? actOnOpen(s.payday, action, now)
@@ -554,11 +558,11 @@ function onClick(event) {
       : addEntry(chores, { track: store.track, date: button.dataset.date, todayIso: current,
         jobId: action === 'chore-add-other' ? 'other' : button.dataset.job, otherName, by: 'kid', nowIso: new Date().toISOString(), id });
     const checked = apply(choresOf(store));
-    if (checked.error) { choreMessage = checked.error; render(); return; }
+    if (checked.error) { choreMessage = KID_CHORE_ERROR; render(); return; }
     let writeError = '';
     persist((s) => {
       const result = apply(choresOf(s));
-      if (result.error) { writeError = result.error; return s; }
+      if (result.error) { writeError = KID_CHORE_ERROR; return s; }
       return withChores(s, () => result);
     });
     choreMessage = writeError;
@@ -630,6 +634,7 @@ function onClick(event) {
         if (result.store.parent !== store.parent) persist((s) => ({ ...s, parent: result.store.parent }));
         pinPending = false;
         if (session !== parentSession || route.screen !== 'parent') return;
+        if (result.ok) parentState.pinEntered = true;
         parentState.pinMessage = result.message;
         render();
       });
@@ -644,6 +649,7 @@ function onClick(event) {
         if (result.store.parent !== store.parent) persist((s) => ({ ...s, parent: result.store.parent }));
         pinPending = false;
         if (session !== parentSession || route.screen !== 'parent') return;
+        if (result.unlocked) parentState.pinEntered = true;
         parentState.pinMessage = result.message;
         render();
       });
@@ -787,7 +793,7 @@ app.addEventListener('click', onClick);
 app.addEventListener('change', (event) => {
   const input = event.target;
   if (!input.matches?.('[data-job-price]') || route.screen !== 'parent' || parentState.view !== 'chores'
-    || parentState.choresView !== 'jobs' || !parentUnlocked(store, Date.now())) return;
+    || parentState.choresView !== 'jobs' || !parentState.pinEntered || !parentUnlocked(store, Date.now())) return;
   const cents = chorePrice(input.value);
   if (cents === null) { parentState.choreMessage = 'Enter a price from $0 to $1000.'; render(); return; }
   writeParentChores((chores) => setJobPrice(chores, input.dataset.jobPrice, cents), 'Price saved for future jobs.');

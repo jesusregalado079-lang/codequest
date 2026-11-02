@@ -211,6 +211,15 @@ assert.deepEqual(c.latestUnusedPaidWeek(validPaid), { mondayIso: MON, cents: 75,
 assert.equal(c.normalizeChores(usedPaid).paid[MON].helperUsedAt, later);
 assert.equal(c.normalizeChores({ ...usedPaid, paid: { [MON]: { ...usedPaid.paid[MON], helperUsedAt: 'bad' } } }).paid[MON].helperUsedAt, undefined);
 assert.equal(ok(c.reopenWeek(usedPaid, MON)).paid[MON], undefined);
+// Bad data that could never come from the screens: a waiting job inside a paid week (it could never be removed),
+// and a custom job borrowing the built-in "other" id.
+const waitingInPaid = c.normalizeChores({ ...validPaid, entries: { ...validPaid.entries, stuck: { ...validPaid.entries.good, id: 'stuck', status: 'waiting', checkedAt: null } } });
+assert.equal(waitingInPaid.entries.stuck, undefined, 'a waiting job inside a paid week is dropped');
+assert.ok(waitingInPaid.entries.good && waitingInPaid.paid[MON], 'the paid week and its jobs stay');
+const declinedInPaid = c.normalizeChores({ ...validPaid, entries: { ...validPaid.entries, nope: { ...validPaid.entries.good, id: 'nope', status: 'declined' } } });
+assert.ok(declinedInPaid.entries.nope, 'a not-done job inside a paid week is allowed');
+const otherCustom = c.normalizeChores({ jobs: { custom: [{ id: 'other', name: 'Sneaky', cents: 100, icon: '⭐', es: '' }, { id: 'mine', name: 'Mine', cents: 100, icon: '⭐', es: '' }] } });
+assert.deepEqual(otherCustom.jobs.custom.map((job) => job.id), ['mine'], 'a custom job cannot reuse the reserved "other" id');
 const backup = c.exportChores({ track: 'guided', chores: usedPaid }, later);
 assert.deepEqual(backup, { format: 'codequest-chores', version: 1, exportedAt: later, track: 'guided', chores: usedPaid });
 assert.deepEqual(c.importChores(c.emptyChores(), backup, 'replace', 'guided').chores, usedPaid);
