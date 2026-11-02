@@ -52,7 +52,6 @@ On the younger son's iPad, an unused paid week appears on the first Payday Helpe
 Parent Mode can export a JSON backup file and import one by merging or replacing chore records. Each iPad accepts backups for its own boy only. Import requires pressing the button. Chore records live in this iPad's `codequest-daily-v1` browser storage, so keep a backup file somewhere safe. Confirmed entries keep their original price. Merge never replaces an existing entry or a paid record, and reopening a paid week removes its payment and Helper-used flag.
 
 ## Trust rules added after the blind review (11/1)
-- The Chores part of Parent Mode asks for the PIN in every visit, even when the one-hour window from an earlier visit is still open. Check work still opens straight in. This stops a boy from reopening Parent Mode right after a grown-up leaves it and pricing or paying his own jobs.
 - An unlock window can never be longer than one hour: if the iPad clock is set back, an old window does not come alive again.
 - A boy never sees a system error. Any refused tap shows "That did not work. Ask a grown-up."
 - A paid week never holds a waiting job, and a custom job cannot reuse the built-in "other" id; backups that say otherwise are cleaned on load.

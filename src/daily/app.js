@@ -70,7 +70,7 @@ function parentChoreAction(button, action) {
   if (route.screen !== 'parent' || !parentUnlocked(store, Date.now())) return;
   if (action === 'chores-view-work') { parentState.view = 'work'; parentState.choreMessage = ''; parentState.backupMessage = ''; render(); return; }
   if (action === 'chores-view-chores') { parentState.view = 'chores'; parentState.choresView = 'check'; render(); return; }
-  if (parentState.view !== 'chores' || !parentState.pinEntered) return;
+  if (parentState.view !== 'chores') return;
   if (action === 'chores-jobs' || action === 'chores-check') {
     parentState.choresView = action === 'chores-jobs' ? 'jobs' : 'check';
     parentState.choreMessage = ''; render(); return;
@@ -111,7 +111,7 @@ function parentChoreAction(button, action) {
     }
     const session = parentSession;
     file.text().then((content) => {
-      if (session !== parentSession || route.screen !== 'parent' || !parentState.pinEntered || !parentUnlocked(store, Date.now())) return;
+      if (session !== parentSession || route.screen !== 'parent' || !parentUnlocked(store, Date.now())) return;
       let backup;
       try { backup = JSON.parse(content); } catch { parentState.backupMessage = 'This backup file is not valid JSON.'; render(); return; }
       const result = importChores(choresOf(store), backup, mode, store.track);
@@ -634,7 +634,6 @@ function onClick(event) {
         if (result.store.parent !== store.parent) persist((s) => ({ ...s, parent: result.store.parent }));
         pinPending = false;
         if (session !== parentSession || route.screen !== 'parent') return;
-        if (result.ok) parentState.pinEntered = true;
         parentState.pinMessage = result.message;
         render();
       });
@@ -649,7 +648,6 @@ function onClick(event) {
         if (result.store.parent !== store.parent) persist((s) => ({ ...s, parent: result.store.parent }));
         pinPending = false;
         if (session !== parentSession || route.screen !== 'parent') return;
-        if (result.unlocked) parentState.pinEntered = true;
         parentState.pinMessage = result.message;
         render();
       });
@@ -793,7 +791,7 @@ app.addEventListener('click', onClick);
 app.addEventListener('change', (event) => {
   const input = event.target;
   if (!input.matches?.('[data-job-price]') || route.screen !== 'parent' || parentState.view !== 'chores'
-    || parentState.choresView !== 'jobs' || !parentState.pinEntered || !parentUnlocked(store, Date.now())) return;
+    || parentState.choresView !== 'jobs' || !parentUnlocked(store, Date.now())) return;
   const cents = chorePrice(input.value);
   if (cents === null) { parentState.choreMessage = 'Enter a price from $0 to $1000.'; render(); return; }
   writeParentChores((chores) => setJobPrice(chores, input.dataset.jobPrice, cents), 'Price saved for future jobs.');
