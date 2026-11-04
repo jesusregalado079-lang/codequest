@@ -60,6 +60,7 @@ export function renderChores(store, todayIso, selectedIso = todayIso, message = 
     <section class="cqd-chore-screen"><span class="cqd-chore-eyebrow">My chores · ${esc(dateLabel(todayIso))}</span>
     <h1>What did you do today?</h1><p class="cqd-chore-lead">Tap a job when you finish it. A grown-up checks it, and then you get paid.</p>
     <nav class="cqd-chore-days" aria-label="Days this week">${dayPills}</nav>
+    <button type="button" class="cqd-button cqd-chore-sheet-open" data-action="open-chore-sheet">📄 My chore sheet</button>
     ${!isToday ? `<p class="cqd-chore-banner">Looking back at ${longDays[dates.indexOf(selected)]}. You can only add jobs for today. If you forgot one, ask a grown-up.</p>` : ''}
     ${message ? `<p class="cqd-chore-message" role="alert">${esc(message)}</p>` : ''}
     ${jobs}<section class="cqd-chore-card"><h2>${isToday ? 'Today' : longDays[dates.indexOf(selected)]} I did</h2>

@@ -55,3 +55,6 @@ Parent Mode can export a JSON backup file and import one by merging or replacing
 - A boy never sees a system error. Any refused tap shows "That did not work. Ask a grown-up."
 - A paid week never holds a waiting job, and a custom job cannot reuse the built-in "other" id; backups that say otherwise are cleaned on load.
 - The device clock decides what "today" is. Setting it forward lets a boy log future days; paid weeks stay locked either way.
+
+## My chore sheet (added 11/3)
+Jesse asked that each boy can see his own record, like the paper sheet, without anything filled in for him. My Chores has a "📄 My chore sheet" button. The sheet is read-only: one box per day (Monday to Sunday) with the jobs that were really logged and their status, a line on any job a grown-up wrote in, the week's Confirmed and Waiting totals, and a PAID stamp (local date and amount) once the week is paid. "← Earlier week" pages back to the first week with any chore; it never shows a future week. Every week stays on that iPad (the backup file is still the safety net). It shows no Give/Save/Spend split, because the Payday Helper is where the younger son works that out.

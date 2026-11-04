@@ -1397,6 +1397,47 @@ body:has(.cqd-save-alert:not([hidden])) #app { padding-bottom: calc(220px + env(
   .cqd-chore-totals small { font-size: .58rem; }
 }
 @media (prefers-reduced-motion: reduce) { .cqd-chore-job, .cqd-chore-day, .cqd-chore-add-button { transition: none; } }
+.cqd-chore-sheet-open { display: block; margin: -3px 0 16px; }
+.cqd-chore-sheet-screen { min-width: 0; color: var(--cqd-text); font-family: 'Nunito', sans-serif; }
+.cqd-chore-sheet-paper { min-width: 0; padding: 20px; border: 2px solid var(--cqd-border); border-radius: var(--cqd-radius); background: var(--cqd-card); box-shadow: var(--cqd-shadow); }
+.cqd-chore-sheet-header { position: relative; margin-bottom: 14px; }
+.cqd-chore-sheet-header h1 { margin: 4px 0 0; color: var(--cqd-ink); }
+.cqd-chore-sheet-header p { margin: 0; color: var(--cqd-muted); font-weight: 800; }
+.cqd-chore-sheet-current { display: inline-block; margin-top: 8px; padding: 3px 11px; border-radius: 999px; background: var(--cqd-gold-soft); color: #81500b; font-size: .8rem; font-weight: 900; }
+.cqd-chore-sheet-nav { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+.cqd-chore-sheet-nav button { min-width: 44px; min-height: 44px; padding: 8px 13px; border: 2px solid var(--cqd-border); border-radius: 12px; background: #fff; color: var(--cqd-ink); font-weight: 900; cursor: pointer; }
+.cqd-chore-sheet-nav button:disabled { opacity: .5; cursor: not-allowed; }
+.cqd-chore-sheet-screen button:focus-visible { outline: 3px solid #337cb7; outline-offset: 3px; }
+.cqd-chore-sheet-days { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.cqd-chore-sheet-day { min-width: 0; padding: 14px; border: 1px solid var(--cqd-border); border-radius: 14px; background: repeating-linear-gradient(to bottom, #fffefb 0, #fffefb 32px, #edf0eb 33px); overflow-wrap: anywhere; }
+.cqd-chore-sheet-day.is-future { opacity: .58; }
+.cqd-chore-sheet-day h2 { margin: 0 0 10px; color: var(--cqd-ink); font-size: 1.15rem; }
+.cqd-chore-sheet-day h2 small { margin-left: 5px; color: var(--cqd-gold); font: 900 .74rem 'Nunito', sans-serif; }
+.cqd-chore-sheet-empty { margin: 0; color: var(--cqd-muted); font-weight: 700; }
+.cqd-chore-sheet-jobs { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.cqd-chore-sheet-job { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 9px; min-width: 0; padding: 7px 0; border-top: 1px solid var(--cqd-line); }
+.cqd-chore-sheet-icon { font-size: 1.4rem; line-height: 1.2; }
+.cqd-chore-sheet-name { min-width: 0; line-height: 1.25; }
+.cqd-chore-sheet-name strong { display: block; color: var(--cqd-ink); font-weight: 900; }
+.cqd-chore-sheet-name small { display: block; color: var(--cqd-muted); font-size: .77rem; font-weight: 700; }
+.cqd-chore-sheet-job-meta { display: flex; grid-column: 2; flex-wrap: wrap; align-items: center; gap: 5px 9px; min-width: 0; }
+.cqd-chore-sheet-job-meta > strong { color: var(--cqd-ink); font-size: .94rem; white-space: nowrap; }
+.cqd-chore-sheet-job .cqd-chore-chip { max-width: 100%; white-space: normal; }
+.cqd-chore-sheet-day-total { margin: 10px 0 0; padding-top: 8px; border-top: 1px solid var(--cqd-border); color: #1d6b3c; font-weight: 900; }
+.cqd-chore-sheet-summary { margin-top: 16px; padding: 16px; border: 2px solid var(--cqd-border); border-radius: 16px; background: var(--cqd-paper); }
+.cqd-chore-sheet-summary h2 { margin-bottom: 8px; color: var(--cqd-ink); font-size: 1.25rem; }
+.cqd-chore-sheet-totals { display: grid; gap: 5px; }
+.cqd-chore-sheet-totals p { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin: 0; font-weight: 800; }
+.cqd-chore-sheet-totals span { color: var(--cqd-ink); font-weight: 900; }
+.cqd-chore-sheet-paid { display: inline-block; margin-top: 13px; padding: 6px 13px; border: 2px dashed #1d6b3c; border-radius: 9px; background: #e3f3e9; color: #1d6b3c; font-weight: 1000; letter-spacing: .055em; }
+.cqd-chore-sheet-payment { margin: 12px 0 0; color: var(--cqd-muted); font-weight: 800; }
+.cqd-chore-sheet-note { margin: 14px 2px 0; color: var(--cqd-muted); font-size: .84rem; font-weight: 700; }
+@media (max-width: 620px) {
+  .cqd-chore-sheet-paper { padding: 13px; }
+  .cqd-chore-sheet-days { grid-template-columns: minmax(0, 1fr); }
+  .cqd-chore-sheet-nav button { flex: 1 1 145px; }
+}
+@media (prefers-reduced-motion: reduce) { .cqd-chore-sheet-screen button { transition: none; } }
 .cqd-tracker:has(.cqd-tracker-payday) { grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.5fr); }
 .cqd-tracker-payday::after { content: none; }
 

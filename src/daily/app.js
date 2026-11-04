@@ -4,6 +4,7 @@ import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
 import { blockFillFor, celebrationSeen, choresOf, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, setBlockFill, snapshotHistory, withChores, withTrack } from './store.js';
 import { addCustomJob, addEntry, confirmDay, confirmWeek, exportChores, importChores, latestUnusedPaidWeek, markPaidUsed, payWeek, removeCustomJob, removeEntry, reopenWeek, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, weekDates, weekMonday } from './chores.js';
 import { renderChores } from './chores-view.js';
+import { choreSheetBounds, renderChoreSheet } from './chores-sheet-view.js';
 import { blockPlan, nextFill } from './blocks.js';
 import { currentWeekSnapshots, renderCalendar, renderVerseScreen } from './calendar.js';
 import { applyDailyAction, dayComplete, dayReady, dayReopened, renderSheetArticle, sheetsForDay } from './sheet-view.js';
@@ -24,6 +25,7 @@ const motion = createDailyMotion(app);
 let store = load();
 let route = { screen: 'calendar', dayKey: null, sheetIndex: 0 };
 let choreDay = null;
+let choreSheetMonday = weekMonday(todayIso());
 let choreMessage = '';
 let parentState = createParentState();
 let drawingController = null;
@@ -475,6 +477,7 @@ function render(motionIntent) {
   }
   else if (route.screen === 'sheet') { app.innerHTML = sheetScreenHtml(); setupDrawing(); }
   else if (route.screen === 'chores') { app.innerHTML = renderChores(store, todayIso(), choreDay || todayIso(), choreMessage); }
+  else if (route.screen === 'chore-sheet') { app.innerHTML = renderChoreSheet(store, todayIso(), choreSheetMonday); }
   else if (route.screen === 'payday') {
     const suggestion = store.track === 'guided' ? latestUnusedPaidWeek(choresOf(store)) : null;
     app.innerHTML = `${paydayMessage ? `<p class="pd-chore-message" role="alert">${paydayMessage}</p>` : ''}${renderPayday(paydayCurrent(), {
@@ -537,6 +540,20 @@ function onClick(event) {
     choreDay = todayIso();
     choreMessage = '';
     route = { screen: 'chores', dayKey: null, sheetIndex: 0 };
+    render();
+    return;
+  }
+  if (action === 'open-chore-sheet' && route.screen === 'chores') {
+    choreSheetMonday = weekMonday(todayIso());
+    route = { screen: 'chore-sheet', dayKey: null, sheetIndex: 0 };
+    render();
+    return;
+  }
+  if (action === 'chore-sheet-week' && route.screen === 'chore-sheet') {
+    const monday = button.dataset.monday;
+    const { earliest, latest } = choreSheetBounds(store, todayIso());
+    if (weekMonday(monday) !== monday || monday < earliest || monday > latest) return;
+    choreSheetMonday = monday;
     render();
     return;
   }
