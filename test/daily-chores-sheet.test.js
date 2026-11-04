@@ -140,7 +140,7 @@ for (const track of ['guided', 'standard']) {
   assert.match(sheet().textContent, /✓ Confirmed/);
   assert.match(sheet().textContent, /A grown-up wrote this in\./);
   assert.match(sheet().textContent, /Confirmed: \$1\.50/);
-  assert.equal(sheet().querySelector('.cqd-chore-sheet-paid').textContent, 'PAID · Nov 9 · $3.00');
+  assert.equal(sheet().querySelector('.cqd-chore-sheet-paid').textContent, `PAID · ${new Date('2026-11-09T10:00:00.000Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · $3.00`);
   assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Confirmed\s*\$3\.00/);
   assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Waiting for a grown-up\s*\$0\.00/);
 
@@ -183,3 +183,32 @@ console.log('daily chore sheet tests passed');
   assert.equal(stamp, `PAID · ${local} · $2.50`, 'paid stamp uses the local day, like the grown-up page');
 }
 console.log('daily chore sheet paid-day test passed');
+
+// A job a grown-up wrote in on a later day this week shows in its box, so the week total never counts a hidden job.
+{
+  const later = addEntry(emptyChores(), { track: 'guided', date: '2026-11-20', todayIso: TODAY, jobId: 'table', by: 'parent', nowIso: NOW, id: 'later1' }).chores;
+  const doc = new JSDOM(renderChoreSheet({ track: 'guided', chores: setEntryStatus(later, 'later1', 'confirmed', NOW).chores }, TODAY, '2026-11-16')).window.document;
+  const friday = [...doc.querySelectorAll('.cqd-chore-sheet-day')][4];
+  assert.match(friday.textContent, /Set & clear the table/, 'a later-day job written in by a grown-up is shown');
+  assert.doesNotMatch(friday.textContent, /Not yet\./, 'a later day with a job does not say Not yet');
+  assert.match(doc.querySelectorAll('.cqd-chore-sheet-day')[5].textContent, /Not yet\./, 'an empty later day still says Not yet');
+}
+// A finished week with nothing in it says so, instead of "Not paid yet."
+{
+  const old = addEntry(emptyChores(), { track: 'guided', date: '2026-11-02', todayIso: '2026-11-02', jobId: 'table', by: 'kid', nowIso: NOW, id: 'old1' }).chores;
+  const empty = new JSDOM(renderChoreSheet({ track: 'guided', chores: old }, TODAY, '2026-11-09')).window.document.querySelector('.cqd-chore-sheet-summary').textContent;
+  assert.match(empty, /No chores this week\./);
+  assert.doesNotMatch(empty, /Not paid yet/);
+  const unpaid = new JSDOM(renderChoreSheet({ track: 'guided', chores: old }, TODAY, '2026-11-02')).window.document.querySelector('.cqd-chore-sheet-summary').textContent;
+  assert.match(unpaid, /Not paid yet\./);
+}
+// Bounds and the render clamp on their own: future-only data never opens a future week, and a forged week shows this week.
+{
+  const future = addEntry(emptyChores(), { track: 'guided', date: '2026-11-20', todayIso: TODAY, jobId: 'table', by: 'parent', nowIso: NOW, id: 'f1' }).chores;
+  const futureStore = { track: 'guided', chores: future };
+  assert.deepEqual(choreSheetBounds(futureStore, '2026-11-09'), { earliest: '2026-11-09', latest: '2026-11-09' });
+  for (const forged of ['2026-11-23', '2026-11-17', 'junk', undefined]) {
+    assert.match(new JSDOM(renderChoreSheet(futureStore, TODAY, forged)).window.document.querySelector('h1').textContent, /Week of Nov 16/, `render clamps ${forged}`);
+  }
+}
+console.log('daily chore sheet review-fix tests passed');

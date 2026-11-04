@@ -55,7 +55,7 @@ export function renderChoreSheet(store, todayIso, mondayIso) {
   const paid = chores.paid[monday];
   const weekStatus = paid
     ? `<span class="cqd-chore-sheet-paid">PAID · ${esc(stampDate(paid.paidAt))} · ${money(paid.cents)}</span>`
-    : `<p class="cqd-chore-sheet-payment">${dates[6] < todayIso ? 'Not paid yet.' : 'This week is still going.'}</p>`;
+    : `<p class="cqd-chore-sheet-payment">${dates[6] >= todayIso ? 'This week is still going.' : totals.confirmedJobs + totals.waitingJobs + totals.declinedJobs ? 'Not paid yet.' : 'No chores this week.'}</p>`;
   return `<section class="cqd-chore-sheet-screen">
     <div class="cqd-sheet-nav"><button type="button" class="cqd-link-button" data-action="open-chores">← My chores</button></div>
     <div class="cqd-chore-sheet-paper"><header class="cqd-chore-sheet-header"><span class="cqd-chore-eyebrow">My chore sheet</span>
@@ -66,12 +66,13 @@ export function renderChoreSheet(store, todayIso, mondayIso) {
       <button type="button" data-action="chore-sheet-week" data-monday="${later}" ${monday >= latest ? 'disabled' : ''}>Later week →</button></nav>
     <ol class="cqd-chore-sheet-days">${dates.map((date) => {
       const future = date > todayIso;
-      const entries = future ? [] : dayEntries(chores, date);
+      // A grown-up can write a job in on a later day; show it so the totals below never count a hidden job.
+      const entries = dayEntries(chores, date);
       const confirmed = summarize(entries).confirmedCents;
       return `<li class="cqd-chore-sheet-day${future ? ' is-future' : ''}"><h2>${esc(dateLabel(date))}${date === todayIso ? ' <small>today</small>' : ''}</h2>
-        ${future ? '<p class="cqd-chore-sheet-empty">Not yet.</p>' : entries.length
+        ${entries.length
     ? `<ul class="cqd-chore-sheet-jobs">${groupsForDay(entries).map(jobHtml).join('')}</ul>`
-    : '<p class="cqd-chore-sheet-empty">No jobs.</p>'}
+    : `<p class="cqd-chore-sheet-empty">${future ? 'Not yet.' : 'No jobs.'}</p>`}
         ${confirmed > 0 ? `<p class="cqd-chore-sheet-day-total">Confirmed: ${money(confirmed)}</p>` : ''}</li>`;
     }).join('')}</ol>
     <section class="cqd-chore-sheet-summary" aria-label="Week summary"><h2>Week summary</h2>
