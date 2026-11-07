@@ -124,8 +124,8 @@ function resetGateHtml(state) {
 }
 
 // "The grown-up PIN was reset on ..." for the last 30 days, so a PIN a kid cleared is never a surprise.
-function pinResetNotice(store) {
-  const resets = recentPinResets(store);
+function pinResetNotice(store, now = Date.now()) {
+  const resets = recentPinResets(store, now);
   if (!resets.length) return '';
   return `<p class="cqd-pin-notice" role="status">⚠️ The grown-up PIN was reset on ${esc(resets.map((time) => new Date(time).toLocaleString()).join(', '))}. If that was not you, someone else may have changed it.</p>`;
 }
@@ -173,13 +173,17 @@ function correctChoiceLine(item) {
 function checkedItemHtml(sheet, item, state) {
   const suggestion = gradeSuggestion(item, state.value);
   const key = choiceKey(sheet.id, item.id);
-  const correctChecked = state.status === 'correct' || (state.status !== 'wrong' && suggestion === true);
-  const wrongChecked = state.status === 'wrong' || (state.status !== 'correct' && suggestion === false);
+  // Typed sentences, the level he reached and the 1-to-5 ratings have no answer to check automatically.
+  // Once answered they start on Correct, like a right math answer, so Save finishes the day; tap
+  // Incorrect to send one back. (Left unpicked, Save skipped them and the day never showed done.)
+  const answered = state.value !== null && state.value !== undefined && state.value !== '';
   const neutral = suggestion === null;
+  const correctChecked = state.status === 'correct' || (state.status !== 'wrong' && (suggestion === true || (neutral && answered)));
+  const wrongChecked = state.status === 'wrong' || (state.status !== 'correct' && suggestion === false);
   return `<li class="cqd-check-item"><p class="cqd-check-prompt">${esc(item.prompt)}</p>
     <p class="cqd-check-answer"><strong>Answer:</strong> ${esc(answerText(item, state.value))}</p>
     ${correctChoiceLine(item)}${titheLine(item, state.value)}${item.parentNote ? `<p class="cqd-check-note"><strong>For you:</strong> ${esc(item.parentNote)}</p>` : ''}
-    ${neutral ? '<p class="cqd-muted">No automatic suggestion — you decide.</p>' : `<p class="cqd-suggestion">Suggested: ${suggestion ? 'Correct' : 'Incorrect'}</p>`}
+    ${neutral ? `<p class="cqd-muted">${answered ? 'No right answer to check here. It starts on Correct; tap Incorrect to send it back.' : 'No automatic suggestion — you decide.'}</p>` : `<p class="cqd-suggestion">Suggested: ${suggestion ? 'Correct' : 'Incorrect'}</p>`}
     <div class="cqd-grade" role="group" aria-label="Grade this item">
       <button type="button" data-action="daily-parent-grade" data-choice="correct" data-grade-key="${esc(key)}" aria-pressed="${correctChecked}">Correct</button>
       <button type="button" data-action="daily-parent-grade" data-choice="wrong" data-grade-key="${esc(key)}" aria-pressed="${wrongChecked}">Incorrect</button>
@@ -208,16 +212,16 @@ export function suggestedDay(store, week, todayIso) {
   return today ? todayKey : 'monday';
 }
 
-function checkWorkHtml(store, state, todayIso, content) {
+function checkWorkHtml(store, state, todayIso, content, now = Date.now()) {
   const week = currentWeek(content, store.track, todayIso);
-  if (!week) return `${pinResetNotice(store)}<section class="cqd-empty"><h1>No Daily Work yet</h1></section>${store.track === 'guided' ? `<section class="cqd-parent">${paydaySummaryHtml(store.payday)}</section>` : ''}`;
+  if (!week) return `${pinResetNotice(store, now)}<section class="cqd-empty"><h1>No Daily Work yet</h1></section>${store.track === 'guided' ? `<section class="cqd-parent">${paydaySummaryHtml(store.payday)}</section>` : ''}`;
   const showPayday = store.track === 'guided' && state.selectedDay === 'payday';
   const selectedDay = showPayday ? 'payday' : DAY_KEYS.includes(state.selectedDay) ? state.selectedDay : suggestedDay(store, week, todayIso);
   state.selectedDay = selectedDay;
   // The Payday Helper checks itself, so its tab is a read-only summary: no sheets, no Save button.
   if (showPayday) {
     return `<section class="cqd-parent"><header class="cqd-calendar-head"><span class="cqd-eyebrow">PARENT MODE · ${esc(week.label.toUpperCase())}</span><h1>Check work</h1></header>
-    ${pinResetNotice(store)}${trackerHtml(store, week, selectedDay)}
+    ${pinResetNotice(store, now)}${trackerHtml(store, week, selectedDay)}
     ${paydaySummaryHtml(store.payday)}</section>`;
   }
   const sheets = sheetsForDay(week, selectedDay);
@@ -226,7 +230,7 @@ function checkWorkHtml(store, state, todayIso, content) {
   const emptyHint = dayStatus(saved, sheets) === 'not-started' && others.length
     ? `<div class="cqd-empty-hint"><span>Nothing is saved for ${dayName(selectedDay)} yet. Work is saved for:</span><span class="cqd-empty-hint-days">${others.map((row) => `<button type="button" class="cqd-empty-day" data-action="daily-parent-day" data-day="${row.dayKey}">${dayName(row.dayKey)}</button>`).join(' ')}</span></div>` : '';
   return `<section class="cqd-parent"><header class="cqd-calendar-head"><span class="cqd-eyebrow">PARENT MODE · ${esc(week.label.toUpperCase())}</span><h1>Check work</h1></header>
-    ${pinResetNotice(store)}${trackerHtml(store, week, selectedDay)}
+    ${pinResetNotice(store, now)}${trackerHtml(store, week, selectedDay)}
     <p class="cqd-muted">${saved.submittedAt ? `Submitted ${esc(new Date(saved.submittedAt).toLocaleString())}` : 'Not submitted yet. You can still check any item.'}</p>
     ${emptyHint}
     ${sheets.length ? sheets.map((sheet) => `<article class="cqd-sheet cqd-check-sheet"><h3>${esc(sheet.title)}</h3><ol class="cqd-check-items">${sheet.items.map((item) => checkedItemHtml(sheet, item, storedItem(saved, sheet.id, item.id))).join('')}</ol></article>`).join('') : '<p class="cqd-muted">No work for this day.</p>'}
@@ -239,5 +243,5 @@ export function renderParent(store, state, todayIso, now = Date.now(), content =
   const switchHtml = `<div class="cqd-chore-parent-switch" role="group" aria-label="Parent Mode view">
     <button type="button" data-action="chores-view-work" aria-label="Check work" aria-pressed="${state.view !== 'chores'}">Check work</button>
     <button type="button" data-action="chores-view-chores" aria-label="Chores${count ? `, ${count} to check` : ''}" aria-pressed="${state.view === 'chores'}">Chores${count ? ` <span class="cqd-chore-parent-badge">${count} to check</span>` : ''}</button></div>`;
-  return `${switchHtml}${state.view === 'chores' ? `${pinResetNotice(store)}${renderChoresParent(store, state, todayIso)}` : checkWorkHtml(store, state, todayIso, content)}`;
+  return `${switchHtml}${state.view === 'chores' ? `${pinResetNotice(store, now)}${renderChoresParent(store, state, todayIso)}` : checkWorkHtml(store, state, todayIso, content, now)}`;
 }
