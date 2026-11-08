@@ -162,6 +162,21 @@ From the three Week 17 Drive docs. guided17 / standard17, assigned Monday 2026-1
 - Four Bible wrong choices were lengthened for Monday q1/q3 and Friday q1/q2 to meet the answer-length rule; all edits are listed in the K17 report.
 - Week 17 test independently derives numeric answers and checks schedule, sheet counts, verses, choice balance, and parent-note isolation. Requested regression and syntax tests pass.
 
+## 2h. Week 18, 2026-11-09
+From the Week 18 Drive plan. guided18 / standard18, assigned Monday 2026-11-09; Week 17 remains available through Sunday 11/08, and Week 18 through Sunday 11/15.
+
+- Normal week: Math Monday, Tuesday, Thursday and Friday; Word Problems Monday, Thursday and Friday; CodeQuest Tuesday and Wednesday.
+- Wednesday has only CodeQuest then Bible Reading, for both sons.
+- Bible Reading reuses the Week 17 builders exactly on Monday, Wednesday and Friday, with no new questions.
+- CodeQuest Day reuses the Week 13 three-question sheet on Tuesday and Wednesday.
+- Older son: sales tax and discounts with two routes, then mixed up/down decisions, a sale-then-tax chain and Friday independent work.
+- Older son's more/less and up/down lines use one-blank word banks. Percent and money answers use numeric typing boxes.
+- Younger son: 6s as five groups plus one, 8s as doubled 4s, and 9s as ten groups minus one; Friday mixes the facts.
+- Younger son's Word Problems have five stories and seven answer lines on each Word Problems day. Operation choices stay Add, Take away, Multiply.
+- Memory verses: 1 John 4:7-8 (NLT), continue, child and knows, for older son; 1 John 4:19 (NLT), loved and first, for younger son.
+- Parent notes preserve the plan's INTENTIONAL REPEAT text. Worked examples omit those parentheticals, and kid pages hide parent notes.
+- Week 18 test derives arithmetic from prompts, checks schedule and sheet counts, and covers kid render and parent grading.
+
 ## 3. Content data shape (per profile)
 ```
 DailyWorkContent = {

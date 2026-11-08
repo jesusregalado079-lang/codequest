@@ -1465,9 +1465,208 @@ const guided17 = Week('week-17', 'Week 17', [
   ]),
 }, '2026-11-02');
 
+
+// Week 18 (Monday 2026-11-09). Math and Word Problems follow the Week 18 Drive plan.
+const standard18 = Week('week-18', 'Week 18', [
+  Sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
+    Item('verse', 'fill-blank', "Dear friends, let us ___ to love one another, for love comes from God. Anyone who loves is a ___ of God and ___ God. But anyone who does not love does not know God, for God is love.", { wordBank: ["continue","child","knows"], answer: ["continue","child","knows"] }),
+  ], { citation: "1 John 4:7-8 (NLT)" }),
+], {
+  monday: Day([
+    Sheet("sales-tax-the-price-goes-up", "math", "Sales Tax: The Price Goes Up",
+      "Sales tax is added on top of the price, so the total is MORE than the price. There are two routes, and they check each other. Route 1: find the tax (write the percent as a decimal and multiply by the price), then add the tax to the price. Route 2: do it in one step. The price plus 8% is 100% + 8% = 108%, which is 1.08, so multiply the price by 1.08. If both routes give the same answer, you can trust it. Before you start, ask 'will the total be more or less than the price?' With tax, it is always more, and only a little more.",
+      "A $25 toy with 8% tax. Route 1: tax = 0.08 × 25. Ignore the decimal point: 8 × 25 = 200. 2 decimal places: 2.00. The tax is $2. Total: 25 + 2 = 27. Route 2: 1.08 × 25. Ignore the decimal point: 108 × 25 = 2700. 2 decimal places: 27.00. Both routes give $27. Check: more than 25, and only a little more.\n\nA $60 pair of sneakers with 7% tax. Route 1: tax = 0.07 × 60. Ignore the decimal point: 7 × 60 = 420. 2 decimal places: 4.20. The tax is $4.20. Total: 60 + 4.20 = 64.20. Route 2: 1.07 × 60. Ignore the decimal point: 107 × 60 = 6420. 2 decimal places: 64.20. Both routes give $64.20. Check: more than 60, and only a little more.", [
+        pick14("1a", "A $40 game has 6% tax. Will the total be more or less than $40?", ["more","less"], "more", "Tax is added on top, so the total is more."),
+        money("1b", "How much is the tax, in dollars?", 2.4, "0.06 × 40: 6 × 40 = 240; 2 places = 2.40. Accept 2.4 or 2.40."),
+        money("1c", "Route 1: What is the total, in dollars?", 42.4, "40 + 2.40 = 42.40. Accept 42.4 or 42.40."),
+        money("1d", "Route 2: What is 1.06 × 40?", 42.4, "106 × 40 = 4240; 2 places = 42.40. It must match 1c."),
+        pick14("2a", "A $70 pair of headphones has 9% tax. Will the total be more or less than $70?", ["more","less"], "more", "Tax is added on top, so the total is more."),
+        money("2b", "How much is the tax, in dollars?", 6.3, "0.09 × 70: 9 × 70 = 630; 2 places = 6.30. Accept 6.3 or 6.30."),
+        money("2c", "What is the total, in dollars? (Use either route.)", 76.3, "70 + 6.30 = 76.30, or 1.09 × 70: 109 × 70 = 7630; 2 places = 76.30. Accept 76.3 or 76.30."),
+        money("3", "A $55 jacket has 8% tax. What is the total, in dollars?", 59.4, "1.08 × 55: 108 × 55 = 5940; 2 places = 59.40. Or 55 + 4.40. Accept 59.4 or 59.40."),
+        money("4", "A $120 tablet has 5% tax. What is the total, in dollars?", 126, "1.05 × 120: 105 × 120 = 12600; 2 places = 126.00. Or 120 + 6. Accept 126, 126.0 or 126.00."),
+      ]),
+    Sheet("clue-words-tax-and-tip-go-up-off-and-sale-go-down", "word-problems", "Clue Words: Tax and Tip Go Up, Off and Sale Go Down",
+      "Shopping stories have clue words that tell you which way the price goes. The words tax, tip and fee mean the price goes UP, so you add. The words off, sale, discount and coupon mean the price goes DOWN, so you take away. Read the story, circle the clue word, decide up or down, and then find the answer with either route. For up, multiply by 1 plus the percent (8% tax is 1.08). For down, multiply by 1 minus the percent (20% off is 0.80).",
+      "A $40 game has 8% tax. How much do you pay in all? Clue word: tax, so UP. Route 2: 1.08 × 40. Ignore the decimal point: 108 × 40 = 4320. 2 decimal places: 43.20. Answer: $43.20. Check: more than 40.", [
+        money("1", "A $35 pizza has a 15% tip added. What is the total with the tip, in dollars?", 40.25, "Tip is a clue word for up. 1.15 × 35: 115 × 35 = 4025; 2 places = 40.25."),
+        money("2", "A $150 game console is on sale for 10% off. How much do you pay, in dollars?", 135, "Off is a clue word for down. 0.90 × 150: 90 × 150 = 13500; 2 places = 135.00. Accept 135, 135.0 or 135.00."),
+        money("3", "A $25 shirt has a coupon for 40% off. How much do you save, in dollars?", 10, "The question asks how much you SAVE, which is the discount itself: 0.40 × 25: 40 × 25 = 1000; 2 places = 10.00. Accept 10, 10.0 or 10.00."),
+      ]),
+    bible17Monday(),
+  ]),
+  tuesday: Day([
+    Sheet("percent-off-the-price-goes-down", "math", "Percent Off: The Price Goes Down",
+      "A discount is taken off the price, so you pay LESS than the price. There are two routes, and they check each other. Route 1: find the discount (write the percent as a decimal and multiply by the price), then subtract it from the price. Route 2: do it in one step. If 20% comes off, you pay the other 100% − 20% = 80%, which is 0.80, so multiply the price by 0.80. If both routes give the same answer, you can trust it. Before you start, ask 'will I pay more or less than the price?' With a discount, it is always less. Picture the price as a bar: one part is what you save, and the other part is what you pay.",
+      "A $50 pair of jeans, 30% off. Route 1: discount = 0.30 × 50. Ignore the decimal point: 30 × 50 = 1500. 2 decimal places: 15.00. You save $15. You pay 50 − 15 = 35. Route 2: you pay 100% − 30% = 70%, which is 0.70. 0.70 × 50: 70 × 50 = 3500; 2 decimal places: 35.00. Both routes give $35. Check: less than 50.\n\nA $90 jacket, 15% off. Route 1: discount = 0.15 × 90. Ignore the decimal point: 15 × 90 = 1350. 2 decimal places: 13.50. You save $13.50. You pay 90 − 13.50 = 76.50. Route 2: you pay 100% − 15% = 85%, which is 0.85. 0.85 × 90: 85 × 90 = 7650; 2 decimal places: 76.50. Both routes give $76.50. Check: less than 90.", [
+        pick14("1a", "A $60 sweatshirt is 25% off. Will you pay more or less than $60?", ["more","less"], "less", "A discount takes money off, so you pay less."),
+        money("1b", "How much do you save, in dollars?", 15, "0.25 × 60: 25 × 60 = 1500; 2 places = 15.00. Accept 15, 15.0 or 15.00."),
+        money("1c", "Route 1: How much do you pay, in dollars?", 45, "60 − 15 = 45."),
+        money("1d", "Route 2: What is 0.75 × 60?", 45, "You pay 100% − 25% = 75%. 75 × 60 = 4500; 2 places = 45.00. It must match 1c."),
+        pick14("2a", "A $45 game is 40% off. Will you pay more or less than $45?", ["more","less"], "less", "A discount takes money off, so you pay less."),
+        money("2b", "How much do you save, in dollars?", 18, "0.40 × 45: 40 × 45 = 1800; 2 places = 18.00. Accept 18, 18.0 or 18.00."),
+        money("2c", "How much do you pay, in dollars? (Use either route.)", 27, "45 − 18 = 27, or 0.60 × 45: 60 × 45 = 2700; 2 places = 27.00."),
+        money("3", "A $75 hoodie is 20% off. How much do you pay, in dollars?", 60, "You pay 80%: 0.80 × 75: 80 × 75 = 6000; 2 places = 60.00. Or 75 − 15. Accept 60, 60.0 or 60.00."),
+        money("4", "A $48 pair of shoes is 35% off. How much do you pay, in dollars?", 31.2, "You pay 65%: 0.65 × 48: 65 × 48 = 3120; 2 places = 31.20. Or 48 − 16.80. Accept 31.2 or 31.20."),
+      ]),
+    codeQuest13(),
+  ]),
+  wednesday: Day([
+    codeQuest13(),
+    bible17Wednesday(false),
+  ]),
+  thursday: Day([
+    Sheet("up-or-down-then-find-the-answer", "math", "Up or Down? Then Find the Answer",
+      "Today tax and discounts are mixed, so the first step is always the same: up or down? Look for the clue word. Tax, tip and fee mean UP, and the total is more than the price. Off, sale, discount and coupon mean DOWN, and you pay less than the price. Then estimate with a benchmark (10%, 25%, 50%), and then find the exact answer by multiplying by 1 plus the percent (up) or 1 minus the percent (down). The steps are not written out today, so use them yourself.",
+      "An $80 pair of shoes with 7% tax. Up or down? Tax, so UP. Estimate: 10% of 80 is 8, and 7% is a little less than that, so the tax is a little less than 8 and the total is a little less than 88. Exact: 1.07 × 80. Ignore the decimal point: 107 × 80 = 8560. 2 decimal places: 85.60. Answer: $85.60. It fits the estimate.\n\nA $120 coat, 35% off. Up or down? Off, so DOWN. Estimate: 35% is between 25% and 50%, so you save between 30 and 60, and you pay between 60 and 90. Exact: you pay 100% − 35% = 65%. 0.65 × 120: 65 × 120 = 7800. 2 decimal places: 78.00. Answer: $78. It fits the estimate.", [
+        pick14("1a", "A $36 shirt has 8% tax. Does the price go up or down?", ["up","down"], "up", "Tax means up."),
+        money("1b", "What is the total, in dollars?", 38.88, "1.08 × 36: 108 × 36 = 3888; 2 places = 38.88."),
+        pick14("2a", "A $65 game has a coupon for 40% off. Does the price go up or down?", ["up","down"], "down", "Coupon and off mean down."),
+        money("2b", "How much do you pay, in dollars?", 39, "You pay 60%: 0.60 × 65: 60 × 65 = 3900; 2 places = 39.00. Accept 39, 39.0 or 39.00."),
+        money("3a", "Estimate: a $200 bike has 9% tax. Round 9% to 10%. What is 10% of 200?", 20, "200 ÷ 10 = 20. The tax is a little less than $20."),
+        money("3b", "What is the total with the 9% tax, in dollars?", 218, "1.09 × 200: 109 × 200 = 21800; 2 places = 218.00. Accept 218, 218.0 or 218.00."),
+        money("4", "A $72 backpack is 25% off. How much do you pay, in dollars?", 54, "You pay 75%: 0.75 × 72: 75 × 72 = 5400; 2 places = 54.00. Or 72 − 18. Accept 54, 54.0 or 54.00."),
+        money("5", "A dinner costs $48. You add a 20% tip. What is the total with the tip, in dollars?", 57.6, "Tip means up. 1.20 × 48: 120 × 48 = 5760; 2 places = 57.60. Accept 57.6 or 57.60."),
+        money("6", "A $75 game is 30% off. How much do you save, in dollars?", 22.5, "The question asks how much you SAVE, which is the discount itself: 0.30 × 75: 30 × 75 = 2250; 2 places = 22.50. Accept 22.5 or 22.50."),
+      ]),
+    Sheet("two-steps-sale-first-then-tax", "word-problems", "Two Steps: Sale First, Then Tax",
+      "Some stories have two steps. When a story says 'on sale, then tax is added', do the sale first. The sale price is the new price, and the tax is a percent of the sale price, not the original price. Write down each step and its answer. Step 1 is DOWN (multiply by 1 minus the discount). Step 2 is UP (multiply by 1 plus the tax). For a tip, remember that it goes UP.",
+      "A $70 shirt is 30% off. Then 6% tax is added to the sale price. What is the final cost? Step 1 (down): you pay 100% − 30% = 70%. 0.70 × 70 = 49. The sale price is $49. Step 2 (up): 1.06 × 49. Ignore the decimal point: 106 × 49 = 5194. 2 decimal places: 51.94. Answer: $51.94.", [
+        money("1", "A meal costs $24. You add a 20% tip. How much is the tip, in dollars?", 4.8, "0.20 × 24: 20 × 24 = 480; 2 places = 4.80. Accept 4.8 or 4.80. The question asks for the tip, not the total."),
+        money("2a", "An $80 jacket is 25% off. What is the sale price, in dollars?", 60, "You pay 75%: 0.75 × 80: 75 × 80 = 6000; 2 places = 60.00. Accept 60, 60.0 or 60.00."),
+        money("2b", "Then 8% tax is added to the sale price. What is the final cost, in dollars?", 64.8, "1.08 × 60: 108 × 60 = 6480; 2 places = 64.80. Accept 64.8 or 64.80."),
+        money("3", "A haircut costs $18. You add a 15% tip. What is the total with the tip, in dollars?", 20.7, "1.15 × 18: 115 × 18 = 2070; 2 places = 20.70. Accept 20.7 or 20.70."),
+      ]),
+  ]),
+  friday: Day([
+    Sheet("show-what-you-know", "math", "Show What You Know",
+      "No steps are written out today. For every problem, ask 'up or down?' first, find the clue word, make an estimate, and then find the exact answer. Up means multiply by 1 plus the percent, and down means multiply by 1 minus the percent. If you want to check yourself, do it with the other route and see if the two answers match.",
+      "A $110 sweater, 20% off. Up or down? Off, so DOWN. You pay 100% − 20% = 80%. 0.80 × 110: 80 × 110 = 8800; 2 decimal places: 88.00. Answer: $88. Check: less than 110.\n\nA $60 ticket with 9% tax. Up or down? Tax, so UP. 1.09 × 60: 109 × 60 = 6540; 2 decimal places: 65.40. Answer: $65.40. Check: more than 60, and only a little more.", [
+        money("1", "A $45 jacket is 20% off. How much do you pay, in dollars?", 36, "You pay 80%: 0.80 × 45: 80 × 45 = 3600; 2 places = 36.00. Accept 36, 36.0 or 36.00."),
+        money("2", "A $70 game has 6% tax. What is the total, in dollars?", 74.2, "1.06 × 70: 106 × 70 = 7420; 2 places = 74.20. Accept 74.2 or 74.20."),
+        money("3", "A $200 bike is 25% off. How much do you pay, in dollars?", 150, "You pay 75%: 0.75 × 200: 75 × 200 = 15000; 2 places = 150.00. Accept 150, 150.0 or 150.00."),
+        money("4", "A $30 meal has an 18% tip. What is the total with the tip, in dollars?", 35.4, "1.18 × 30: 118 × 30 = 3540; 2 places = 35.40. Accept 35.4 or 35.40."),
+        money("5", "A $84 pair of shoes is 15% off. How much do you pay, in dollars?", 71.4, "You pay 85%: 0.85 × 84: 85 × 84 = 7140; 2 places = 71.40. Accept 71.4 or 71.40."),
+        note("6", "In one sentence, explain how the words 'tax' and 'off' tell you whether to multiply by more than 1 or less than 1.", "A good answer says that tax makes the price go up, so you multiply by a number bigger than 1 (like 1.08), and off makes the price go down, so you multiply by a number smaller than 1 (like 0.80)."),
+      ]),
+    Sheet("shopping-stories-on-your-own", "word-problems", "Shopping Stories on Your Own",
+      "Read each story twice. Circle the clue word, decide up or down, and then find the answer. Two-step stories need a step for the sale first and then a step for the tax or the tip. There are no steps written out today, because you know them now.",
+      "A $200 TV is 15% off. Then 8% tax is added to the sale price. What is the final cost? Step 1 (down): you pay 100% − 15% = 85%. 0.85 × 200 = 170. The sale price is $170. Step 2 (up): 1.08 × 170. Ignore the decimal point: 108 × 170 = 18360. 2 decimal places: 183.60. Answer: $183.60.", [
+        money("1", "A $50 backpack is 40% off. How much do you pay, in dollars?", 30, "You pay 60%: 0.60 × 50: 60 × 50 = 3000; 2 places = 30.00. Accept 30, 30.0 or 30.00."),
+        money("2", "A dinner costs $30. You add a 20% tip. What is the total with the tip, in dollars?", 36, "1.20 × 30: 120 × 30 = 3600; 2 places = 36.00. Accept 36, 36.0 or 36.00."),
+        money("3a", "A $65 jacket is 20% off. What is the sale price, in dollars?", 52, "You pay 80%: 0.80 × 65: 80 × 65 = 5200; 2 places = 52.00. Accept 52, 52.0 or 52.00."),
+        money("3b", "Then 6% tax is added to the sale price. What is the final cost, in dollars?", 55.12, "1.06 × 52: 106 × 52 = 5512; 2 places = 55.12."),
+        note("4", "In one sentence, tell how you decide whether a price goes up or down.", "A good answer names the clue words: tax, tip or fee mean up, and off, sale, discount or coupon mean down."),
+      ]),
+    bible17Friday(),
+  ]),
+}, '2026-11-09');
+
+const guided18 = Week('week-18', 'Week 18', [
+  Sheet('memory-verse', 'memory-verse', 'Memory Verse', null, null, [
+    Item('verse', 'fill-blank', "We love each other because he ___ us ___.", { wordBank: ["loved","first"], answer: ["loved","first"] }),
+  ], { citation: "1 John 4:19 (NLT)" }),
+], {
+  monday: Day([
+    Sheet("sixes-five-groups-plus-one-more", "math", "Sixes: Five Groups Plus One More",
+      "Six is five plus one. So 6 groups is 5 groups plus 1 more group. You know your 5s. To find a 6s fact, find the 5s fact and add one more group. 6 × 7: 5 × 7 = 35, and one more group of 7 makes 35 + 7 = 42. Write the two parts, then add.",
+      "6 × 7. Step 1: 5 × 7 = 35. Step 2: add one more group of 7: 35 + 7 = 42. So 6 × 7 = 42.\n\n6 × 8. Step 1: 5 × 8 = 40. Step 2: add one more group of 8: 40 + 8 = 48. So 6 × 8 = 48.", [
+        withNote(times("1a", 5, 6), "INTENTIONAL REPEAT (Weeks 16 and 17): he needs to see facts more than once."),
+        money("1b", "Add one more group of 6. 30 + 6 = ?", 36, "30 + 6 = 36."),
+        money("1c", "So 6 × 6 = ?", 36, "INTENTIONAL REPEAT (Week 13): he needs to see facts more than once."),
+        withNote(times("2a", 5, 9), "INTENTIONAL REPEAT (Weeks 13, 14, 16 and 17): he needs to see facts more than once."),
+        money("2b", "Add one more group of 9. 45 + 9 = ?", 54, "45 + 9 = 54."),
+        money("2c", "So 6 × 9 = ?", 54, "New fact this week."),
+        withNote(times("3", 6, 4), "INTENTIONAL REPEAT (Weeks 16 and 17): he needs to see facts more than once. 5 × 4 + 4 = 24."),
+        withNote(times("4", 6, 10), "INTENTIONAL REPEAT (Weeks 13 and 17): he needs to see facts more than once."),
+      ]),
+    Sheet("groups-of-six", "word-problems", "Groups of Six",
+      "Read the story slowly. Find what the groups are and how many are in each group. Then ask what you need to do. When every group is the same size and you want the total, you multiply. When some are taken away, you take away. When some are added, you add.",
+      "A pack has 6 pencils. There are 3 packs. How many pencils in all? Clue: 'a pack has 6' and 'there are 3 packs' mean equal groups, so MULTIPLY. 6 × 3: 5 × 3 = 15, and one more group of 3 makes 15 + 3 = 18. Answer: 18 pencils.", [
+        choice("1a", "A tray has 6 muffins. There are 6 trays. What do you need to do?", ["Add", "Take away", "Multiply"], "C", "Equal groups means multiply."),
+        money("1b", "How many muffins in all?", 36, "6 × 6 = 36. INTENTIONAL REPEAT (Math problem 1c today): he needs to see facts more than once."),
+        money("2", "Sia has 6 jars. Each jar has 9 buttons. How many buttons in all?", 54, "6 × 9 = 54. INTENTIONAL REPEAT (Math problem 2c today): he needs to see facts more than once."),
+        money("3", "A bus has 8 rows. Each row has 6 seats. How many seats in all?", 48, "8 × 6 = 48. INTENTIONAL REPEAT (Math worked example today, 6 × 8): he needs to see facts more than once."),
+        choice("4a", "Tam has 36 stickers. He gives 6 away. What do you need to do?", ["Add", "Take away", "Multiply"], "B", "'Gives away' means take away."),
+        money("4b", "How many stickers does Tam have left?", 30, "36 − 6 = 30."),
+        money("5", "Uri has 10 boxes. Each box has 6 crayons. How many crayons in all?", 60, "10 × 6 = 60. INTENTIONAL REPEAT (Math problem 4 today): he needs to see facts more than once."),
+      ]),
+    bible17Monday(),
+  ]),
+  tuesday: Day([
+    Sheet("eights-double-the-fours", "math", "Eights: Double the Fours",
+      "Eight is double four. So an 8s fact is a 4s fact doubled. You know your 4s. To find 8 × 6: 4 × 6 = 24, and double 24 is 24 + 24 = 48. Find the 4s fact first, then double it.",
+      "8 × 6. Step 1: 4 × 6 = 24. Step 2: double 24: 24 + 24 = 48. So 8 × 6 = 48.\n\n8 × 3. Step 1: 4 × 3 = 12. Step 2: double 12: 12 + 12 = 24. So 8 × 3 = 24.", [
+        withNote(times("1a", 4, 7), "INTENTIONAL REPEAT (Weeks 13, 14, 16 and 17): he needs to see facts more than once."),
+        money("1b", "Double it. 28 + 28 = ?", 56, "28 + 28 = 56."),
+        money("1c", "So 8 × 7 = ?", 56, "INTENTIONAL REPEAT (7 × 8 from Weeks 16 and 17): he needs to see facts more than once."),
+        withNote(times("2a", 4, 9), "INTENTIONAL REPEAT (Weeks 13, 14, 16 and 17): he needs to see facts more than once."),
+        money("2b", "Double it. 36 + 36 = ?", 72, "36 + 36 = 72."),
+        money("2c", "So 8 × 9 = ?", 72, "New fact this week."),
+        money("3", "8 × 8 = ? Hint: 4 × 8 = 32, then double it.", 64, "32 + 32 = 64. New fact this week."),
+        withNote(times("4", 8, 5), "INTENTIONAL REPEAT (5 × 8 from Weeks 16 and 17): he needs to see facts more than once."),
+      ]),
+    codeQuest13(),
+  ]),
+  wednesday: Day([
+    codeQuest13(),
+    bible17Wednesday(true),
+  ]),
+  thursday: Day([
+    Sheet("nines-ten-groups-minus-one", "math", "Nines: Ten Groups Minus One",
+      "Nine is ten minus one. So 9 groups is 10 groups take away 1 group. You know your 10s. To find 9 × 7: 10 × 7 = 70, and take away one group of 7: 70 − 7 = 63. Find the 10s fact first, then take one group away.",
+      "9 × 7. Step 1: 10 × 7 = 70. Step 2: take away one group of 7: 70 − 7 = 63. So 9 × 7 = 63.\n\n9 × 4. Step 1: 10 × 4 = 40. Step 2: take away one group of 4: 40 − 4 = 36. So 9 × 4 = 36.", [
+        withNote(times("1a", 10, 6), "INTENTIONAL REPEAT (Weeks 13 and 17): he needs to see facts more than once."),
+        money("1b", "Take away one group of 6. 60 − 6 = ?", 54, "60 − 6 = 54."),
+        money("1c", "So 9 × 6 = ?", 54, "INTENTIONAL REPEAT (Monday's 6 × 9): he needs to see facts more than once."),
+        withNote(times("2a", 10, 8), "INTENTIONAL REPEAT (Weeks 13 and 17, and Tuesday): he needs to see facts more than once."),
+        money("2b", "Take away one group of 8. 80 − 8 = ?", 72, "80 − 8 = 72."),
+        money("2c", "So 9 × 8 = ?", 72, "INTENTIONAL REPEAT (Tuesday's 8 × 9): he needs to see facts more than once."),
+        money("3", "9 × 9 = ? Hint: 10 × 9 = 90, then take away one group of 9.", 81, "90 − 9 = 81. New fact this week."),
+        withNote(times("4", 9, 5), "INTENTIONAL REPEAT (Weeks 13, 14, 16 and 17): he needs to see facts more than once."),
+      ]),
+    Sheet("groups-of-nine", "word-problems", "Groups of Nine",
+      "Read the story slowly. Find what the groups are and how many are in each group. Then ask what you need to do. Equal groups means multiply. For a 9s fact, find the 10s fact and take one group away.",
+      "A pack has 9 cards. There are 3 packs. How many cards in all? Clue: 'a pack has 9' and 'there are 3 packs' mean equal groups, so MULTIPLY. 9 × 3: 10 × 3 = 30, and take away one group of 3: 30 − 3 = 27. Answer: 27 cards.", [
+        choice("1a", "A shelf has 9 books. There are 7 shelves. What do you need to do?", ["Add", "Take away", "Multiply"], "C", "Equal groups means multiply."),
+        money("1b", "How many books in all?", 63, "9 × 7 = 63. INTENTIONAL REPEAT (Math worked example today): he needs to see facts more than once."),
+        money("2", "Val has 9 bags. Each bag has 8 stones. How many stones in all?", 72, "9 × 8 = 72. INTENTIONAL REPEAT (Math problem 2c today): he needs to see facts more than once."),
+        money("3", "A team has 9 players. There are 6 teams. How many players in all?", 54, "9 × 6 = 54. INTENTIONAL REPEAT (Math problem 1c today): he needs to see facts more than once."),
+        choice("4a", "Wes has 20 marbles. He gets 9 more. What do you need to do?", ["Add", "Take away", "Multiply"], "A", "'Gets 9 more' means add."),
+        money("4b", "How many marbles does Wes have now?", 29, "20 + 9 = 29."),
+        money("5", "A box has 9 pencils. Bo has 5 boxes. How many pencils in all?", 45, "9 × 5 = 45. INTENTIONAL REPEAT (Math problem 4 today): he needs to see facts more than once."),
+      ]),
+  ]),
+  friday: Day([
+    Sheet("show-what-you-know", "math", "Show What You Know",
+      "No steps are written out today, so use the tricks yourself. For a 6s fact, find the 5s fact and add one more group. For an 8s fact, find the 4s fact and double it. For a 9s fact, find the 10s fact and take one group away. If you get stuck, go back to the worked example and follow the same steps one at a time. The last item asks how sure you feel.",
+      "6 × 7. Step 1: 5 × 7 = 35. Step 2: add one more group of 7: 35 + 7 = 42. So 6 × 7 = 42.\n\n9 × 4. Step 1: 10 × 4 = 40. Step 2: take away one group of 4: 40 − 4 = 36. So 9 × 4 = 36.", [
+        withNote(times("1", 6, 6), "INTENTIONAL REPEAT (Monday and Week 13): he needs to see facts more than once."),
+        withNote(times("2", 8, 7), "INTENTIONAL REPEAT (Tuesday): he needs to see facts more than once."),
+        withNote(times("3", 9, 8), "INTENTIONAL REPEAT (Tuesday and Thursday): he needs to see facts more than once."),
+        withNote(times("4", 6, 9), "INTENTIONAL REPEAT (Monday and Thursday): he needs to see facts more than once."),
+        withNote(times("5", 8, 8), "INTENTIONAL REPEAT (Tuesday): he needs to see facts more than once."),
+        withNote(times("6", 9, 9), "INTENTIONAL REPEAT (Thursday): he needs to see facts more than once."),
+        withNote(times("7", 7, 9), "INTENTIONAL REPEAT (Weeks 17 and 18): he needs to see facts more than once."),
+        Item("8", 'scale', "How sure do you feel about your 6s, 8s and 9s? (1 = not sure, 5 = very sure)", { scaleMax: 5, parentNote: "Any number from 1 to 5 is fine. Jesse can use it to see how he feels." }),
+      ]),
+    Sheet("show-what-you-know-stories", "word-problems", "Show What You Know: Stories",
+      "Read each story slowly. Find what the groups are and how many are in each group. Then ask what you need to do. Equal groups means multiply, 'gives away' or 'spends' means take away, and 'gets more' means add. There are no steps written out today.",
+      "Sia has 8 bags. Each bag has 6 oranges. How many oranges in all? Clue: 'each bag has 6' and 'Sia has 8 bags' mean equal groups, so MULTIPLY. 8 × 6: 4 × 6 = 24, and double 24 is 48. Answer: 48 oranges.", [
+        choice("1a", "A fish tank has 8 fish. There are 7 tanks. What do you need to do?", ["Add", "Take away", "Multiply"], "C", "Equal groups means multiply."),
+        money("1b", "How many fish in all?", 56, "8 × 7 = 56. INTENTIONAL REPEAT (Math problem 2 today): he needs to see facts more than once."),
+        money("2", "A car has 4 wheels. There are 9 cars. How many wheels in all?", 36, "4 × 9 = 36. INTENTIONAL REPEAT (Thursday's worked example, 9 × 4): he needs to see facts more than once."),
+        money("3", "A bag has 8 apples. Val has 8 bags. How many apples in all?", 64, "8 × 8 = 64. INTENTIONAL REPEAT (Math problem 5 today): he needs to see facts more than once."),
+        choice("4a", "Tam has 50 cents. He spends 9 cents. What do you need to do?", ["Add", "Take away", "Multiply"], "B", "'Spends' means take away."),
+        money("4b", "How many cents does Tam have left?", 41, "50 − 9 = 41."),
+        money("5", "Wes has 6 boxes. Each box has 9 crayons. How many crayons in all?", 54, "6 × 9 = 54. INTENTIONAL REPEAT (Math problem 4 today): he needs to see facts more than once."),
+      ]),
+    bible17Friday(),
+  ]),
+}, '2026-11-09');
 export const DAILY_WORK = deepFreeze({
-  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14, 'week-15': guided15, 'week-16': guided16, 'week-17': guided17 } },
-  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14, 'week-15': standard15, 'week-16': standard16, 'week-17': standard17 } },
+  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14, 'week-15': guided15, 'week-16': guided16, 'week-17': guided17, 'week-18': guided18 } },
+  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14, 'week-15': standard15, 'week-16': standard16, 'week-17': standard17, 'week-18': standard18 } },
 });
 
 export function getWeek(track, weekId) {
