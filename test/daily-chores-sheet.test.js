@@ -65,11 +65,10 @@ function sheet() {
   assert.ok(root, 'sheet is open');
   return root;
 }
-function assertReadOnly(root) {
-  assert.deepEqual([...root.querySelectorAll('[data-action]')].map((item) => item.dataset.action).sort(),
-    ['chore-sheet-week', 'chore-sheet-week', 'open-chores']);
-  assert.equal(root.querySelectorAll('input, textarea, select').length, 0);
-  assert.doesNotMatch(root.textContent, /Give 10%|Save 20%|Spend 70%|Dad|easy|hard|guided|standard|answer/i);
+function assertSheetControls(root) {
+  assert.ok(root.querySelector('[data-action="chore-math-save"]'));
+  assert.equal(root.querySelectorAll('[data-chore-math]').length, 4);
+  assert.doesNotMatch(root.textContent, /Dad|easy|hard|guided|standard/);
 }
 
 let chores = emptyChores();
@@ -103,7 +102,7 @@ for (const track of ['guided', 'standard']) {
   assert.match(sheet().textContent, /This week is still going\./);
   assert.match(sheet().textContent, /Not yet\./);
   assert.ok(sheet().querySelector('[data-action="chore-sheet-week"]:last-child').disabled, 'later week disabled now');
-  assertReadOnly(sheet());
+  assertSheetControls(sheet());
   assert.equal(localStorage.getItem('codequest-daily-v1'), before, 'opening sheet leaves store byte-identical');
 
   forgedWeek('2026-11-23');
@@ -120,13 +119,13 @@ for (const track of ['guided', 'standard']) {
   assert.match(sheet().textContent, /↩ Ask a grown-up/);
   assert.equal(sheet().querySelectorAll('.cqd-chore-sheet-name small').length > 0, true);
   assert.equal([...sheet().querySelectorAll('.cqd-chore-sheet-job')].filter((row) => row.textContent.includes('A grown-up wrote this in.')).length, 1);
-  assert.match(sheet().textContent, /Confirmed: \$1\.25/);
-  assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Confirmed\s*\$1\.25/);
-  assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Waiting for a grown-up\s*\$0\.75/);
-  assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Ask a grown-up\s*1 job/);
+  assert.doesNotMatch(sheet().textContent, /Confirmed: \$/);
+  assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Confirmed:\s*1 job/);
+  assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Waiting for a grown-up:\s*2 jobs/);
+  assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Ask a grown-up:\s*1 job/);
   assert.equal(sheet().querySelector('img'), null, 'hostile job name stays text');
   assert.match(sheet().innerHTML, /&lt;img onerror=/);
-  assertReadOnly(sheet());
+  assertSheetControls(sheet());
 
   click('[data-action="chore-sheet-week"]:first-child');
   assert.match(sheet().querySelector('h1').textContent, /Week of Nov 2/);
@@ -136,13 +135,13 @@ for (const track of ['guided', 'standard']) {
   const tableRows = [...sheet().querySelectorAll('.cqd-chore-sheet-job')].filter((row) => row.textContent.includes('Set & clear the table'));
   assert.equal(tableRows.filter((row) => row.textContent.includes('A grown-up wrote this in.')).length, 1, 'only the grown-up group carries the note');
   assert.match(sheet().textContent, /Poner y recoger la mesa/);
-  assert.match(sheet().textContent, /\$1\.00/);
+  assert.match(sheet().textContent, /\$0\.50 each/);
   assert.match(sheet().textContent, /✓ Confirmed/);
   assert.match(sheet().textContent, /A grown-up wrote this in\./);
-  assert.match(sheet().textContent, /Confirmed: \$1\.50/);
-  assert.equal(sheet().querySelector('.cqd-chore-sheet-paid').textContent, `PAID · ${new Date('2026-11-09T10:00:00.000Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · $3.00`);
-  assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Confirmed\s*\$3\.00/);
-  assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Waiting for a grown-up\s*\$0\.00/);
+  assert.doesNotMatch(sheet().textContent, /Confirmed: \$/);
+  assert.equal(sheet().querySelector('.cqd-chore-sheet-paid').textContent, `PAID · ${new Date('2026-11-09T10:00:00.000Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`);
+  assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Confirmed:\s*4 jobs/);
+  assert.match(sheet().querySelector('.cqd-chore-sheet-summary').textContent, /Waiting for a grown-up:\s*0 jobs/);
 
   click('[data-action="chore-sheet-week"]:first-child');
   assert.match(sheet().querySelector('h1').textContent, /Week of Oct 26/);
@@ -164,7 +163,7 @@ assert.equal(sheet().querySelectorAll('.cqd-chore-sheet-days > li').length, 7, '
 assert.equal(sheet().querySelectorAll('.cqd-chore-sheet-empty').length, 7);
 assert.ok(sheet().querySelectorAll('[data-action="chore-sheet-week"]:disabled').length === 2);
 assert.equal(localStorage.getItem('codequest-daily-v1'), emptyBefore);
-assertReadOnly(sheet());
+assertSheetControls(sheet());
 
 // A pure render must not mutate its input either.
 const directStore = { track: 'guided', chores };
@@ -180,7 +179,7 @@ console.log('daily chore sheet tests passed');
   const local = new Date(lateSunday).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const html = renderChoreSheet({ track: 'guided', chores: { ...emptyChores(), paid: { '2026-11-02': { paidAt: lateSunday, cents: 250 } } } }, TODAY, '2026-11-02');
   const stamp = new JSDOM(html).window.document.querySelector('.cqd-chore-sheet-paid').textContent;
-  assert.equal(stamp, `PAID · ${local} · $2.50`, 'paid stamp uses the local day, like the grown-up page');
+  assert.equal(stamp, `PAID · ${local}`, 'paid stamp uses the local day, like the grown-up page');
 }
 console.log('daily chore sheet paid-day test passed');
 

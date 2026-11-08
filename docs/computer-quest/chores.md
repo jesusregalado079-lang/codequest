@@ -58,3 +58,10 @@ Parent Mode can export a JSON backup file and import one by merging or replacing
 
 ## My chore sheet (added 11/3)
 Jesse asked that each boy can see his own record, like the paper sheet, without anything filled in for him. My Chores has a "📄 My chore sheet" button. The sheet is read-only: one box per day (Monday to Sunday) with the jobs that were really logged and their status, a line on any job a grown-up wrote in, the week's Confirmed and Waiting totals, and a PAID stamp (local date and amount) once the week is paid. "← Earlier week" pages back to the first week with any chore; it never shows a future week. Every week stays on that iPad (the backup file is still the safety net). It shows no Give/Save/Spend split, because the Payday Helper is where the younger son works that out.
+
+## Money math and savings used (added 11/8)
+Both boys see job prices, but no app-added chore money totals. Each week's chore sheet has four boxes for his own total, Give 10%, Save 20%, and Spend 70%. He can save part of the math and return later. The app does not tell him if it is right. The boxes stay editable until a grown-up marks the week paid and all four lines are saved. Reopening keeps the math. Every week's work stays on his iPad and in backups.
+
+The current week's sheet also lets him record how much savings he used and what for. A grown-up approves or declines each request in Parent Mode. He sees the decision, but no savings balance. He can remove a request he made today while it is waiting.
+
+The grown-up sees his numbers next to the actual confirmed and split amounts on Pay the week. The grown-up also sees savings requests and the app's saved-so-far figure after approved uses. Payment does not depend on his math. The Payday Helper remains for the younger boy, but it no longer offers a chore amount; he types the amount he worked out. This replaces decision 8 and the 11/3 read-only chore sheet rule.

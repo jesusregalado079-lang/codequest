@@ -161,7 +161,7 @@ click(`[data-action="chores-entry-status"][data-id="${unpricedId}"][data-status=
 click('[data-action="chores-pay-week"]');
 assert.ok(storage.load().chores.paid[MONDAY], 'paid record saved');
 assert.match(document.querySelector('.cqd-chore-parent-banner').textContent, /Paid on/);
-assert.equal(document.querySelector('[data-action="chores-open-payday"]').disabled, false, 'paid and unused: the grown-up can open the Payday Helper');
+assert.equal(document.querySelector('[data-action="chores-open-payday"]'), null, 'paid week has no Helper offer');
 assert.equal(document.querySelector('[data-action="chores-confirm-week"]').disabled, true);
 assert.equal(document.querySelector('[data-action="chores-add-entry"]').disabled, true);
 assert.equal(document.querySelector('[data-action="chores-remove-entry"]').disabled, true);
@@ -223,7 +223,7 @@ olderChores = setEntryStatus(olderChores, 'older-confirmed', 'confirmed', NOW).c
 await launch('standard', olderChores);
 await unlock();
 assert.equal(document.querySelector('[data-action="chores-open-payday"]'), null, 'older son never sees Payday helper');
-assert.match(document.querySelector('.cqd-chore-parent').textContent, /His money stays here and adds up for the month/);
+assert.ok(document.querySelector('.cqd-chore-parent').textContent.includes('His money math'));
 assert.match(document.querySelector('.cqd-chore-parent').textContent, /OLDER SON/);
 let savedBlob;
 let savedName;

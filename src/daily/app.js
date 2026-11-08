@@ -2,7 +2,7 @@ import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
 import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
 import { blockFillFor, celebrationSeen, choresOf, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, setBlockFill, snapshotHistory, withChores, withTrack } from './store.js';
-import { addCustomJob, addEntry, confirmDay, confirmWeek, exportChores, importChores, latestUnusedPaidWeek, markPaidUsed, payWeek, removeCustomJob, removeEntry, reopenWeek, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, weekDates, weekMonday } from './chores.js';
+import { addCustomJob, addEntry, addSavingsUse, confirmDay, confirmWeek, exportChores, importChores, parseMoneyInput, payWeek, removeCustomJob, removeEntry, removeSavingsUse, reopenWeek, saveWeekMath, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, setSavingsStatus, weekDates, weekMathEditable, weekMonday } from './chores.js';
 import { renderChores } from './chores-view.js';
 import { choreSheetBounds, renderChoreSheet } from './chores-sheet-view.js';
 import { blockPlan, nextFill } from './blocks.js';
@@ -14,7 +14,6 @@ import { celebrationForSheet, celebrationHtml, trophyButtonHtml } from './celebr
 import { act as paydayReduce, newSession as newPayday } from '../payday/session.js';
 import { abandonOpen, actOnOpen, addSession, openSession } from '../payday/state.js';
 import { renderPayday } from '../payday/view.js';
-import { MIN_EARNED, MAX_EARNED } from '../payday/logic.js';
 import { lockParent, parentUnlocked, resetParentPin } from './pin.js';
 import {
   RESET_PHRASE, checkDailyParentPin, createParentState, gradeDailyWork, renderParent, setDailyParentPin,
@@ -40,7 +39,6 @@ const revealKey = (week, day, sheet, item) => `${week}|${day}|${sheet}|${item}`;
 let paydayDraft = null;
 let paydayAsk = false; // the "Start a new payday?" question is showing
 let paydayDoneId = null; // the payday he just finished stays on screen until he starts a new one
-let paydayMessage = '';
 
 function todayIso() {
   const date = new Date();
@@ -76,20 +74,6 @@ function parentChoreAction(button, action) {
   if (action === 'chores-jobs' || action === 'chores-check') {
     parentState.choresView = action === 'chores-jobs' ? 'jobs' : 'check';
     parentState.choreMessage = ''; render(); return;
-  }
-  if (action === 'chores-open-payday') {
-    if (store.track !== 'guided' || parentState.choresView === 'jobs') return;
-    const monday = parentState.weekMonday;
-    const chores = choresOf(store);
-    const paid = chores.paid[monday];
-    if (!paid) { parentState.choreMessage = 'Mark the week as paid first. Then the Payday Helper can use it.'; render(); return; }
-    if (!useChoreAmount(monday, paid.cents)) { parentState.choreMessage = paydayMessage; render(); return; }
-    parentSession += 1;
-    parentState = createParentState();
-    paydayDoneId = null;
-    paydayAsk = false;
-    route = { screen: 'payday', dayKey: null, sheetIndex: 0 };
-    render(); return;
   }
   if (action === 'chores-export-backup') {
     const backup = exportChores(store, new Date().toISOString());
@@ -161,7 +145,9 @@ function parentChoreAction(button, action) {
   const monday = parentState.weekMonday;
   const day = parentState.day;
   const nowIso = new Date().toISOString();
-  if (action === 'chores-entry-status' || action === 'chores-remove-entry' || action === 'chores-set-entry-price') {
+  if (action === 'chores-savings-approve' || action === 'chores-savings-decline') {
+    writeParentChores((chores) => setSavingsStatus(chores, button.dataset.id, action === 'chores-savings-approve' ? 'approved' : 'declined', nowIso), 'Savings decision saved.');
+  } else if (action === 'chores-entry-status' || action === 'chores-remove-entry' || action === 'chores-set-entry-price') {
     const entry = choresOf(store).entries[button.dataset.id];
     if (!entry || weekMonday(entry.date) !== monday) return;
     if (action === 'chores-entry-status') {
@@ -192,8 +178,7 @@ function parentChoreAction(button, action) {
   } else if (action === 'chores-pay-week') {
     writeParentChores((chores) => payWeek(chores, monday, nowIso), 'Week marked paid.');
   } else if (action === 'chores-reopen-week') {
-    const wasUsed = !!choresOf(store).paid[monday]?.helperUsedAt;
-    writeParentChores((chores) => reopenWeek(chores, monday), wasUsed ? 'Week reopened. It already went through the Payday Helper, so when you pay it again, tell him to type only the new part.' : 'Week reopened.');
+    writeParentChores((chores) => reopenWeek(chores, monday), 'Week reopened.');
   }
 }
 
@@ -362,50 +347,9 @@ function paydayCurrent() {
 
 const KID_CHORE_ERROR = 'That did not work. Ask a grown-up.';
 
-function useChoreAmount(monday, cents) {
-  paydayMessage = '';
-  if (store.track !== 'guided' || !weekDates(monday).length || !Number.isInteger(cents)
-    || cents < MIN_EARNED || cents > MAX_EARNED) {
-    paydayMessage = 'Ask a grown-up about this amount.'; return false;
-  }
-  return paydayAct({ type: 'earn-submit', text: (cents / 100).toFixed(2) }, monday, cents);
-}
-
 // One tap in the Payday Helper. The rules live in src/payday/session.js; this only saves the result.
-function paydayAct(action, choreMonday = null, choreCents = null) {
+function paydayAct(action) {
   const now = new Date().toISOString();
-  if (choreMonday) {
-    let failure = '';
-    const result = commit(store, (s) => {
-      if (s.track !== 'guided') { failure = 'Payday Helper is unavailable here.'; return s; }
-      const chores = choresOf(s);
-      const paid = chores.paid[choreMonday];
-      if (!paid) { failure = 'This week is not paid yet.'; return s; }
-      const cents = paid.cents;
-      if (cents !== choreCents || cents < MIN_EARNED || cents > MAX_EARNED || paid.helperUsedAt) {
-        failure = paid.helperUsedAt ? 'This week was already used.' : 'The chore amount changed. Try again.'; return s;
-      }
-      const current = openSession(s.payday);
-      const base = current?.screen === 'earn' ? current : newPayday(now);
-      const next = paydayReduce(base, action, now);
-      if (next.screen !== 'handed' || next.earned !== cents) { failure = 'Check the amount and try again.'; return s; }
-      const marked = markPaidUsed(chores, choreMonday, now);
-      if (marked.error) { failure = marked.error; return s; }
-      const payday = current?.screen === 'earn'
-        ? actOnOpen(s.payday, action, now)
-        : addSession(current ? abandonOpen(s.payday) : s.payday, next);
-      return { ...withChores(s, () => marked), payday };
-    });
-    if (failure || !result.core?.ok) {
-      paydayMessage = failure || 'This iPad could not save. Try again.';
-      return false;
-    }
-    store = result.store;
-    saveOk = true; showSaveAlert();
-    paydayDraft = null;
-    paydayDoneId = null;
-    return true;
-  }
   try {
     if (openSession(store.payday)) {
       persist((s) => ({ ...s, payday: actOnOpen(s.payday, action, now) }));
@@ -433,12 +377,6 @@ function handlePayday(button, action) {
   };
   if (simple[action]) return paydayAct({ type: simple[action] });
   switch (action) {
-    case 'payday-use-chores': {
-      if (store.track !== 'guided' || route.screen !== 'payday' || paydayCurrent().screen !== 'earn') return;
-      const suggestion = latestUnusedPaidWeek(choresOf(store));
-      if (!suggestion || !useChoreAmount(suggestion.mondayIso, suggestion.cents)) { paydayMessage = paydayMessage || 'This week is no longer available.'; render(); return; }
-      render(); return;
-    }
     case 'payday-earn-submit': return paydayAct({ type: 'earn-submit', text: paydayText('earn') });
     case 'payday-add-answer': return paydayAct({ type: 'add-answer', text: paydayText('add') });
     case 'payday-spend-answer': return paydayAct({ type: 'spend-answer', text: paydayText('spend') });
@@ -467,6 +405,16 @@ function handlePayday(button, action) {
   }
 }
 
+// Saving one form on the chore sheet re-draws it; put back what the boy had typed in the other form.
+function renderKeepingDrafts(selectors) {
+  const drafts = selectors.flatMap((selector) => [...app.querySelectorAll(selector)]
+    .map((input) => [input.dataset.choreMath ? `[data-chore-math="${input.dataset.choreMath}"]` : selector, input.value]));
+  render();
+  for (const [selector, value] of drafts) { const input = app.querySelector(selector); if (input) input.value = value; }
+}
+const MATH_DRAFT = ['[data-chore-math]'];
+const SAVINGS_DRAFT = ['[data-chore-savings-cents]', '[data-chore-savings-why]'];
+
 function render(motionIntent) {
   syncStore();
   const previousVisuals = motion.capture(motionIntent);
@@ -479,10 +427,7 @@ function render(motionIntent) {
   else if (route.screen === 'chores') { app.innerHTML = renderChores(store, todayIso(), choreDay || todayIso(), choreMessage); }
   else if (route.screen === 'chore-sheet') { app.innerHTML = renderChoreSheet(store, todayIso(), choreSheetMonday); }
   else if (route.screen === 'payday') {
-    const suggestion = store.track === 'guided' ? latestUnusedPaidWeek(choresOf(store)) : null;
-    app.innerHTML = `${paydayMessage ? `<p class="pd-chore-message" role="alert">${paydayMessage}</p>` : ''}${renderPayday(paydayCurrent(), {
-      confirmRestart: paydayAsk, suggestion: suggestion ? { cents: suggestion.cents, jobs: suggestion.jobs, label: suggestion.mondayIso } : null,
-    })}`;
+    app.innerHTML = renderPayday(paydayCurrent(), { confirmRestart: paydayAsk });
   }
   else if (route.screen === 'verse') {
     const verse = renderVerseScreen(store, todayIso());
@@ -556,6 +501,53 @@ function onClick(event) {
     choreSheetMonday = monday;
     render();
     return;
+  }
+  if (route.screen === 'chore-sheet' && action === 'chore-math-save') {
+    const current = todayIso();
+    const monday = button.dataset.monday;
+    const bounds = choreSheetBounds(store, current);
+    if (monday !== choreSheetMonday || weekMonday(monday) !== monday || monday < bounds.earliest || monday > bounds.latest
+      || !weekMathEditable(choresOf(store), monday, current)) return;
+    const keys = ['totalCents', 'giveCents', 'saveCents', 'spendCents'];
+    const values = {};
+    for (const key of keys) {
+      const raw = app.querySelector(`[data-chore-math="${key}"]`)?.value;
+      values[key] = String(raw ?? '').trim() === '' ? null : parseMoneyInput(raw);
+      if (String(raw ?? '').trim() !== '' && values[key] === null) {
+        app.querySelector('[data-chore-math-status]').textContent = 'Type each amount like 4.25.'; return;
+      }
+    }
+    const apply = (chores) => saveWeekMath(chores, monday, values, { todayIso: current, nowIso: new Date().toISOString() });
+    if (apply(choresOf(store)).error) { app.querySelector('[data-chore-math-status]').textContent = 'Type each amount like 4.25.'; return; }
+    let failed = false;
+    persist((latest) => { const result = apply(choresOf(latest)); if (result.error) { failed = true; return latest; } return withChores(latest, () => result); });
+    renderKeepingDrafts(SAVINGS_DRAFT);
+    app.querySelector('[data-chore-math-status]').textContent = failed ? 'Type each amount like 4.25.' : 'Saved.';
+    return;
+  }
+  if (route.screen === 'chore-sheet' && action === 'chore-savings-add') {
+    if (choreSheetMonday !== weekMonday(todayIso())) return;
+    const amount = app.querySelector('[data-chore-savings-cents]')?.value;
+    const why = app.querySelector('[data-chore-savings-why]')?.value?.trim() || '';
+    const cents = parseMoneyInput(amount);
+    if (cents === null || cents < 1 || !why || why.length > 120) {
+      app.querySelector('[data-chore-savings-status]').textContent = 'Type how much and what it was for.'; return;
+    }
+    const id = `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const apply = (chores) => addSavingsUse(chores, { date: todayIso(), todayIso: todayIso(), cents, why, nowIso: new Date().toISOString(), id });
+    if (apply(choresOf(store)).error) { app.querySelector('[data-chore-savings-status]').textContent = 'Type how much and what it was for.'; return; }
+    let failed = false;
+    persist((latest) => { const result = apply(choresOf(latest)); if (result.error) { failed = true; return latest; } return withChores(latest, () => result); });
+    renderKeepingDrafts(MATH_DRAFT);
+    app.querySelector('[data-chore-savings-status]').textContent = failed ? 'Type how much and what it was for.' : 'Sent to a grown-up.';
+    return;
+  }
+  if (route.screen === 'chore-sheet' && action === 'chore-savings-remove') {
+    if (choreSheetMonday !== weekMonday(todayIso())) return;
+    const apply = (chores) => removeSavingsUse(chores, button.dataset.id, { todayIso: todayIso() });
+    if (apply(choresOf(store)).error) return;
+    persist((latest) => { const result = apply(choresOf(latest)); return result.error ? latest : withChores(latest, () => result); });
+    renderKeepingDrafts([...MATH_DRAFT, ...SAVINGS_DRAFT]); return;
   }
   if (action === 'chore-day' && route.screen === 'chores') {
     const date = button.dataset.date;

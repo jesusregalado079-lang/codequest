@@ -13,6 +13,11 @@ const object = (value) => value && typeof value === 'object' && !Array.isArray(v
 const safeId = (value) => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value) && !blocked.has(value);
 const cleanText = (value) => typeof value === 'string'
   ? value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim().slice(0, 80) : '';
+// Too long means bad data: drop it instead of cutting a boy's words short.
+const cleanSavingsWhy = (value) => {
+  const text = typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim() : '';
+  return text.length <= 120 ? text : '';
+};
 const priceOk = (value) => Number.isInteger(value) && value >= 0 && value <= MAX_CENTS;
 const error = (message) => ({ error: message });
 const validMonday = (value) => isIso(value) && weekMonday(value) === value;
@@ -23,7 +28,7 @@ const isPaid = (chores, date) => own(chores.paid, weekMonday(date));
 const checked = (entry, status, nowIso) => ({ ...entry, status, checkedAt: status === 'waiting' ? null : nowIso });
 
 export function emptyChores() {
-  return { jobs: { overrides: {}, custom: [] }, entries: {}, paid: {} };
+  return { jobs: { overrides: {}, custom: [] }, entries: {}, paid: {}, math: {}, savingsUsed: {} };
 }
 
 export function isIso(value) { return isValidDay(value); }
@@ -98,6 +103,24 @@ export function normalizeChores(value) {
   for (const id of Object.keys(result.entries)) {
     // Paying needs every job checked, and a paid week takes no new jobs, so a waiting job here is bad data that could never be removed.
     if (result.entries[id].status === 'waiting' && result.paid[weekMonday(result.entries[id].date)]) delete result.entries[id];
+  }
+  for (const monday of Object.keys(object(source.math))) {
+    if (!validMonday(monday)) continue;
+    const raw = object(source.math[monday]);
+    const values = ['totalCents', 'giveCents', 'saveCents', 'spendCents'];
+    if (!validStamp(raw.savedAt) || values.some((key) => raw[key] !== null && !priceOk(raw[key]))
+      || values.every((key) => raw[key] === null)) continue;
+    result.math[monday] = { ...Object.fromEntries(values.map((key) => [key, raw[key]])), savedAt: raw.savedAt };
+  }
+  for (const id of Object.keys(object(source.savingsUsed)).slice(0, 500)) {
+    if (!safeId(id)) continue;
+    const raw = object(source.savingsUsed[id]);
+    const why = cleanSavingsWhy(raw.why);
+    if (raw.id !== id || !isIso(raw.date) || !Number.isInteger(raw.cents) || raw.cents < 1 || raw.cents > MAX_CENTS
+      || !why || !['waiting', 'approved', 'declined'].includes(raw.status) || !validStamp(raw.addedAt)
+      || (raw.status === 'waiting' ? raw.checkedAt !== null : !validStamp(raw.checkedAt))) continue;
+    result.savingsUsed[id] = { id, date: raw.date, cents: raw.cents, why, status: raw.status,
+      addedAt: raw.addedAt, checkedAt: raw.checkedAt };
   }
   return result;
 }
@@ -239,17 +262,49 @@ export function reopenWeek(chores, mondayIso) {
   delete paid[mondayIso];
   return { chores: { ...chores, paid } };
 }
-export function markPaidUsed(chores, mondayIso, nowIso) {
-  if (!validMonday(mondayIso) || !validStamp(nowIso) || !own(chores.paid, mondayIso)) return error('Week is not paid');
-  if (chores.paid[mondayIso].helperUsedAt) return error('This week was already used');
-  return { chores: { ...chores, paid: { ...chores.paid,
-    [mondayIso]: { ...chores.paid[mondayIso], helperUsedAt: nowIso } } } };
+export function parseMoneyInput(text) {
+  const value = String(text ?? '').trim().replace(/^\$/, '');
+  if (!/^(?:\d+(?:\.\d{1,2})?|\.\d{1,2})$/.test(value)) return null;
+  const [whole, fraction = ''] = value.split('.');
+  const cents = Number(whole || 0) * 100 + Number(fraction.padEnd(2, '0'));
+  return priceOk(cents) ? cents : null;
 }
-export function latestUnusedPaidWeek(chores) {
-  const mondayIso = Object.keys(chores.paid).filter((monday) => !chores.paid[monday].helperUsedAt).sort().slice(-1)[0];
-  if (!mondayIso) return null;
-  const paid = chores.paid[mondayIso];
-  return { mondayIso, cents: paid.cents, jobs: paid.entryIds.length, paidAt: paid.paidAt };
+export function weekMathEditable(chores, mondayIso, todayIso) {
+  if (!validMonday(mondayIso) || !isIso(todayIso) || mondayIso > weekMonday(todayIso)) return false;
+  const math = chores.math?.[mondayIso];
+  return !chores.paid[mondayIso] || !math || ['totalCents', 'giveCents', 'saveCents', 'spendCents'].some((key) => math[key] === null);
+}
+export function saveWeekMath(chores, mondayIso, values, { todayIso, nowIso } = {}) {
+  if (!weekMathEditable(chores, mondayIso, todayIso) || !validStamp(nowIso)) return error('Week math is locked');
+  const keys = ['totalCents', 'giveCents', 'saveCents', 'spendCents'];
+  if (keys.some((key) => values?.[key] !== null && !priceOk(values?.[key])) || keys.every((key) => values[key] === null)) return error('Invalid money math');
+  return { chores: { ...chores, math: { ...chores.math, [mondayIso]: { ...Object.fromEntries(keys.map((key) => [key, values[key]])), savedAt: nowIso } } } };
+}
+export function addSavingsUse(chores, { date, todayIso, cents, why, nowIso, id } = {}) {
+  const cleaned = cleanSavingsWhy(why);
+  if (typeof why !== 'string' || why.trim().length > 120) return error('Invalid savings use');
+  if (date !== todayIso || !isIso(todayIso) || !safeId(id) || own(chores.savingsUsed, id)
+    || Object.keys(chores.savingsUsed).length >= 500 || !Number.isInteger(cents) || cents < 1 || cents > MAX_CENTS
+    || !cleaned || !validStamp(nowIso)) return error('Invalid savings use');
+  return { chores: { ...chores, savingsUsed: { ...chores.savingsUsed,
+    [id]: { id, date, cents, why: cleaned, status: 'waiting', addedAt: nowIso, checkedAt: null } } } };
+}
+export function removeSavingsUse(chores, id, { todayIso } = {}) {
+  const record = own(chores.savingsUsed, id) ? chores.savingsUsed[id] : null;
+  if (!record || !isIso(todayIso) || record.date !== todayIso || record.status !== 'waiting') return error('Cannot remove savings use');
+  const savingsUsed = { ...chores.savingsUsed };
+  delete savingsUsed[id];
+  return { chores: { ...chores, savingsUsed } };
+}
+export function setSavingsStatus(chores, id, status, nowIso) {
+  const record = own(chores.savingsUsed, id) ? chores.savingsUsed[id] : null;
+  if (!record || !['approved', 'declined'].includes(status) || !validStamp(nowIso)) return error('Invalid savings decision');
+  return { chores: { ...chores, savingsUsed: { ...chores.savingsUsed,
+    [id]: { ...record, status, checkedAt: nowIso } } } };
+}
+export function savingsSoFarCents(chores) {
+  return Object.values(chores.paid).reduce((sum, paid) => sum + jarAmounts(paid.cents).save, 0)
+    - Object.values(chores.savingsUsed).filter((item) => item.status === 'approved').reduce((sum, item) => sum + item.cents, 0);
 }
 
 export function exportChores(store, nowIso) {
@@ -268,15 +323,18 @@ export function importChores(chores, backup, mode, track) {
     || (own(raw, 'entries') && object(raw.entries) !== raw.entries)
     || (own(raw, 'jobs') && object(raw.jobs) !== raw.jobs)
     || (own(raw, 'paid') && object(raw.paid) !== raw.paid)
+    || (own(raw, 'math') && object(raw.math) !== raw.math)
+    || (own(raw, 'savingsUsed') && object(raw.savingsUsed) !== raw.savingsUsed)
     || Object.keys(object(raw.entries)).length > MAX_ENTRIES
     || (Array.isArray(object(raw.jobs).custom) && raw.jobs.custom.length > MAX_CUSTOM)
-    || Object.keys(object(raw.paid)).length > MAX_ENTRIES) return error('This backup has too many records or missing chores');
+    || Object.keys(object(raw.paid)).length > MAX_ENTRIES
+    || Object.keys(object(raw.savingsUsed)).length > 500) return error('This backup has too many records or missing chores');
   const incoming = normalizeChores(raw);
   const current = normalizeChores(chores);
   if (mode === 'replace') return { chores: incoming,
     added: Object.keys(incoming.entries).length, skipped: 0 };
   const merged = { jobs: { overrides: { ...current.jobs.overrides }, custom: [...current.jobs.custom] },
-    entries: { ...current.entries }, paid: { ...current.paid } };
+    entries: { ...current.entries }, paid: { ...current.paid }, math: { ...current.math }, savingsUsed: { ...current.savingsUsed } };
   let added = 0;
   let skipped = 0;
   for (const [id, value] of Object.entries(incoming.jobs.overrides)) {
@@ -300,6 +358,14 @@ export function importChores(chores, backup, mode, track) {
       || Object.values(merged.entries).some((entry) => weekMonday(entry.date) === monday
         && (entry.status === 'waiting' || (entry.status === 'confirmed' && !paid.entryIds.includes(entry.id))))) skipped++;
     else { merged.paid[monday] = paid; added++; }
+  }
+  for (const [monday, value] of Object.entries(incoming.math)) {
+    if (own(merged.math, monday)) skipped++;
+    else { merged.math[monday] = value; added++; }
+  }
+  for (const [id, value] of Object.entries(incoming.savingsUsed)) {
+    if (own(merged.savingsUsed, id) || Object.keys(merged.savingsUsed).length >= 500) skipped++;
+    else { merged.savingsUsed[id] = value; added++; }
   }
   return { chores: normalizeChores(merged), added, skipped };
 }

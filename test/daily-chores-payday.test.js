@@ -50,20 +50,13 @@ async function unlock() {
 }
 await launch('guided', week());
 click('[data-action="open-payday"]');
-assert.match(document.querySelector('.pd-chore-suggestion').textContent, /Your chores, week of Nov 2.*\$9\.00 from 1 job\./s);
-click('[data-action="payday-use-chores"]');
-assert.equal(storage.load().payday.sessions[0].earned, 900);
-assert.ok(storage.load().chores.paid[MONDAY].helperUsedAt);
 assert.equal(document.querySelector('.pd-chore-suggestion'), null);
-click('[data-action="payday-change-amount"]');
-assert.equal(document.querySelector('.pd-chore-suggestion'), null, 'used paid week stays hidden on earn screen');
+assert.equal(document.querySelector('[data-action="payday-use-chores"]'), null);
 const forged = document.createElement('button');
 forged.dataset.action = 'payday-use-chores';
 document.querySelector('#app').append(forged);
 forged.click();
-assert.equal(storage.load().payday.sessions.length, 1, 'second tap cannot reuse a paid week');
-assert.ok(storage.load().chores.paid[MONDAY].helperUsedAt);
-assert.equal(reopenWeek(storage.load().chores, MONDAY).chores.paid[MONDAY], undefined);
+assert.equal(storage.load().payday.sessions.length, 0, 'forged offer does nothing');
 
 await launch('guided', week());
 click('[data-action="open-payday"]');
@@ -74,31 +67,16 @@ assert.equal(storage.load().chores.paid[MONDAY].helperUsedAt, undefined);
 
 await launch('guided', week(6000));
 click('[data-action="open-payday"]');
-assert.match(document.querySelector('.pd-chore-suggestion').textContent, /more than the Payday Helper can split/);
-assert.equal(document.querySelector('[data-action="payday-use-chores"]'), null);
+assert.equal(document.querySelector('.pd-chore-suggestion'), null);
 
 await launch('guided', week());
 await unlock();
-click('[data-action="chores-open-payday"]');
-assert.equal(storage.load().payday.sessions[0].earned, 900, 'paid parent button starts same amount');
-assert.ok(storage.load().chores.paid[MONDAY].helperUsedAt);
-assert.equal(document.querySelector('.cqd-chore-parent'), null, 'parent mode exited');
-
-await launch('guided', week(775, false));
-await unlock();
-assert.equal(document.querySelector('[data-action="chores-open-payday"]'), null, 'no Payday button for a week that is not paid yet');
-const forgedUnpaid = document.createElement('button');
-forgedUnpaid.dataset.action = 'chores-open-payday';
-document.querySelector('#app').append(forgedUnpaid);
-forgedUnpaid.click();
-assert.equal(storage.load().payday.sessions.length, 0, 'an unpaid week cannot start the Payday Helper (it could be used twice)');
-assert.match(document.querySelector('.cqd-chore-parent-message').textContent, /Mark the week as paid first/);
-assert.equal(storage.load().chores.paid[MONDAY], undefined, 'unpaid week remains unpaid');
-click('[data-action="chores-pay-week"]');
-assert.equal(storage.load().chores.paid[MONDAY].helperUsedAt, undefined, 'paying does not use the Helper');
-click('[data-action="chores-open-payday"]');
-assert.equal(storage.load().payday.sessions[0].earned, 775, 'once paid, the button starts the same amount');
-assert.ok(storage.load().chores.paid[MONDAY].helperUsedAt, 'and marks the week used');
+assert.equal(document.querySelector('[data-action="chores-open-payday"]'), null);
+const forgedParent = document.createElement('button');
+forgedParent.dataset.action = 'chores-open-payday';
+document.querySelector('#app').append(forgedParent);
+forgedParent.click();
+assert.equal(storage.load().payday.sessions.length, 0);
 
 await launch('standard', week());
 assert.equal(document.querySelector('[data-action="open-payday"]'), null);
@@ -112,4 +90,4 @@ await unlock();
 assert.equal(document.querySelector('[data-action="chores-open-payday"]'), null);
 assert.equal(document.querySelector('.pd-chore-suggestion'), null);
 globalThis.Date = RealDate;
-console.log('ok — chore Payday suggestion, used flag, typed amount, range, parent links, older track');
+console.log('ok — chore Payday offer removed; typed amount and older track');

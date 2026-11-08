@@ -1,5 +1,5 @@
 // Parent Mode chore screens. HTML only: actions and storage live in app.js.
-import { activeJobs, catalogFor, dayEntries, monthKey, splitCents, summarize, weekDates, weekEntries, weekMonday } from './chores.js';
+import { activeJobs, catalogFor, dayEntries, monthKey, savingsSoFarCents, splitCents, summarize, weekDates, weekEntries, weekMonday } from './chores.js';
 import { choresOf } from './store.js';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
@@ -52,7 +52,6 @@ function checkHtml(store, state, todayIso) {
   const chores = choresOf(store);
   const dates = weekDates(state.weekMonday);
   const paid = chores.paid[state.weekMonday];
-  const todayInWeek = dates.includes(todayIso);
   const day = state.day;
   const entries = dayEntries(chores, day);
   const waiting = weekEntries(chores, state.weekMonday).filter((entry) => entry.status === 'waiting');
@@ -77,7 +76,34 @@ function checkHtml(store, state, todayIso) {
       <label>Name for something else<input data-chores-other-name maxlength="80" aria-label="Name for something else"${disabled(!!paid)}></label>
       ${priceInput(null, 'Price for something else in dollars', 'data-chores-other-price', !!paid)}
       ${button('chores-add-entry', `Add a job for ${fullDate(day)}`, `${disabled(!!paid)}`, 'is-green')}</div><p class="cqd-chore-parent-note">For Something else, enter its name and price.</p></section>
-    ${payHtml(store, state, todayIso, todayInWeek)}`;
+    ${savingsParentHtml(chores)}
+    ${payHtml(store, state, todayIso)}`;
+}
+
+function mathParentHtml(chores, monday, total, split) {
+  const math = chores.math[monday];
+  const rows = [['Total', 'totalCents', total], ['Give 10%', 'giveCents', split?.give],
+    ['Save 20%', 'saveCents', split?.save], ['Spend 70%', 'spendCents', split?.spend]];
+  return `<section class="cqd-chore-parent-math"><h3>His money math</h3>
+    ${math ? `<div class="cqd-chore-parent-table-wrap"><table><thead><tr><th></th><th>He wrote</th><th>Right amount</th></tr></thead><tbody>
+    ${rows.map(([label, key, right]) => `<tr><th>${label}</th><td>${math[key] === null ? '—' : `${money(math[key])}${math[key] === right ? ' ✓' : ''}`}</td><td>${right === undefined ? '—' : money(right)}</td></tr>`).join('')}
+    </tbody></table></div>` : '<p>He has not done his money math for this week yet.</p>'}
+    <p class="cqd-chore-parent-note">A cent off can be rounding.</p></section>`;
+}
+function savingsParentHtml(chores) {
+  const all = Object.values(chores.savingsUsed).sort((a, b) => b.addedAt.localeCompare(a.addedAt) || b.id.localeCompare(a.id));
+  const waiting = all.filter((record) => record.status === 'waiting');
+  const decided = all.filter((record) => record.status !== 'waiting').slice(0, 20);
+  const row = (record) => `<li><strong>${esc(shortDate(record.date))} · ${money(record.cents)}</strong> ${esc(record.why)}
+    <span class="cqd-chore-chip ${record.status === 'approved' ? 'ok' : record.status === 'declined' ? 'back' : 'wait'}">${record.status === 'approved' ? '✓ Approved' : record.status === 'declined' ? '↩ Not approved' : '⏳ Waiting for a grown-up'}</span>
+    ${record.checkedAt ? `<small>Checked ${esc(stampDate(record.checkedAt))}</small>` : ''}
+    ${record.status !== 'approved' ? button('chores-savings-approve', 'Approve', `data-id="${esc(record.id)}"`) : ''}
+    ${record.status !== 'declined' ? button('chores-savings-decline', 'Not approved', `data-id="${esc(record.id)}"`) : ''}</li>`;
+  const balance = savingsSoFarCents(chores);
+  return `<section class="cqd-chore-parent-card"><h2>Savings he used</h2>
+    <p>Saved so far, by the app: ${balance < 0 ? '-' : ''}${money(Math.abs(balance))}</p>
+    ${waiting.length ? `<ul class="cqd-chore-savings-list">${waiting.map(row).join('')}</ul>` : '<p>No requests waiting.</p>'}
+    ${decided.length ? `<h3>Checked</h3><ul class="cqd-chore-savings-list">${decided.map(row).join('')}</ul>` : ''}</section>`;
 }
 
 function payHtml(store, state, todayIso) {
@@ -86,7 +112,8 @@ function payHtml(store, state, todayIso) {
   const entries = weekEntries(chores, state.weekMonday);
   const sum = summarize(entries);
   const paid = chores.paid[state.weekMonday];
-  const split = sum.confirmedCents <= 100000 ? splitCents(sum.confirmedCents) : null;
+  const totalCents = paid ? paid.cents : sum.confirmedCents;
+  const split = totalCents <= 100000 ? splitCents(totalCents) : null;
   const history = Object.entries(chores.paid).sort(([a], [b]) => b.localeCompare(a));
   const month = monthKey(todayIso);
   const monthSum = summarize(Object.values(chores.entries).filter((entry) => monthKey(entry.date) === month && entry.date <= todayIso));
@@ -94,11 +121,11 @@ function payHtml(store, state, todayIso) {
     const day = summarize(dayEntries(chores, date));
     return `<tr><th>${esc(dayLabel(date))}</th><td>${day.confirmedJobs + day.waitingJobs + day.declinedJobs}</td><td>${day.declinedJobs}</td><td>${money(day.confirmedCents)}</td></tr>`;
   }).join('')}<tr class="is-total"><th>Week</th><td>${entries.length}</td><td>${sum.declinedJobs}</td><td>${money(sum.confirmedCents)}</td></tr></tbody></table></div>
+  ${mathParentHtml(chores, state.weekMonday, totalCents, split)}
   ${split ? `<div class="cqd-chore-parent-split"><div><strong>${money(split.give)}</strong><small>Give 10%</small></div><div><strong>${money(split.save)}</strong><small>Save 20%</small></div><div><strong>${money(split.spend)}</strong><small>Spend 70%</small></div></div><p class="cqd-chore-parent-note">The 10/20/70 split is a guide.</p>` : '<p class="cqd-chore-parent-note">Guide unavailable for this amount.</p>'}</section>
   <section class="cqd-chore-parent-card"><div class="cqd-chore-parent-pay-actions">${button('chores-pay-week', `Mark the week as paid · ${money(sum.confirmedCents)}`, `${disabled(!!paid || !!sum.waitingJobs || !sum.confirmedJobs)}`, 'is-green')}
-  ${store.track === 'guided' && paid ? button('chores-open-payday', `Open the Payday Helper with ${money(paid.cents)}`, `${disabled(!!paid.helperUsedAt)}`) : ''}</div>
-  ${paid ? `<p>Week paid and locked.${store.track === 'guided' ? (paid.helperUsedAt ? ' It already went through the Payday Helper.' : ' The Payday Helper can use it once.') : ''}</p>` : sum.waitingJobs ? `<p>Check the ${sum.waitingJobs} waiting jobs first.</p>` : !sum.confirmedJobs ? '<p>Nothing confirmed yet.</p>' : '<p>Marking paid locks this week and keeps a record.</p>'}
-  ${store.track === 'standard' ? '<p>His money stays here and adds up for the month.</p>' : ''}</section>
+  </div>
+  ${paid ? '<p>Week paid and locked.</p>' : sum.waitingJobs ? `<p>Check the ${sum.waitingJobs} waiting jobs first.</p>` : !sum.confirmedJobs ? '<p>Nothing confirmed yet.</p>' : '<p>Marking paid locks this week and keeps a record.</p>'}</section>
   <section class="cqd-chore-parent-card"><h2>Paid so far</h2><div class="cqd-chore-parent-table-wrap"><table><thead><tr><th>Week</th><th>Paid on</th><th>Amount</th></tr></thead><tbody>${history.map(([monday, record]) => `<tr><th>Week of ${esc(shortDate(monday))}</th><td>${esc(stampDate(record.paidAt))}</td><td>${money(record.cents)}</td></tr>`).join('') || '<tr><td colspan="3">No paid weeks yet.</td></tr>'}</tbody></table></div><p class="cqd-chore-parent-month">This month (${esc(monthName(month))}): ${money(monthSum.confirmedCents)} confirmed</p></section>`;
 }
 

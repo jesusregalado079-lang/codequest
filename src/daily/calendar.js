@@ -197,6 +197,7 @@ export function renderCalendar(store, todayIso, viewedYear, viewedMonth, content
         <button type="button" class="cqd-link-button" data-action="next-month" aria-label="Next month" ${nextDisabled}>›</button>
       </div>
     </header>
+    ${choresButton}
     <p class="cqd-month-help" id="cqd-month-help"><span class="cqd-live-key" aria-hidden="true"></span>Raised days open this week's work. Other days are a look back or ahead.</p>
     <div class="cqd-month-garden">
       <div class="cqd-month-edge cqd-month-edge-left" aria-hidden="true">${monthIllustration(month.month + 1, 'margin')}</div>
@@ -211,7 +212,6 @@ export function renderCalendar(store, todayIso, viewedYear, viewedMonth, content
     </div>
     <ul class="cqd-month-key" aria-label="Day status key">${Object.entries(STATUS_LABELS).map(([status, label]) => `<li class="cqd-month-key-item cqd-status-${status}"><span class="cqd-month-dot" aria-hidden="true">${statusMark(status)}</span>${esc(label)}</li>`).join('')}</ul>
     ${verseButton}
-    ${choresButton}
     ${paydayButton}
   </section>`;
 }

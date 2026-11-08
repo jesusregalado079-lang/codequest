@@ -64,7 +64,7 @@ for (const track of ['guided', 'standard']) {
   assert.match(laundry.textContent, track === 'guided' ? /Doblar y guardar la ropa/ : /Lavar, secar y doblar la ropa/);
   assert.equal(document.querySelector(track === 'guided' ? '[data-job="laundry-full"]' : '[data-job="laundry-fold"]'), null);
   assert.equal(document.querySelectorAll('[data-action="chore-day"][aria-pressed="true"]').length, 1);
-  assert.ok(document.querySelector('[aria-live="polite"].cqd-chore-totals'));
+  assert.equal(document.querySelector('.cqd-chore-totals'), null);
   assert.doesNotMatch(document.querySelector('.cqd-chore-screen').innerHTML, /data-action="(?:confirm|price|pay)[^"]*"/);
   click('[data-job="table"]');
   click('[data-job="table"]');
@@ -133,7 +133,7 @@ prepared = store.withChores(prepared, () => ({ chores }));
 const preparedHtml = renderChores(prepared, TODAY);
 const preparedDoc = new JSDOM(preparedHtml).window.document;
 const totals = preparedDoc.querySelectorAll('.cqd-chore-totals strong');
-assert.deepEqual([...totals].map((node) => node.textContent), ['$1.75', '$0.50', '$1.75'], 'week and calendar month totals');
+assert.equal(totals.length, 0, 'kid sees no computed totals');
 assert.equal(preparedDoc.querySelectorAll('[data-action="chore-remove"]').length, 1, 'only waiting row has x');
 assert.equal(new JSDOM(renderChores(prepared, TODAY, YESTERDAY)).window.document.querySelector('[data-action="chore-remove"]'), null);
 assert.match(renderCalendar(prepared, TODAY, 2026, 10), /1 waiting/);

@@ -1,4 +1,4 @@
-import { activeJobs, dayEntries, groupByJob, monthKey, monthTotals, weekDates, weekMonday, weekTotals } from './chores.js';
+import { activeJobs, dayEntries, groupByJob, weekDates, weekMonday } from './chores.js';
 import { choresOf } from './store.js';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
@@ -24,8 +24,6 @@ export function renderChores(store, todayIso, selectedIso = todayIso, message = 
   const isToday = selected === todayIso;
   const entries = dayEntries(chores, selected);
   const groups = groupByJob(entries);
-  const weekly = weekTotals(chores, monday);
-  const monthly = monthTotals(chores, monthKey(todayIso));
   const dayPills = dates.map((date, index) => {
     const count = dayEntries(chores, date);
     const waiting = count.filter((entry) => entry.status === 'waiting').length;
@@ -53,7 +51,7 @@ export function renderChores(store, todayIso, selectedIso = todayIso, message = 
         : `<span class="cqd-chore-chip wait">⏳ ${group.cents === null ? 'Waiting, a grown-up picks the price' : 'Waiting for a grown-up'}</span>`;
     return `<li class="cqd-chore-row"><span class="cqd-chore-row-icon" aria-hidden="true">${esc(group.icon)}</span>
       <span class="cqd-chore-name">${esc(group.name)}${group.count > 1 ? ` x${group.count}` : ''}<small>${esc(group.es)}</small></span>
-      <span class="cqd-chore-meta"><span class="cqd-chore-amount">${group.cents === null ? '' : money(group.cents * group.count)}</span>${chip}</span>
+      <span class="cqd-chore-meta"><span class="cqd-chore-amount">${group.cents === null ? '' : money(group.cents) + (group.count > 1 ? ' each' : '')}</span>${chip}</span>
       ${removableEntry ? `<button type="button" class="cqd-chore-remove" data-action="chore-remove" data-id="${esc(removableEntry.id)}" data-date="${todayIso}" aria-label="Remove one ${esc(group.name)} entry">×</button>` : ''}</li>`;
   }).join('');
   return `<div class="cqd-sheet-nav"><button type="button" class="cqd-link-button" data-action="back-to-calendar">← This week</button></div>
@@ -65,8 +63,5 @@ export function renderChores(store, todayIso, selectedIso = todayIso, message = 
     ${message ? `<p class="cqd-chore-message" role="alert">${esc(message)}</p>` : ''}
     ${jobs}<section class="cqd-chore-card"><h2>${isToday ? 'Today' : longDays[dates.indexOf(selected)]} I did</h2>
     ${rows ? `<ul class="cqd-chore-rows">${rows}</ul>` : '<p class="cqd-chore-empty">No jobs logged for this day yet.</p>'}
-    <div class="cqd-chore-totals" aria-live="polite"><div class="a"><strong>${money(weekly.confirmedCents)}</strong><small>Confirmed this week</small></div>
-    <div class="b"><strong>${money(weekly.waitingCents)}</strong><small>Waiting for a grown-up</small></div>
-    <div class="c"><strong>${money(monthly.confirmedCents)}</strong><small>This month</small></div></div>
     <p class="cqd-chore-note">The x only works until a grown-up has checked it.</p></section></section>`;
 }
