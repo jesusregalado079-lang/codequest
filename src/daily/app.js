@@ -2,9 +2,10 @@ import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
 import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
 import { blockFillFor, celebrationSeen, choresOf, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, setBlockFill, snapshotHistory, withChores, withTrack } from './store.js';
-import { addCustomJob, addEntry, addSavingsUse, confirmDay, confirmWeek, exportChores, importChores, parseMoneyInput, payWeek, removeCustomJob, removeEntry, removeSavingsUse, reopenWeek, saveWeekMath, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, setSavingsStatus, weekDates, weekMathEditable, weekMonday } from './chores.js';
+import { addCustomJob, addEntry, addSavingsUse, confirmDay, confirmWeek, exportChores, importChores, monthKey, monthPageEditable, parseMoneyInput, payWeek, removeCustomJob, removeEntry, removeSavingsUse, reopenWeek, saveMonthPage, saveWeekMath, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, setSavingsStatus, weekDates, weekMathEditable, weekMonday } from './chores.js';
 import { renderChores } from './chores-view.js';
 import { choreSheetBounds, renderChoreSheet } from './chores-sheet-view.js';
+import { moneyMonthFields, moneyPageBounds, renderMoneyPage } from './money-page-view.js';
 import { blockPlan, nextFill } from './blocks.js';
 import { currentWeekSnapshots, renderCalendar, renderVerseScreen } from './calendar.js';
 import { applyDailyAction, dayComplete, dayReady, dayReopened, renderSheetArticle, sheetsForDay } from './sheet-view.js';
@@ -25,6 +26,7 @@ let store = load();
 let route = { screen: 'calendar', dayKey: null, sheetIndex: 0 };
 let choreDay = null;
 let choreSheetMonday = weekMonday(todayIso());
+let moneyMonth = monthKey(todayIso());
 let choreMessage = '';
 let parentState = createParentState();
 let drawingController = null;
@@ -405,15 +407,20 @@ function handlePayday(button, action) {
   }
 }
 
-// Saving one form on the chore sheet re-draws it; put back what the boy had typed in the other form.
-function renderKeepingDrafts(selectors) {
-  const drafts = selectors.flatMap((selector) => [...app.querySelectorAll(selector)]
-    .map((input) => [input.dataset.choreMath ? `[data-chore-math="${input.dataset.choreMath}"]` : selector, input.value]));
+// Keep unsaved page fields through a savings action or a page save.
+function renderKeepingMoneyDrafts(selectors) {
+  const drafts = selectors.flatMap((selector) => [...app.querySelectorAll(selector)].map((input) => {
+    const week = input.closest('[data-money-week]');
+    const key = input.dataset.moneyWeekField;
+    const target = week ? `[data-money-week="${week.dataset.moneyWeek}"] [data-money-week-field="${key}"]`
+      : input.dataset.moneyMonth ? `[data-money-month="${input.dataset.moneyMonth}"]` : selector;
+    return [target, input.value];
+  }));
   render();
   for (const [selector, value] of drafts) { const input = app.querySelector(selector); if (input) input.value = value; }
 }
-const MATH_DRAFT = ['[data-chore-math]'];
-const SAVINGS_DRAFT = ['[data-chore-savings-cents]', '[data-chore-savings-why]'];
+const PAGE_DRAFT = ['input[data-money-month]', '[data-money-week-field]'];
+const SAVINGS_DRAFT = ['[data-money-savings-cents]', '[data-money-savings-why]'];
 
 function render(motionIntent) {
   syncStore();
@@ -426,6 +433,11 @@ function render(motionIntent) {
   else if (route.screen === 'sheet') { app.innerHTML = sheetScreenHtml(); setupDrawing(); }
   else if (route.screen === 'chores') { app.innerHTML = renderChores(store, todayIso(), choreDay || todayIso(), choreMessage); }
   else if (route.screen === 'chore-sheet') { app.innerHTML = renderChoreSheet(store, todayIso(), choreSheetMonday); }
+  else if (route.screen === 'money') {
+    const bounds = moneyPageBounds(store, todayIso());
+    if (moneyMonth < bounds.earliest || moneyMonth > bounds.latest) moneyMonth = bounds.latest;
+    app.innerHTML = renderMoneyPage(store, todayIso(), moneyMonth);
+  }
   else if (route.screen === 'payday') {
     app.innerHTML = renderPayday(paydayCurrent(), { confirmRestart: paydayAsk });
   }
@@ -502,52 +514,106 @@ function onClick(event) {
     render();
     return;
   }
-  if (route.screen === 'chore-sheet' && action === 'chore-math-save') {
+  if (action === 'open-money') {
+    detachDrawing();
+    moneyMonth = monthKey(todayIso());
+    route = { screen: 'money', dayKey: null, sheetIndex: 0 };
+    render(); return;
+  }
+  if (action === 'money-month' && route.screen === 'money') {
+    const bounds = moneyPageBounds(store, todayIso());
+    const target = button.dataset.month;
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(target || '') || target < bounds.earliest || target > bounds.latest) return;
+    moneyMonth = target; render(); return;
+  }
+  if (action === 'money-save' && route.screen === 'money') {
     const current = todayIso();
-    const monday = button.dataset.monday;
-    const bounds = choreSheetBounds(store, current);
-    if (monday !== choreSheetMonday || weekMonday(monday) !== monday || monday < bounds.earliest || monday > bounds.latest
-      || !weekMathEditable(choresOf(store), monday, current)) return;
-    const keys = ['totalCents', 'giveCents', 'saveCents', 'spendCents'];
-    const values = {};
-    for (const key of keys) {
-      const raw = app.querySelector(`[data-chore-math="${key}"]`)?.value;
-      values[key] = String(raw ?? '').trim() === '' ? null : parseMoneyInput(raw);
-      if (String(raw ?? '').trim() !== '' && values[key] === null) {
-        app.querySelector('[data-chore-math-status]').textContent = 'Type each amount like 4.25.'; return;
+    const month = moneyMonth;
+    const chores = choresOf(store);
+    const monthValues = {};
+    let anyMonth = false;
+    if (monthPageEditable(chores, month, current)) {
+      for (const [key, , kind] of moneyMonthFields) {
+        const raw = app.querySelector(`[data-money-month="${key}"]`)?.value;
+        if (raw === undefined) return;
+        if (kind === 'text') {
+          monthValues[key] = raw;
+          if (raw.trim()) anyMonth = true;
+          if (raw.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim().length > 80) {
+            app.querySelector('[data-money-status]').textContent = 'Type each amount like 4.25.'; return;
+          }
+        } else {
+          monthValues[key] = raw.trim() === '' ? null : parseMoneyInput(raw);
+          if (raw.trim()) anyMonth = true;
+          if (raw.trim() && monthValues[key] === null) {
+            app.querySelector('[data-money-status]').textContent = 'Type each amount like 4.25.'; return;
+          }
+        }
       }
     }
-    const apply = (chores) => saveWeekMath(chores, monday, values, { todayIso: current, nowIso: new Date().toISOString() });
-    if (apply(choresOf(store)).error) { app.querySelector('[data-chore-math-status]').textContent = 'Type each amount like 4.25.'; return; }
+    const weekValues = [];
+    for (const row of app.querySelectorAll('[data-money-week]')) {
+      const monday = row.dataset.moneyWeek;
+      if (!weekMathEditable(chores, monday, current)) continue;
+      const values = {};
+      let any = false;
+      for (const key of ['totalCents', 'giveCents', 'saveCents', 'spendCents']) {
+        const raw = row.querySelector(`[data-money-week-field="${key}"]`)?.value;
+        if (raw === undefined) return;
+        values[key] = raw.trim() === '' ? null : parseMoneyInput(raw);
+        if (raw.trim()) any = true;
+        if (raw.trim() && values[key] === null) {
+          app.querySelector('[data-money-status]').textContent = 'Type each amount like 4.25.'; return;
+        }
+      }
+      if (any) weekValues.push([monday, values]);
+    }
+    if (!anyMonth && !weekValues.length) { app.querySelector('[data-money-status]').textContent = 'Type each amount like 4.25.'; return; }
+    const nowIso = new Date().toISOString();
+    const apply = (source) => {
+      let next = source;
+      if (anyMonth) {
+        const result = saveMonthPage(next, month, monthValues, { todayIso: current, nowIso });
+        if (result.error) return result;
+        next = result.chores;
+      }
+      for (const [monday, values] of weekValues) {
+        const result = saveWeekMath(next, monday, values, { todayIso: current, nowIso });
+        if (result.error) return result;
+        next = result.chores;
+      }
+      return { chores: next };
+    };
+    if (apply(chores).error) { app.querySelector('[data-money-status]').textContent = 'Type each amount like 4.25.'; return; }
     let failed = false;
     persist((latest) => { const result = apply(choresOf(latest)); if (result.error) { failed = true; return latest; } return withChores(latest, () => result); });
-    renderKeepingDrafts(SAVINGS_DRAFT);
-    app.querySelector('[data-chore-math-status]').textContent = failed ? 'Type each amount like 4.25.' : 'Saved.';
+    renderKeepingMoneyDrafts(SAVINGS_DRAFT);
+    app.querySelector('[data-money-status]').textContent = failed ? 'Type each amount like 4.25.' : 'Saved.';
     return;
   }
-  if (route.screen === 'chore-sheet' && action === 'chore-savings-add') {
-    if (choreSheetMonday !== weekMonday(todayIso())) return;
-    const amount = app.querySelector('[data-chore-savings-cents]')?.value;
-    const why = app.querySelector('[data-chore-savings-why]')?.value?.trim() || '';
+  if (action === 'money-savings-add' && route.screen === 'money') {
+    if (moneyMonth !== monthKey(todayIso())) return;
+    const amount = app.querySelector('[data-money-savings-cents]')?.value;
+    const why = app.querySelector('[data-money-savings-why]')?.value?.trim() || '';
     const cents = parseMoneyInput(amount);
     if (cents === null || cents < 1 || !why || why.length > 120) {
-      app.querySelector('[data-chore-savings-status]').textContent = 'Type how much and what it was for.'; return;
+      app.querySelector('[data-money-savings-status]').textContent = 'Type how much and what it was for.'; return;
     }
     const id = `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
-    const apply = (chores) => addSavingsUse(chores, { date: todayIso(), todayIso: todayIso(), cents, why, nowIso: new Date().toISOString(), id });
-    if (apply(choresOf(store)).error) { app.querySelector('[data-chore-savings-status]').textContent = 'Type how much and what it was for.'; return; }
+    const apply = (source) => addSavingsUse(source, { date: todayIso(), todayIso: todayIso(), cents, why, nowIso: new Date().toISOString(), id });
+    if (apply(choresOf(store)).error) { app.querySelector('[data-money-savings-status]').textContent = 'Type how much and what it was for.'; return; }
     let failed = false;
     persist((latest) => { const result = apply(choresOf(latest)); if (result.error) { failed = true; return latest; } return withChores(latest, () => result); });
-    renderKeepingDrafts(MATH_DRAFT);
-    app.querySelector('[data-chore-savings-status]').textContent = failed ? 'Type how much and what it was for.' : 'Sent to a grown-up.';
+    renderKeepingMoneyDrafts(PAGE_DRAFT);
+    app.querySelector('[data-money-savings-status]').textContent = failed ? 'Type how much and what it was for.' : 'Sent to a grown-up.';
     return;
   }
-  if (route.screen === 'chore-sheet' && action === 'chore-savings-remove') {
-    if (choreSheetMonday !== weekMonday(todayIso())) return;
-    const apply = (chores) => removeSavingsUse(chores, button.dataset.id, { todayIso: todayIso() });
+  if (action === 'money-savings-remove' && route.screen === 'money') {
+    if (moneyMonth !== monthKey(todayIso())) return;
+    const apply = (source) => removeSavingsUse(source, button.dataset.id, { todayIso: todayIso() });
     if (apply(choresOf(store)).error) return;
     persist((latest) => { const result = apply(choresOf(latest)); return result.error ? latest : withChores(latest, () => result); });
-    renderKeepingDrafts([...MATH_DRAFT, ...SAVINGS_DRAFT]); return;
+    renderKeepingMoneyDrafts([...PAGE_DRAFT, ...SAVINGS_DRAFT]); return;
   }
   if (action === 'chore-day' && route.screen === 'chores') {
     const date = button.dataset.date;

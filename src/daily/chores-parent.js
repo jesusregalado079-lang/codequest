@@ -1,5 +1,5 @@
 // Parent Mode chore screens. HTML only: actions and storage live in app.js.
-import { activeJobs, catalogFor, dayEntries, monthKey, savingsSoFarCents, splitCents, summarize, weekDates, weekEntries, weekMonday } from './chores.js';
+import { activeJobs, catalogFor, dayEntries, monthKey, monthRightAmounts, savingsSoFarCents, splitCents, summarize, weekDates, weekEntries, weekMonday } from './chores.js';
 import { choresOf } from './store.js';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
@@ -90,6 +90,27 @@ function mathParentHtml(chores, monday, total, split) {
     </tbody></table></div>` : '<p>He has not done his money math for this week yet.</p>'}
     <p class="cqd-chore-parent-note">A cent off can be rounding.</p></section>`;
 }
+function moneyPageParentHtml(chores, month) {
+  const record = (chores.months || {})[month];
+  const right = monthRightAmounts(chores, month);
+  const rows = [['Total earned', 'totalEarnedCents', right.earned], ['Total given', 'totalGivenCents', right.given],
+    ['Total saved', 'totalSavedCents', right.saved], ['Total spent', 'totalSpentCents', right.spent],
+    ['Savings I have now', 'savingsNowCents', right.savingsNow]];
+  const moneyLine = (label, key) => `<p><strong>${label}</strong> ${record[key] === null ? '—' : money(record[key])}</p>`;
+  return `<section class="cqd-chore-parent-card cqd-chore-parent-money-page"><h2>His money page · ${esc(monthName(month))}</h2>
+    ${record ? `<div class="cqd-chore-parent-table-wrap"><table><thead><tr><th></th><th>He wrote</th><th>Right amount</th></tr></thead><tbody>
+      ${rows.map(([label, key, correct]) => `<tr><th>${label}</th><td>${record[key] === null ? '—' : `${money(record[key])}${record[key] === correct ? ' ✓' : ''}`}</td><td>${correct === null ? '—' : money(correct)}</td></tr>`).join('')}</tbody></table></div>
+      ${right.savingsNow === null ? '<p class="cqd-chore-parent-note">Needs his Savings from last month.</p>' : ''}
+      <p class="cqd-chore-parent-note">Right amounts come from the ${right.paidWeeks} paid weeks in ${esc(monthWord(month))}. A cent off can be rounding.</p>
+      <div class="cqd-chore-parent-money-details"><p><strong>I am saving for:</strong> ${esc(record.goalFor || '—')}</p>
+      ${moneyLine('It costs about:', 'goalCostCents')}${moneyLine('I have saved so far:', 'goalSavedCents')}
+      ${moneyLine('Savings from last month:', 'savingsFromLastCents')}${moneyLine('Spending money from last month:', 'spendingFromLastCents')}
+      ${moneyLine('Spending money I have now:', 'spendingNowCents')}
+      <p><strong>Saving for this month:</strong> ${esc(record.savingForMonth || '—')}</p>${moneyLine('My earning goal:', 'earningGoalCents')}</div>`
+    : `<p>He has not filled in his money page for ${esc(monthWord(month))} yet.</p>`}</section>`;
+}
+const monthWord = (key) => key ? dateObj(`${key}-01`).toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' }) : '';
+
 function savingsParentHtml(chores) {
   const all = Object.values(chores.savingsUsed).sort((a, b) => b.addedAt.localeCompare(a.addedAt) || b.id.localeCompare(a.id));
   const waiting = all.filter((record) => record.status === 'waiting');
@@ -126,6 +147,7 @@ function payHtml(store, state, todayIso) {
   <section class="cqd-chore-parent-card"><div class="cqd-chore-parent-pay-actions">${button('chores-pay-week', `Mark the week as paid · ${money(sum.confirmedCents)}`, `${disabled(!!paid || !!sum.waitingJobs || !sum.confirmedJobs)}`, 'is-green')}
   </div>
   ${paid ? '<p>Week paid and locked.</p>' : sum.waitingJobs ? `<p>Check the ${sum.waitingJobs} waiting jobs first.</p>` : !sum.confirmedJobs ? '<p>Nothing confirmed yet.</p>' : '<p>Marking paid locks this week and keeps a record.</p>'}</section>
+  ${moneyPageParentHtml(chores, monthKey(state.weekMonday))}
   <section class="cqd-chore-parent-card"><h2>Paid so far</h2><div class="cqd-chore-parent-table-wrap"><table><thead><tr><th>Week</th><th>Paid on</th><th>Amount</th></tr></thead><tbody>${history.map(([monday, record]) => `<tr><th>Week of ${esc(shortDate(monday))}</th><td>${esc(stampDate(record.paidAt))}</td><td>${money(record.cents)}</td></tr>`).join('') || '<tr><td colspan="3">No paid weeks yet.</td></tr>'}</tbody></table></div><p class="cqd-chore-parent-month">This month (${esc(monthName(month))}): ${money(monthSum.confirmedCents)} confirmed</p></section>`;
 }
 

@@ -1,5 +1,5 @@
 // The boy's saved week, shown without changing chore records.
-import { dayEntries, groupByJob, weekDates, weekMonday, weekTotals, weekMathEditable } from './chores.js';
+import { dayEntries, groupByJob, weekDates, weekMonday, weekTotals } from './chores.js';
 import { choresOf } from './store.js';
 
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
@@ -47,32 +47,6 @@ function jobHtml(group) {
 }
 
 const jobs = (count) => `${count} ${count === 1 ? 'job' : 'jobs'}`;
-const mathFields = [['totalCents', 'My total for the week'], ['giveCents', 'Give 10%'], ['saveCents', 'Save 20%'], ['spendCents', 'Spend 70%']];
-function mathHtml(chores, monday, todayIso) {
-  if (monday > weekMonday(todayIso)) return '';
-  const saved = chores.math[monday];
-  const editable = weekMathEditable(chores, monday, todayIso);
-  return `<section class="cqd-chore-math"><h2>My money math</h2>
-    <p>Add up your confirmed jobs, then split your total. A grown-up checks it.</p>
-    <div class="cqd-chore-math-grid">${mathFields.map(([key, label]) => editable
-    ? `<label>${label}<span class="cqd-chore-money-input"><span>$</span><input type="text" inputmode="decimal" data-chore-math="${key}" value="${saved?.[key] === null || saved?.[key] === undefined ? '' : (saved[key] / 100).toFixed(2)}"></span></label>`
-    : `<div><strong>${label}</strong><span>${saved?.[key] === null || saved?.[key] === undefined ? '—' : money(saved[key])}</span></div>`).join('')}</div>
-    ${editable ? `<button type="button" class="cqd-button" data-action="chore-math-save" data-monday="${monday}">Save my math</button>` : '<p>Locked after payday.</p>'}
-    <p class="cqd-chore-feedback" data-chore-math-status role="status"></p></section>`;
-}
-function savingsHtml(chores, monday, todayIso) {
-  const uses = Object.values(chores.savingsUsed).filter((record) => weekMonday(record.date) === monday)
-    .sort((a, b) => b.addedAt.localeCompare(a.addedAt) || b.id.localeCompare(a.id));
-  return `<section class="cqd-chore-savings"><h2>Savings I used</h2>
-    ${monday === weekMonday(todayIso) ? `<div class="cqd-chore-savings-form"><label>How much did you use?<span class="cqd-chore-money-input"><span>$</span><input type="text" inputmode="decimal" data-chore-savings-cents></span></label>
-    <label>What did you use it for?<input type="text" maxlength="120" data-chore-savings-why></label>
-    <button type="button" class="cqd-button" data-action="chore-savings-add">Send to a grown-up</button></div>` : ''}
-    <p class="cqd-chore-feedback" data-chore-savings-status role="status"></p>
-    ${uses.length ? `<ul class="cqd-chore-savings-list">${uses.map((record) => `<li><strong>${money(record.cents)}</strong> ${esc(record.why)} <small>${esc(shortDate(record.date))}</small>
-      <span class="cqd-chore-chip ${record.status === 'approved' ? 'ok' : record.status === 'declined' ? 'back' : 'wait'}">${record.status === 'approved' ? '✓ Approved' : record.status === 'declined' ? '↩ Not approved. Ask a grown-up.' : '⏳ Waiting for a grown-up'}</span>
-      ${record.status === 'waiting' && record.date === todayIso ? `<button type="button" class="cqd-chore-remove" data-action="chore-savings-remove" data-id="${esc(record.id)}" aria-label="Remove savings use">×</button>` : ''}</li>`).join('')}</ul>` : '<p>None this week.</p>'}</section>`;
-}
-
 export function renderChoreSheet(store, todayIso, mondayIso) {
   const chores = choresOf(store);
   const { earliest, latest } = choreSheetBounds(store, todayIso);
@@ -103,12 +77,10 @@ export function renderChoreSheet(store, todayIso, mondayIso) {
     : `<p class="cqd-chore-sheet-empty">${future ? 'Not yet.' : 'No jobs.'}</p>`}
       </li>`;
     }).join('')}</ol>
-    ${mathHtml(chores, monday, todayIso)}
     <section class="cqd-chore-sheet-summary" aria-label="Week summary"><h2>Week summary</h2>
       <div class="cqd-chore-sheet-totals"><p><strong>Confirmed:</strong> <span>${jobs(totals.confirmedJobs)}</span></p>
       <p><strong>Waiting for a grown-up:</strong> <span>${jobs(totals.waitingJobs)}</span></p>
       ${totals.declinedJobs ? `<p><strong>Ask a grown-up:</strong> <span>${totals.declinedJobs} ${totals.declinedJobs === 1 ? 'job' : 'jobs'}</span></p>` : ''}</div>
       ${weekStatus}</section>
-    ${savingsHtml(chores, monday, todayIso)}
     <p class="cqd-chore-sheet-note">Every week stays here on this iPad. Tap ← Earlier week to look back.</p></div></section>`;
 }

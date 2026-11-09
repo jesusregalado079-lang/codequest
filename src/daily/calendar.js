@@ -198,6 +198,11 @@ export function renderCalendar(store, todayIso, viewedYear, viewedMonth, content
       </div>
     </header>
     ${choresButton}
+    <button type="button" class="cqd-button cqd-payday-open" data-action="open-money">
+      <span class="cqd-payday-open-icon cqd-chore-open-icon" aria-hidden="true">💰</span>
+      <span class="cqd-payday-open-copy">Give · Save · Spend<small>My money page for the month.</small></span>
+      <span class="cqd-verse-open-arrow" aria-hidden="true">↗</span>
+    </button>
     <p class="cqd-month-help" id="cqd-month-help"><span class="cqd-live-key" aria-hidden="true"></span>Raised days open this week's work. Other days are a look back or ahead.</p>
     <div class="cqd-month-garden">
       <div class="cqd-month-edge cqd-month-edge-left" aria-hidden="true">${monthIllustration(month.month + 1, 'margin')}</div>

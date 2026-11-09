@@ -44,7 +44,7 @@ for (const [track, suffix] of [
 assert.deepEqual(c.catalogFor('bogus', c.emptyChores()), []);
 
 let chores = c.emptyChores();
-assert.deepEqual(chores, { jobs: { overrides: {}, custom: [] }, entries: {}, paid: {}, math: {}, savingsUsed: {} });
+assert.deepEqual(chores, { jobs: { overrides: {}, custom: [] }, entries: {}, paid: {}, math: {}, savingsUsed: {}, months: {} });
 rejected(add(chores, 'past', 'trash', { date: MON }), 'kid yesterday');
 rejected(add(chores, 'future', 'trash', { date: WED }), 'kid tomorrow');
 rejected(add(chores, 'bad', 'alien'), 'unknown job');
@@ -188,7 +188,7 @@ for (const bad of [null, 3, [], 'oops', new Date(), Object.create({ entries: { e
 }
 const hostile = JSON.parse(`{"jobs":{"overrides":{"__proto__":{"active":false},"trash":{"cents":"100","active":false}},"custom":[{"id":"custom","name":"${'X'.repeat(90)}","es":"Y","cents":25}]},"entries":{"__proto__":{"id":"__proto__"},"bad":{"date":"2026-02-30"},"float":{"date":"2026-10-27","jobId":"trash","name":"Float","cents":1.5,"status":"waiting","by":"kid"},"string":{"date":"2026-10-27","jobId":"trash","name":"String","cents":"75","status":"waiting","by":"kid"},"negative":{"date":"2026-10-27","jobId":"trash","name":"Negative","cents":-1,"status":"waiting","by":"kid"},"unknown":{"date":"2026-10-27","jobId":"trash","name":"Unknown","cents":75,"status":"maybe","by":"kid"},"good":{"date":"2026-10-27","jobId":"trash","name":"${'N'.repeat(90)}","es":"Name","icon":"🗑️","cents":75,"status":"confirmed","by":"kid","addedAt":"2026-10-27T12:00:00Z","checkedAt":"2026-10-27T20:00:00Z"}},"paid":{"2026-10-26":{"cents":75,"paidAt":"2026-10-27T20:00:00Z","entryIds":["missing"]}}}`);
 const clean = c.normalizeChores(hostile);
-assert.deepEqual(Object.keys(clean), ['jobs', 'entries', 'paid', 'math', 'savingsUsed']);
+assert.deepEqual(Object.keys(clean), ['jobs', 'entries', 'paid', 'math', 'savingsUsed', 'months']);
 assert.equal(clean.jobs.overrides.trash.active, false);
 assert.equal(clean.jobs.overrides.trash.cents, undefined);
 assert.equal(clean.jobs.custom[0].name.length, 80);

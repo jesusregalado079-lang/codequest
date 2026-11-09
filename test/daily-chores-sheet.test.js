@@ -66,8 +66,8 @@ function sheet() {
   return root;
 }
 function assertSheetControls(root) {
-  assert.ok(root.querySelector('[data-action="chore-math-save"]'));
-  assert.equal(root.querySelectorAll('[data-chore-math]').length, 4);
+  assert.equal(root.querySelector('[data-chore-math]'), null);
+  assert.equal(root.querySelector('[data-chore-savings-cents]'), null);
   assert.doesNotMatch(root.textContent, /Dad|easy|hard|guided|standard/);
 }
 

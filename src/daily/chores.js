@@ -6,6 +6,10 @@ import { CHORE_CATALOG } from './chores-catalog.js';
 const MAX_CENTS = 100000;
 const MAX_ENTRIES = 5000;
 const MAX_CUSTOM = 100;
+const MAX_MONTHS = 600;
+const monthPattern = /^\d{4}-(0[1-9]|1[0-2])$/;
+const monthTextKeys = ['goalFor', 'savingForMonth'];
+const monthMoneyKeys = ['goalCostCents', 'goalSavedCents', 'savingsFromLastCents', 'spendingFromLastCents', 'savingsNowCents', 'spendingNowCents', 'earningGoalCents', 'totalEarnedCents', 'totalGivenCents', 'totalSavedCents', 'totalSpentCents'];
 const blocked = new Set(['__proto__', 'constructor', 'prototype']);
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value)
@@ -28,7 +32,7 @@ const isPaid = (chores, date) => own(chores.paid, weekMonday(date));
 const checked = (entry, status, nowIso) => ({ ...entry, status, checkedAt: status === 'waiting' ? null : nowIso });
 
 export function emptyChores() {
-  return { jobs: { overrides: {}, custom: [] }, entries: {}, paid: {}, math: {}, savingsUsed: {} };
+  return { jobs: { overrides: {}, custom: [] }, entries: {}, paid: {}, math: {}, savingsUsed: {}, months: {} };
 }
 
 export function isIso(value) { return isValidDay(value); }
@@ -50,6 +54,73 @@ export function weekDates(mondayIso) {
   });
 }
 export function monthKey(iso) { return isIso(iso) ? iso.slice(0, 7) : null; }
+
+export function monthMondays(month) {
+  if (typeof month !== 'string' || !monthPattern.test(month)) return [];
+  const year = Number(month.slice(0, 4));
+  const number = Number(month.slice(5));
+  const date = new Date(0);
+  date.setUTCHours(12, 0, 0, 0);
+  date.setUTCFullYear(year, number - 1, 1);
+  const mondays = [];
+  while (date.getUTCMonth() === number - 1 && date.getUTCFullYear() === year) {
+    if (date.getUTCDay() === 1) mondays.push(date.toISOString().slice(0, 10));
+    date.setUTCDate(date.getUTCDate() + 1);
+  }
+  return mondays;
+}
+
+export function monthLocked(chores, month) {
+  const mondays = monthMondays(month);
+  if (!mondays.length) return false;
+  const last = mondays[mondays.length - 1];
+  return Object.keys(chores.paid || {}).some((monday) => monday >= last);
+}
+
+export function monthPageEditable(chores, month, todayIso) {
+  return monthMondays(month).length > 0 && monthKey(todayIso) !== null
+    && month <= monthKey(todayIso) && !monthLocked(chores, month);
+}
+
+function monthText(value) {
+  const cleaned = typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim() : '';
+  return cleaned.length <= 80 ? cleaned : '';
+}
+
+function validMonthValues(values, strictText = false) {
+  const raw = object(values);
+  if (monthTextKeys.some((key) => typeof raw[key] !== 'string' || strictText && raw[key].replace(/[\u0000-\u001f\u007f-\u009f]/g, '').trim().length > 80)) return false;
+  if (monthMoneyKeys.some((key) => raw[key] !== null && !priceOk(raw[key]))) return false;
+  return monthTextKeys.some((key) => monthText(raw[key])) || monthMoneyKeys.some((key) => raw[key] !== null);
+}
+
+export function saveMonthPage(chores, month, values, { todayIso, nowIso } = {}) {
+  if (!monthPageEditable(chores, month, todayIso) || !validStamp(nowIso)) return error('Month is locked');
+  if (!validMonthValues(values, true) || Object.keys(chores.months || {}).length >= MAX_MONTHS && !own(chores.months, month)) return error('Invalid money page');
+  const record = { ...Object.fromEntries(monthTextKeys.map((key) => [key, monthText(values[key])])),
+    ...Object.fromEntries(monthMoneyKeys.map((key) => [key, values[key]])), savedAt: nowIso };
+  return { chores: { ...chores, months: { ...chores.months, [month]: record } } };
+}
+
+export function monthRightAmounts(chores, month) {
+  const mondays = monthMondays(month);
+  const totals = { paidWeeks: 0, earned: 0, given: 0, saved: 0, spent: 0, approvedUsed: 0, savingsNow: null };
+  for (const monday of mondays) {
+    const paid = (chores.paid || {})[monday];
+    if (!paid) continue;
+    const jars = jarAmounts(paid.cents);
+    totals.paidWeeks++;
+    totals.earned += paid.cents;
+    totals.given += jars.give;
+    totals.saved += jars.save;
+    totals.spent += jars.spend;
+  }
+  totals.approvedUsed = Object.values(chores.savingsUsed || {}).filter((item) => item.status === 'approved' && monthKey(item.date) === month)
+    .reduce((sum, item) => sum + item.cents, 0);
+  const previous = (chores.months || {})[month]?.savingsFromLastCents;
+  if (previous !== null && previous !== undefined) totals.savingsNow = previous + totals.saved - totals.approvedUsed;
+  return totals;
+}
 
 export function normalizeChores(value) {
   const source = object(value);
@@ -121,6 +192,13 @@ export function normalizeChores(value) {
       || (raw.status === 'waiting' ? raw.checkedAt !== null : !validStamp(raw.checkedAt))) continue;
     result.savingsUsed[id] = { id, date: raw.date, cents: raw.cents, why, status: raw.status,
       addedAt: raw.addedAt, checkedAt: raw.checkedAt };
+  }
+  for (const month of Object.keys(object(source.months)).slice(0, MAX_MONTHS)) {
+    if (!monthPattern.test(month)) continue;
+    const raw = object(source.months[month]);
+    if (!validStamp(raw.savedAt) || !validMonthValues(raw)) continue;
+    result.months[month] = { ...Object.fromEntries(monthTextKeys.map((key) => [key, monthText(raw[key])])),
+      ...Object.fromEntries(monthMoneyKeys.map((key) => [key, raw[key]])), savedAt: raw.savedAt };
   }
   return result;
 }
@@ -325,16 +403,18 @@ export function importChores(chores, backup, mode, track) {
     || (own(raw, 'paid') && object(raw.paid) !== raw.paid)
     || (own(raw, 'math') && object(raw.math) !== raw.math)
     || (own(raw, 'savingsUsed') && object(raw.savingsUsed) !== raw.savingsUsed)
+    || (own(raw, 'months') && object(raw.months) !== raw.months)
     || Object.keys(object(raw.entries)).length > MAX_ENTRIES
     || (Array.isArray(object(raw.jobs).custom) && raw.jobs.custom.length > MAX_CUSTOM)
     || Object.keys(object(raw.paid)).length > MAX_ENTRIES
-    || Object.keys(object(raw.savingsUsed)).length > 500) return error('This backup has too many records or missing chores');
+    || Object.keys(object(raw.savingsUsed)).length > 500
+    || Object.keys(object(raw.months)).length > MAX_MONTHS) return error('This backup has too many records or missing chores');
   const incoming = normalizeChores(raw);
   const current = normalizeChores(chores);
   if (mode === 'replace') return { chores: incoming,
     added: Object.keys(incoming.entries).length, skipped: 0 };
   const merged = { jobs: { overrides: { ...current.jobs.overrides }, custom: [...current.jobs.custom] },
-    entries: { ...current.entries }, paid: { ...current.paid }, math: { ...current.math }, savingsUsed: { ...current.savingsUsed } };
+    entries: { ...current.entries }, paid: { ...current.paid }, math: { ...current.math }, savingsUsed: { ...current.savingsUsed }, months: { ...current.months } };
   let added = 0;
   let skipped = 0;
   for (const [id, value] of Object.entries(incoming.jobs.overrides)) {
@@ -366,6 +446,10 @@ export function importChores(chores, backup, mode, track) {
   for (const [id, value] of Object.entries(incoming.savingsUsed)) {
     if (own(merged.savingsUsed, id) || Object.keys(merged.savingsUsed).length >= 500) skipped++;
     else { merged.savingsUsed[id] = value; added++; }
+  }
+  for (const [month, value] of Object.entries(incoming.months)) {
+    if (own(merged.months, month) || Object.keys(merged.months).length >= MAX_MONTHS) skipped++;
+    else { merged.months[month] = value; added++; }
   }
   return { chores: normalizeChores(merged), added, skipped };
 }
