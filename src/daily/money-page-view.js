@@ -88,7 +88,7 @@ export function renderMoneyPage(store, todayIso, requestedMonth) {
       <section class="cqd-money-month-goal">${f('savingForMonth')}${f('earningGoalCents')}</section>
       <section class="cqd-money-totals" aria-label="Monthly totals">${['totalEarnedCents', 'totalGivenCents', 'totalSavedCents', 'totalSpentCents'].map(f).join('')}</section>
       ${editable || weekCanSave ? '<button type="button" class="cqd-button cqd-primary cqd-money-save" data-action="money-save">Save my page</button>' : ''}
-      ${editable ? '' : '<p class="cqd-money-locked">Locked after payday.</p>'}
+      ${editable ? '' : `<p class="cqd-money-locked">${weekCanSave ? 'The month boxes are locked after payday. You can still finish an open week.' : 'Locked after payday.'}</p>`}
       <p class="cqd-chore-feedback" data-money-status role="status"></p>
       ${savingsHtml(chores, month, todayIso)}
       <p class="cqd-chore-sheet-note">Every month stays here on this iPad. Tap ← Earlier month to look back.</p>

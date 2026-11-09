@@ -78,7 +78,7 @@ for (const track of ['guided', 'standard']) {
   const before = localStorage.getItem('codequest-daily-v1');
   click('[data-action="money-save"]');
   assert.equal(localStorage.getItem('codequest-daily-v1'), before);
-  assert.match(document.querySelector('[data-money-status]').textContent, /Type each amount like 4.25/);
+  assert.match(document.querySelector('[data-money-status]').textContent, /Nothing to save yet\./);
   for (const bad of ['-1', '4.256', 'letters', '1000.01']) {
     field('[data-money-week="2026-11-16"] [data-money-week-field="totalCents"]', bad);
     click('[data-action="money-save"]');

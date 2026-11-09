@@ -568,7 +568,7 @@ function onClick(event) {
       }
       if (any) weekValues.push([monday, values]);
     }
-    if (!anyMonth && !weekValues.length) { app.querySelector('[data-money-status]').textContent = 'Type each amount like 4.25.'; return; }
+    if (!anyMonth && !weekValues.length) { app.querySelector('[data-money-status]').textContent = 'Nothing to save yet.'; return; }
     const nowIso = new Date().toISOString();
     const apply = (source) => {
       let next = source;

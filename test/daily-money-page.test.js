@@ -113,7 +113,7 @@ assert.match(oldPage.querySelector('.cqd-money-savings').textContent, /Snack/);
 const locked = { ...withMath, paid: { '2026-11-30': { cents: 100, paidAt: NOW } } };
 const lockedPage = doc(renderMoneyPage({ track: 'guided', chores: locked }, TODAY, NOV));
 assert.equal(lockedPage.querySelector('input[data-money-month]'), null);
-assert.match(lockedPage.body.textContent, /Locked after payday/);
+assert.match(lockedPage.body.textContent, /locked after payday/i);
 const parentStore = { track: 'guided', chores: { ...paid, months: { [NOV]: savedMonth({ goalFor: 'Bike', goalCostCents: 900,
   savingsFromLastCents: 100, savingsNowCents: 140, totalEarnedCents: 300, totalGivenCents: 31,
   totalSavedCents: 60, totalSpentCents: 209 }) } } };
@@ -131,6 +131,18 @@ const parentNeeds = doc(renderChoresParent({ ...parentStore, chores: { ...paid, 
   { weekMonday: '2026-11-09', day: '2026-11-09', choresView: 'check' }, TODAY));
 assert.match(parentNeeds.querySelector('.cqd-chore-parent-money-page').textContent, /Needs his Savings from last month/);
 assert.equal(parentNeeds.querySelector('.cqd-chore-parent-money-page tr:last-child td:last-child').textContent, '—');
+
+// One paid week reads "1 paid week"; a month with no paid week shows no right amounts and no ✓ for the totals.
+const oneWeek = doc(renderChoresParent({ track: 'guided', chores: { ...paid, months: { '2026-10': savedMonth({ totalEarnedCents: 100 }) } } },
+  { weekMonday: '2026-10-26', day: '2026-10-26', choresView: 'check' }, TODAY)).querySelector('.cqd-chore-parent-money-page');
+assert.match(oneWeek.textContent, /1 paid week in October\./);
+assert.match(oneWeek.textContent, /\$1\.00 ✓/);
+const noPaid = doc(renderChoresParent({ track: 'guided', chores: { ...empty, months: { [NOV]: savedMonth({ totalEarnedCents: 0, savingsFromLastCents: 500, savingsNowCents: 500 }) } } },
+  { weekMonday: '2026-11-09', day: '2026-11-09', choresView: 'check' }, TODAY)).querySelector('.cqd-chore-parent-money-page');
+assert.match(noPaid.textContent, /No paid weeks in November yet/);
+assert.equal(noPaid.querySelector('tbody tr:first-child td:last-child').textContent, '—');
+assert.ok(!/\$0\.00 ✓/.test(noPaid.textContent), 'no ✓ against an empty month');
+assert.match(noPaid.querySelector('tbody tr:last-child').textContent, /\$5\.00 ✓/);
 
 // Integration: one bad amount prevents every part of a page save, even a valid weekly row.
 const RealDate = Date;
@@ -155,6 +167,10 @@ await import('../src/daily/app.js?monthly-page-test');
 const click = (selector) => { const el = document.querySelector(selector); assert.ok(el, selector); el.click(); };
 const field = (selector, value) => { const el = document.querySelector(selector); assert.ok(el, selector); el.value = value; };
 click('[data-action="open-money"]');
+const blankBefore = localStorage.getItem('codequest-daily-v1');
+click('[data-action="money-save"]');
+assert.match(document.querySelector('[data-money-status]').textContent, /Nothing to save yet\./);
+assert.equal(localStorage.getItem('codequest-daily-v1'), blankBefore);
 field('[data-money-month="goalCostCents"]', 'bad');
 field('[data-money-week="2026-11-16"] [data-money-week-field="totalCents"]', '4.25');
 const before = localStorage.getItem('codequest-daily-v1');

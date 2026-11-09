@@ -99,9 +99,9 @@ function moneyPageParentHtml(chores, month) {
   const moneyLine = (label, key) => `<p><strong>${label}</strong> ${record[key] === null ? '—' : money(record[key])}</p>`;
   return `<section class="cqd-chore-parent-card cqd-chore-parent-money-page"><h2>His money page · ${esc(monthName(month))}</h2>
     ${record ? `<div class="cqd-chore-parent-table-wrap"><table><thead><tr><th></th><th>He wrote</th><th>Right amount</th></tr></thead><tbody>
-      ${rows.map(([label, key, correct]) => `<tr><th>${label}</th><td>${record[key] === null ? '—' : `${money(record[key])}${record[key] === correct ? ' ✓' : ''}`}</td><td>${correct === null ? '—' : money(correct)}</td></tr>`).join('')}</tbody></table></div>
+      ${rows.map(([label, key, value]) => { const correct = right.paidWeeks || key === 'savingsNowCents' ? value : null; return `<tr><th>${label}</th><td>${record[key] === null ? '—' : `${money(record[key])}${correct !== null && record[key] === correct ? ' ✓' : ''}`}</td><td>${correct === null ? '—' : money(correct)}</td></tr>`; }).join('')}</tbody></table></div>
       ${right.savingsNow === null ? '<p class="cqd-chore-parent-note">Needs his Savings from last month.</p>' : ''}
-      <p class="cqd-chore-parent-note">Right amounts come from the ${right.paidWeeks} paid weeks in ${esc(monthWord(month))}. A cent off can be rounding.</p>
+      <p class="cqd-chore-parent-note">${right.paidWeeks ? `Right amounts come from the ${right.paidWeeks} paid ${right.paidWeeks === 1 ? 'week' : 'weeks'} in ${esc(monthWord(month))}. A cent off can be rounding.` : `No paid weeks in ${esc(monthWord(month))} yet, so there is nothing to check the totals against.`}</p>
       <div class="cqd-chore-parent-money-details"><p><strong>I am saving for:</strong> ${esc(record.goalFor || '—')}</p>
       ${moneyLine('It costs about:', 'goalCostCents')}${moneyLine('I have saved so far:', 'goalSavedCents')}
       ${moneyLine('Savings from last month:', 'savingsFromLastCents')}${moneyLine('Spending money from last month:', 'spendingFromLastCents')}
