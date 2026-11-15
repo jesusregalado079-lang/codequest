@@ -184,7 +184,7 @@ From the local Week 19 plan and final Jonah Bible Reading wording. guided19 / st
 - Wednesday has only CodeQuest then Bible Reading for both sons.
 - CodeQuest Day reuses the Week 13 sheet on Tuesday and Wednesday.
 - Bible Reading covers Jonah 1:1-17, 2:1-3:10 and 4:1-11 on Monday, Wednesday and Friday.
-- Older son practices reading the question before tax, tip and discount calculations; the check lines are cut.
+- Older son practices reading the question before tax, tip and discount calculations; the check lines are cut. Each "What is the question asking for?" line shows the problem first (the plan listed the asking line before the story, so he would have answered it blind).
 - Younger son practices one digit times three digit multiplication with the strategy card on each Math sheet.
 - Each boy has the same Ten Commandments verse page with ten blanks, one per commandment.
 - Parent notes retain intentional repeat details; kid pages hide them.
