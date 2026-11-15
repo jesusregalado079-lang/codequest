@@ -34,6 +34,16 @@ export function sizeCanvas(canvas, container) {
   canvas.height = Math.round(rect.height * scale * clamp);
 }
 
+export function closedLayoutHeight(stageHeight, openPanelHeights) {
+  return Math.max(0, stageHeight - openPanelHeights.reduce((sum, height) => sum + height, 0));
+}
+
+export function hasVisibleInk(canvas) {
+  const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+  for (let i = 3; i < pixels.length; i += 4) if (pixels[i] !== 0) return true;
+  return false;
+}
+
 function pointFromEvent(canvas, event) {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;

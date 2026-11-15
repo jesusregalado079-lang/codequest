@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { DAILY_WORK } from '../src/cq/daily-work/content.js';
 import { renderSheetArticle, scratchProblemGroups } from '../src/daily/sheet-view.js';
 import { MAX_SCRATCH_CHARS, drawingFor, emptyStore, load, saveDrawing, saveInk, scratchDrawingKey } from '../src/daily/store.js';
+import { closedLayoutHeight, hasVisibleInk } from '../src/daily/drawing.js';
 
 const disk = new Map();
 globalThis.localStorage = {
@@ -10,6 +11,16 @@ globalThis.localStorage = {
   removeItem(key) { disk.delete(key); },
 };
 const blank = { sheets: {}, submittedAt: null };
+assert.equal(closedLayoutHeight(900, [189, 189]), 522, 'open panel heights include their top margins');
+assert.equal(closedLayoutHeight(100, []), 100);
+assert.equal(closedLayoutHeight(10, [20]), 0);
+const pixels = new Uint8ClampedArray(8);
+const fakeCanvas = { width: 2, height: 1, getContext: () => ({ getImageData: () => ({ data: pixels }) }) };
+assert.equal(hasVisibleInk(fakeCanvas), false);
+pixels[0] = 255;
+assert.equal(hasVisibleInk(fakeCanvas), false, 'RGB without alpha is blank');
+pixels[7] = 1;
+assert.equal(hasVisibleInk(fakeCanvas), true);
 const render = (week, day, sheet, scratchOf) => renderSheetArticle(week, day, sheet, blank, false, () => 0, () => false, scratchOf);
 const expected = {
   guided: { 18: { math: ['1', '2', '3', '4'], 'word-problems': ['1', '2', '3', '4', '5'] }, 19: { math: ['1', '2', '3', '4', '5', '6', '7', '8'], 'word-problems': ['1', '2', '3', '4', '5'] } },
@@ -90,4 +101,24 @@ assert.equal(saveInk(sameDay).ok, true);
 const dayInk = JSON.parse(disk.get('codequest-daily-ink-v1'))['week-19'].monday;
 assert.ok(dayInk.math, 'page drawing survives same-day scratch pressure');
 assert.equal(dayInk['math-s-1'], undefined, 'same-day scratch leaves before page drawing');
+disk.clear();
+let protectedPair = saveDrawing(emptyStore(), 'week-17', 'monday', 'math', image(200000));
+protectedPair = saveDrawing(protectedPair, 'week-19', 'monday', 'math', image(850000));
+protectedPair = saveDrawing(protectedPair, 'week-19', 'monday', key, image(110000));
+assert.equal(saveInk(protectedPair, ['week-19', 'monday', key, 'math']).ok, true);
+const pairInk = JSON.parse(disk.get('codequest-daily-ink-v1'));
+assert.equal(pairInk['week-17'], undefined, 'older sheet evicted before current scratch and page ink');
+assert.ok(pairInk['week-19'].monday.math && pairInk['week-19'].monday[key], 'scratch and page ink both protected');
+disk.clear();
+assert.equal(saveInk(protectedPair, ['week-19', 'monday', key]).ok, true);
+const threeElementInk = JSON.parse(disk.get('codequest-daily-ink-v1'));
+assert.ok(threeElementInk['week-19'].monday[key], 'three-element keep still protects its named key');
+let overBudgetPair = saveDrawing(emptyStore(), 'week-19', 'monday', 'math', image(895000));
+overBudgetPair = saveDrawing(overBudgetPair, 'week-19', 'monday', key, image(115000));
+disk.clear();
+assert.equal(saveInk(overBudgetPair, ['week-19', 'monday', key, 'math']).ok, true);
+assert.ok(JSON.parse(disk.get('codequest-daily-ink-v1'))['week-19'].monday.math, 'four-element keep protects page ink under pressure');
+disk.clear();
+assert.equal(saveInk(overBudgetPair, ['week-19', 'monday', key]).ok, true);
+assert.equal(JSON.parse(disk.get('codequest-daily-ink-v1'))['week-19'].monday.math, undefined, 'three-element keep retains prior single-key behavior');
 console.log('Daily scratch grouping, rendering, neutrality, store round-trip, cap, and eviction: passed');

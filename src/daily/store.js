@@ -249,11 +249,12 @@ function inkEntries(drawings) {
     || (a.sheetId < b.sheetId ? -1 : 1));
 }
 
-// Drawings trimmed to INK_BUDGET, oldest first, never dropping the sheet named by `keep`.
+// Drawings trimmed to INK_BUDGET, oldest first, protecting keys named by `keep`.
 function fitInk(drawings, keep) {
   const entries = inkEntries(drawings);
   let total = entries.reduce((sum, entry) => sum + entry.url.length, 0);
-  const isKept = (entry) => keep && entry.weekId === keep[0] && entry.dayKey === keep[1] && entry.sheetId === keep[2];
+  const isKept = (entry) => keep && entry.weekId === keep[0] && entry.dayKey === keep[1]
+    && (entry.sheetId === keep[2] || entry.sheetId === keep[3]);
   const dropped = new Set();
   for (const entry of entries) {
     if (total <= INK_BUDGET) break;
