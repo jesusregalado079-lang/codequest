@@ -360,6 +360,8 @@ function setupScratch(panel, week, sheet) {
   const canvas = panel.querySelector('canvas');
   const paper = panel.querySelector('.cqd-scratch-paper');
   if (!key || !canvas || !paper) return;
+  // A fresh controller always starts on the pen, so the tool buttons must say so too.
+  panel.querySelectorAll('[data-action="scratch-tool"]').forEach((choice) => choice.setAttribute('aria-pressed', String(choice.dataset.scratchTool === 'pen')));
   const dayKey = route.dayKey;
   const loadNumber = (scratchLoads.get(panel) || 0) + 1;
   scratchLoads.set(panel, loadNumber);
@@ -762,6 +764,7 @@ function onClick(event) {
     return;
   }
   if (action === 'clear-drawing') {
+    closeAllScratch();
     if (drawingController) drawingController.clear();
     return;
   }

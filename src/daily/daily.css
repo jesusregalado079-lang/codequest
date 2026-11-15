@@ -596,7 +596,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .cqd-scratch-tools button[aria-pressed="true"] { border-color: #69899a; background: #e5eff1; }
 .cqd-scratch-paper { box-sizing: border-box; width: 100%; height: 180px; overflow: hidden; border: 1px solid #d5d9d1; border-radius: 8px; background: repeating-linear-gradient(#fffdf7 0 29px, #e8eee9 30px); }
 .cqd-scratch-paper canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
-.cqd-sheet-stage[data-mode="draw"] .cqd-scratch { z-index: 2; }
+.cqd-sheet-stage[data-mode="draw"] .cqd-scratch { z-index: auto; }
 .cqd-clear-drawing { color: #5d6a6d; font-size: .84rem; }
 .cqd-sheet-stage input, .cqd-sheet-stage textarea, .cqd-sheet-stage button { scroll-margin-top: 140px; }
 .cqd-pager { display: flex; align-items: center; justify-content: center; gap: 15px; margin: 22px 0; }
