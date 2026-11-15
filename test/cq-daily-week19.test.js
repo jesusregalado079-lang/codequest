@@ -58,7 +58,12 @@ const checkOlder = (sheet) => {
     }
     const choice=items.find((i)=>i.kind==='multiple-choice');
     if (choice) {
-      assert.equal(choice.prompt,'What is the question asking for?'); assert.equal(choice.choices.length,3);
+      // The problem is shown first, then the question about it (the plan listed the asking line before the story).
+      const lines=choice.prompt.split('\n');
+      assert.equal(lines.length,2,key+' ask prompt is story + ask'); assert.equal(lines[1],'What is the question asking for?'); assert.equal(choice.choices.length,3);
+      const firstCalc=numerics[0].prompt;
+      assert.ok(lines[0].includes(firstCalc.match(/\$\d+/)[0])&&lines[0].includes(firstCalc.match(/\d+%/)[0])&&lines[0].endsWith('?'),key+' problem shown before the ask');
+      if (!numerics.some((i)=>/^Route |^Then /.test(i.prompt))) assert.equal(lines[0],firstCalc,key+' plain problem repeated exactly');
       const target=questionTarget(numerics[numerics.length-1].prompt,source);
       assert.equal(expectedOption(target,choice.choices[choice.answer.charCodeAt(0)-65].toLowerCase()),true,sheet.title+'/'+key+' choice points to '+target);
     }
