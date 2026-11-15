@@ -23,10 +23,10 @@ const object = (value) => value && typeof value === 'object' && !Array.isArray(v
   && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null) ? value : {};
 const safeKey = (value) => typeof value === 'string' && value.length > 0 && value.length <= 100
   && value !== '__proto__' && value !== 'constructor' && value !== 'prototype';
-const isScratchKey = (value) => /-s-[a-z0-9][a-z0-9-]*$/.test(value);
+const isScratchKey = (value) => /~s~[a-z0-9][a-z0-9-]*$/.test(value);
 export function scratchDrawingKey(sheetId, problemId) {
   if (!safeKey(sheetId) || !safeKey(problemId) || !/^[a-z0-9-]+$/.test(problemId)) return null;
-  const key = `${sheetId}-s-${problemId}`;
+  const key = `${sheetId}~s~${problemId}`;
   return safeKey(key) ? key : null;
 }
 

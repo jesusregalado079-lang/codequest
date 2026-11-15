@@ -72,9 +72,9 @@ assert.match(closedHtml, /<div class="cqd-scratch-panel" hidden>/);
 
 const image = (size) => `data:image/png;base64,${'A'.repeat(size - 22)}`;
 const key = scratchDrawingKey(sheet.id, '1');
-assert.equal(key, `${sheet.id}-s-1`);
+assert.equal(key, `${sheet.id}~s~1`);
 assert.ok(key.length <= 100);
-assert.equal(scratchDrawingKey('more-or-less-then-percent', '3-of-10'), 'more-or-less-then-percent-s-3-of-10');
+assert.equal(scratchDrawingKey('more-or-less-then-percent', '3-of-10'), 'more-or-less-then-percent~s~3-of-10');
 let saved = saveDrawing(emptyStore(), 'week-19', 'monday', key, image(1000));
 assert.equal(drawingFor(saved, 'week-19', 'monday', key), image(1000));
 assert.equal(saveInk(saved, ['week-19', 'monday', key]).ok, true);
@@ -100,7 +100,7 @@ for (let i = 1; i <= 9; i += 1) sameDay = saveDrawing(sameDay, 'week-19', 'monda
 assert.equal(saveInk(sameDay).ok, true);
 const dayInk = JSON.parse(disk.get('codequest-daily-ink-v1'))['week-19'].monday;
 assert.ok(dayInk.math, 'page drawing survives same-day scratch pressure');
-assert.equal(dayInk['math-s-1'], undefined, 'same-day scratch leaves before page drawing');
+assert.equal(dayInk['math~s~1'], undefined, 'same-day scratch leaves before page drawing');
 disk.clear();
 let protectedPair = saveDrawing(emptyStore(), 'week-17', 'monday', 'math', image(200000));
 protectedPair = saveDrawing(protectedPair, 'week-19', 'monday', 'math', image(850000));
@@ -121,4 +121,10 @@ assert.ok(JSON.parse(disk.get('codequest-daily-ink-v1'))['week-19'].monday.math,
 disk.clear();
 assert.equal(saveInk(overBudgetPair, ['week-19', 'monday', key]).ok, true);
 assert.equal(JSON.parse(disk.get('codequest-daily-ink-v1'))['week-19'].monday.math, undefined, 'three-element keep retains prior single-key behavior');
+// A real sheet id can never look like a scratch key, now or in a future week: scratch keys use `~s~`, which no sheet id may contain.
+for (const track of ['guided', 'standard']) for (const week of Object.values(DAILY_WORK[track].weeks)) {
+  const sheets = [...(week.weekItems || []), ...Object.values(week.days || {}).flatMap((day) => day.sheets || [])];
+  for (const sheet of sheets) assert.equal(String(sheet.id).includes('~'), false, `sheet id ${sheet.id} must not contain ~`);
+}
+assert.equal(scratchDrawingKey('sam-s-store', '1'), 'sam-s-store~s~1', 'a possessive-looking sheet id stays an ordinary sheet id');
 console.log('Daily scratch grouping, rendering, neutrality, store round-trip, cap, and eviction: passed');
