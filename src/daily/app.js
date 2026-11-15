@@ -1,7 +1,7 @@
 import { DAILY_WORK } from '../cq/daily-work/content.js';
 import { currentWeek } from '../cq/daily-work/schedule.js';
 import { itemMeta, storedDay } from '../cq/daily-work/daily-work-ui.js';
-import { blockFillFor, celebrationSeen, choresOf, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, setBlockFill, snapshotHistory, withChores, withTrack } from './store.js';
+import { MAX_SCRATCH_CHARS, blockFillFor, celebrationSeen, choresOf, commit, drawingFor, historyFor, load, markCelebrationSeen, refreshed, saveDrawing, scratchDrawingKey, setBlockFill, snapshotHistory, withChores, withTrack } from './store.js';
 import { addCustomJob, addEntry, addSavingsUse, confirmDay, confirmWeek, exportChores, importChores, monthKey, monthPageEditable, parseMoneyInput, payWeek, removeCustomJob, removeEntry, removeSavingsUse, reopenWeek, saveMonthPage, saveWeekMath, setEntryPrice, setEntryStatus, setJobActive, setJobPrice, setSavingsStatus, weekDates, weekMathEditable, weekMonday } from './chores.js';
 import { renderChores } from './chores-view.js';
 import { choreSheetBounds, renderChoreSheet } from './chores-sheet-view.js';
@@ -30,6 +30,10 @@ let moneyMonth = monthKey(todayIso());
 let choreMessage = '';
 let parentState = createParentState();
 let drawingController = null;
+const openScratch = new Set();
+const scratchControllers = new Map();
+const scratchLoads = new WeakMap();
+const scratchKey = (week, day, sheet, problem) => `${week}|${day}|${sheet}|${problem}`;
 let pinPending = false;
 let parentSession = 0;
 let openCelebrationMessage = null;
@@ -234,6 +238,8 @@ function snapshotToday() {
 
 function detachDrawing() {
   if (drawingController) { drawingController.detach(); drawingController = null; }
+  scratchControllers.forEach((controller) => controller.detach());
+  scratchControllers.clear();
 }
 
 function trackPickerHtml() {
@@ -289,7 +295,7 @@ function sheetScreenHtml() {
     </div>
     <div class="cqd-sheet-wrap">
       <div class="cqd-sheet-stage" data-mode="type">
-        ${renderSheetArticle(week, route.dayKey, sheet, dayState, reopened, (item) => blockFillFor(store, week.id, route.dayKey, sheet.id, item.id), (item) => revealedBlocks.has(revealKey(week.id, route.dayKey, sheet.id, item.id)))}
+        ${renderSheetArticle(week, route.dayKey, sheet, dayState, reopened, (item) => blockFillFor(store, week.id, route.dayKey, sheet.id, item.id), (item) => revealedBlocks.has(revealKey(week.id, route.dayKey, sheet.id, item.id)), (problem) => ({ open: openScratch.has(scratchKey(week.id, route.dayKey, sheet.id, problem)), ink: !!drawingFor(store, week.id, route.dayKey, scratchDrawingKey(sheet.id, problem)) }))}
         <canvas class="cqd-ink" aria-label="Draw here to show your work"></canvas>
       </div>
     </div>
@@ -340,6 +346,43 @@ function setupDrawing() {
   drawingController = attachDrawing(canvas, {
     onStroke: (dataUrl) => { persist((s) => saveDrawing(s, week.id, route.dayKey, sheet.id, dataUrl), { core: false, ink: true, keep: [week.id, route.dayKey, sheet.id] }); },
   });
+  app.querySelectorAll('.cqd-scratch-panel:not([hidden])').forEach((panel) => setupScratch(panel, week, sheet));
+}
+
+function setupScratch(panel, week, sheet) {
+  const problem = panel.closest('[data-scratch-id]')?.dataset.scratchId;
+  const key = scratchDrawingKey(sheet.id, problem);
+  const canvas = panel.querySelector('canvas');
+  const paper = panel.querySelector('.cqd-scratch-paper');
+  if (!key || !canvas || !paper) return;
+  const dayKey = route.dayKey;
+  const loadNumber = (scratchLoads.get(panel) || 0) + 1;
+  scratchLoads.set(panel, loadNumber);
+  sizeCanvas(canvas, paper);
+  loadDrawing(canvas, drawingFor(store, week.id, dayKey, key), () => scratchLoads.get(panel) === loadNumber && !panel.hidden).then(() => {
+    if (!canvas.isConnected || panel.hidden || scratchLoads.get(panel) !== loadNumber) return;
+    scratchControllers.set(problem, attachDrawing(canvas, {
+      maxChars: MAX_SCRATCH_CHARS,
+      onStroke: (dataUrl) => persist((s) => saveDrawing(s, week.id, dayKey, key, dataUrl), { core: false, ink: true, keep: [week.id, dayKey, key] }),
+    }));
+  });
+}
+
+function resizePageCanvas() {
+  const canvas = app.querySelector('.cqd-ink');
+  const stage = app.querySelector('.cqd-sheet-stage');
+  if (!canvas || !stage) return;
+  const oldWidth = canvas.width;
+  const oldHeight = canvas.height;
+  const copy = document.createElement('canvas');
+  copy.width = oldWidth;
+  copy.height = oldHeight;
+  copy.getContext('2d').drawImage(canvas, 0, 0);
+  sizeCanvas(canvas, stage);
+  const ctx = canvas.getContext('2d');
+  if (oldWidth) ctx.drawImage(copy, 0, 0, canvas.width, oldHeight * canvas.width / oldWidth);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
 }
 
 function paydayCurrent() {
@@ -652,6 +695,45 @@ function onClick(event) {
   }
   if (action === 'set-mode') {
     setSheetMode(button.dataset.mode);
+    return;
+  }
+  if (action === 'scratch-toggle' || action === 'scratch-tool' || action === 'scratch-clear') {
+    if (route.screen !== 'sheet') return;
+    const week = currentWeek(DAILY_WORK, store.track, todayIso());
+    const sheet = week && sheetsForDay(week, route.dayKey)[route.sheetIndex];
+    const box = button.closest('[data-scratch-id]');
+    const problem = box?.dataset.scratchId;
+    const key = sheet && scratchDrawingKey(sheet.id, problem);
+    if (!key || !['math', 'word-problems'].includes(sheet.subject)) return;
+    const panel = box.querySelector('.cqd-scratch-panel');
+    if (action === 'scratch-toggle') {
+      const openKey = scratchKey(week.id, route.dayKey, sheet.id, problem);
+      if (panel.hidden) {
+        panel.hidden = false;
+        openScratch.add(openKey);
+        button.setAttribute('aria-expanded', 'true');
+        button.textContent = 'Scratch paper';
+        resizePageCanvas();
+        setupScratch(panel, week, sheet);
+      } else {
+        scratchLoads.set(panel, (scratchLoads.get(panel) || 0) + 1);
+        scratchControllers.get(problem)?.detach();
+        scratchControllers.delete(problem);
+        panel.hidden = true;
+        openScratch.delete(openKey);
+        button.setAttribute('aria-expanded', 'false');
+        button.innerHTML = `Scratch paper${drawingFor(store, week.id, route.dayKey, key) ? '<span aria-hidden="true"> ✎</span>' : ''}`;
+        resizePageCanvas();
+      }
+      return;
+    }
+    const controller = scratchControllers.get(problem);
+    if (!controller) return;
+    if (action === 'scratch-clear') { controller.clear(); return; }
+    const tool = button.dataset.scratchTool;
+    if (tool !== 'pen' && tool !== 'eraser') return;
+    controller.setTool(tool);
+    panel.querySelectorAll('[data-action="scratch-tool"]').forEach((choice) => choice.setAttribute('aria-pressed', String(choice === button)));
     return;
   }
   if (action === 'set-tool') {

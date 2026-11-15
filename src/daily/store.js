@@ -16,12 +16,19 @@ const KEY = 'codequest-daily-v1';
 const INK_KEY = 'codequest-daily-ink-v1';
 const TRACKS = ['guided', 'standard'];
 const MAX_DRAWING_CHARS = 900000; // hard ceiling when reading a saved drawing back
+export const MAX_SCRATCH_CHARS = 120000;
 const INK_BUDGET = 1000000; // total characters of drawings kept on disk, across every sheet
 
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value)
   && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null) ? value : {};
 const safeKey = (value) => typeof value === 'string' && value.length > 0 && value.length <= 100
   && value !== '__proto__' && value !== 'constructor' && value !== 'prototype';
+const isScratchKey = (value) => /-s-[a-z0-9][a-z0-9-]*$/.test(value);
+export function scratchDrawingKey(sheetId, problemId) {
+  if (!safeKey(sheetId) || !safeKey(problemId) || !/^[a-z0-9-]+$/.test(problemId)) return null;
+  const key = `${sheetId}-s-${problemId}`;
+  return safeKey(key) ? key : null;
+}
 
 function defaultParent() {
   return { pinHash: null, pinSalt: null, failCount: 0, lockUntil: 0, unlockedUntil: 0, resets: [] };
@@ -55,7 +62,7 @@ function normalizeDrawings(value) {
       Object.keys(sourceSheets).forEach((sheetId) => {
         if (!safeKey(sheetId)) return;
         const v = sourceSheets[sheetId];
-        if (typeof v === 'string' && v.startsWith('data:image/') && v.length <= MAX_DRAWING_CHARS) sheets[sheetId] = v;
+        if (typeof v === 'string' && v.startsWith('data:image/') && v.length <= (isScratchKey(sheetId) ? MAX_SCRATCH_CHARS : MAX_DRAWING_CHARS)) sheets[sheetId] = v;
       });
       if (Object.keys(sheets).length) days[dayKey] = sheets;
     });
@@ -230,14 +237,16 @@ function mergeDrawings(base, top) {
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 const weekNumber = (weekId) => Number((String(weekId).match(/\d+$/) || [0])[0]);
 
-// Oldest sheets first (by week, then weekday), so trimming to the budget forgets old work before new.
+// Oldest dates first; within a day, scratch leaves before the page drawing.
 function inkEntries(drawings) {
   const entries = [];
   Object.keys(drawings).forEach((weekId) => Object.keys(drawings[weekId]).forEach((dayKey) => Object.keys(drawings[weekId][dayKey]).forEach((sheetId) => {
     entries.push({ weekId, dayKey, sheetId, url: drawings[weekId][dayKey][sheetId] });
   })));
   return entries.sort((a, b) => weekNumber(a.weekId) - weekNumber(b.weekId)
-    || DAY_ORDER.indexOf(a.dayKey) - DAY_ORDER.indexOf(b.dayKey) || (a.sheetId < b.sheetId ? -1 : 1));
+    || DAY_ORDER.indexOf(a.dayKey) - DAY_ORDER.indexOf(b.dayKey)
+    || Number(isScratchKey(b.sheetId)) - Number(isScratchKey(a.sheetId))
+    || (a.sheetId < b.sheetId ? -1 : 1));
 }
 
 // Drawings trimmed to INK_BUDGET, oldest first, never dropping the sheet named by `keep`.
@@ -364,6 +373,7 @@ export function drawingFor(store, weekId, dayKey, sheetId) {
 // mirrors the same narrow-write discipline daily-work-ui.js's setItem() already uses for answers.
 export function saveDrawing(store, weekId, dayKey, sheetId, dataUrl) {
   if (!safeKey(weekId) || !safeKey(dayKey) || !safeKey(sheetId)) return store;
+  if (dataUrl && isScratchKey(sheetId) && dataUrl.length > MAX_SCRATCH_CHARS) return store;
   const weeks = { ...object(store.drawings) };
   const days = { ...object(weeks[weekId]) };
   const sheets = { ...object(days[dayKey]) };

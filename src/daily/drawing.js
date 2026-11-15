@@ -9,15 +9,20 @@ const MAX_INK_CHARS = 450000; // one sheet's saved drawing; store.js also budget
 // The saved frame for a stroke: WebP where the browser can encode it (Safari cannot, and quietly returns
 // a far bigger PNG instead), redrawn at half size once if that is still too large, or null if it will not
 // fit at all. A null frame is simply not saved; the drawing stays on screen for this visit.
-export function encodeInk(canvas) {
+export function encodeInk(canvas, maxChars = MAX_INK_CHARS) {
   const first = canvas.toDataURL('image/webp', 0.8);
-  if (first.length <= MAX_INK_CHARS) return first;
-  const small = document.createElement('canvas');
-  small.width = Math.max(1, Math.round(canvas.width / 2));
-  small.height = Math.max(1, Math.round(canvas.height / 2));
-  small.getContext('2d').drawImage(canvas, 0, 0, small.width, small.height);
-  const second = small.toDataURL('image/webp', 0.8);
-  return second.length <= MAX_INK_CHARS ? second : null;
+  if (first.length <= maxChars) return first;
+  let source = canvas;
+  for (let step = 0; step < 3; step += 1) {
+    const small = document.createElement('canvas');
+    small.width = Math.max(1, Math.round(source.width / 2));
+    small.height = Math.max(1, Math.round(source.height / 2));
+    small.getContext('2d').drawImage(source, 0, 0, small.width, small.height);
+    const frame = small.toDataURL('image/webp', 0.8);
+    if (frame.length <= maxChars) return frame;
+    source = small;
+  }
+  return null;
 }
 
 export function sizeCanvas(canvas, container) {
@@ -39,7 +44,7 @@ function pointFromEvent(canvas, event) {
 // Attaches drawing behaviour to an already-sized canvas. Returns a controller with setTool()/
 // clear()/toDataUrl()/detach(). onStroke fires once per completed stroke (pointerup), not per move, so
 // callers can debounce their own save without drawing.js knowing anything about storage.
-export function attachDrawing(canvas, { color = '#1c3d5a', lineWidth = 4, onStroke } = {}) {
+export function attachDrawing(canvas, { color = '#1c3d5a', lineWidth = 4, maxChars = MAX_INK_CHARS, onStroke } = {}) {
   const ctx = canvas.getContext('2d');
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -80,7 +85,7 @@ export function attachDrawing(canvas, { color = '#1c3d5a', lineWidth = 4, onStro
     activePointer = null;
     ctx.restore();
     try { canvas.releasePointerCapture(event.pointerId); } catch { /* already released */ }
-    const frame = encodeInk(canvas);
+    const frame = encodeInk(canvas, maxChars);
     if (onStroke && frame) onStroke(frame);
   }
 
@@ -99,7 +104,7 @@ export function attachDrawing(canvas, { color = '#1c3d5a', lineWidth = 4, onStro
       if (onStroke) onStroke(null);
     },
     toDataUrl() {
-      return encodeInk(canvas);
+      return encodeInk(canvas, maxChars);
     },
     detach() {
       canvas.removeEventListener('pointerdown', down);
@@ -110,13 +115,13 @@ export function attachDrawing(canvas, { color = '#1c3d5a', lineWidth = 4, onStro
   };
 }
 
-export function loadDrawing(canvas, dataUrl) {
+export function loadDrawing(canvas, dataUrl, shouldLoad = () => true) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!dataUrl) return Promise.resolve();
   return new Promise((resolve) => {
     const img = new Image();
-    img.onload = () => { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); resolve(); };
+    img.onload = () => { if (shouldLoad()) ctx.drawImage(img, 0, 0, canvas.width, canvas.height); resolve(); };
     img.onerror = () => resolve();
     img.src = dataUrl;
   });

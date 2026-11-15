@@ -219,9 +219,40 @@ function renderItem(week, dayKey, sheet, item, state, locked, fillOf, revealOf) 
   return `<li class="cqd-item"><label class="cqd-field"><span>${esc(item.prompt)}</span>${control}</label></li>`;
 }
 
+// A number and its lettered parts are one problem. Week 13's half-X / X pair is
+// also one authored problem. All other items are their own numbered line on the page.
+export function scratchProblemGroups(sheet) {
+  if (!['math', 'word-problems'].includes(sheet.subject)) return [];
+  const groups = new Map();
+  const ids = new Set((sheet.items || []).map((item) => item.id));
+  (sheet.items || []).forEach((item, index) => {
+    const parts = /^(\d+)[a-z]$/.exec(item.id);
+    const half = /^half-(\d+-of-\d+)$/.exec(item.id);
+    const id = parts ? parts[1] : half && ids.has(half[1]) ? half[1] : item.id;
+    groups.set(id, index);
+  });
+  return [...groups].map(([id, lastIndex]) => ({ id, lastIndex }));
+}
+
+function scratchMarkup(problemId, state) {
+  const open = !!state.open;
+  return `<div class="cqd-scratch" data-scratch-id="${esc(problemId)}">
+    <button type="button" class="cqd-scratch-button" data-action="scratch-toggle" data-problem="${esc(problemId)}" aria-expanded="${open}">Scratch paper${!open && state.ink ? '<span aria-hidden="true"> ✎</span>' : ''}</button>
+    <div class="cqd-scratch-panel" ${open ? '' : 'hidden'}>
+      <div class="cqd-scratch-tools" role="toolbar" aria-label="Scratch paper tools">
+        <button type="button" data-action="scratch-tool" data-scratch-tool="pen" aria-pressed="true">Pen</button>
+        <button type="button" data-action="scratch-tool" data-scratch-tool="eraser" aria-pressed="false">Eraser</button>
+        <button type="button" data-action="scratch-clear">Clear</button>
+      </div>
+      <div class="cqd-scratch-paper"><canvas aria-label="Scratch paper drawing area"></canvas></div>
+    </div>
+  </div>`;
+}
+
 // One sheet's worked-example header plus its items — the page chrome (subject bar, prev/next,
 // submit) is added by app.js, which also knows the sheet's position among the day's other sheets.
-export function renderSheetArticle(week, dayKey, sheet, dayState, reopened, fillOf, revealOf) {
+export function renderSheetArticle(week, dayKey, sheet, dayState, reopened, fillOf, revealOf, scratchOf = () => ({})) {
+  const scratchAfter = new Map((dayKey === 'wednesday' ? [] : scratchProblemGroups(sheet)).map((group) => [group.lastIndex, group.id]));
   return `<article class="cqd-sheet" data-subject="${esc(sheet.subject)}">
     <header class="cqd-sheet-head">
       <span class="cqd-subject-icon" aria-hidden="true"></span>
@@ -231,9 +262,11 @@ export function renderSheetArticle(week, dayKey, sheet, dayState, reopened, fill
     ${sheet.intro ? `<p class="cqd-intro">${esc(sheet.intro)}</p>` : ''}
     ${sheet.example ? `<p class="cqd-example"><strong>Worked example:</strong> ${esc(sheet.example)}</p>` : ''}
     ${sheet.citation ? `<p class="cqd-citation">${esc(sheet.citation)}</p>` : ''}
-    <ol class="cqd-items">${(sheet.items || []).map((item) => {
+    <ol class="cqd-items">${(sheet.items || []).map((item, index) => {
       const state = storedItem(dayState, sheet.id, item.id);
-      return renderItem(week, dayKey, sheet, item, state, state.status === OK_STATUS && reopened, fillOf, revealOf);
+      const html = renderItem(week, dayKey, sheet, item, state, state.status === OK_STATUS && reopened, fillOf, revealOf);
+      const problemId = scratchAfter.get(index);
+      return problemId ? html.replace(/<\/li>$/, `${scratchMarkup(problemId, scratchOf(problemId) || {})}</li>`) : html;
     }).join('')}</ol>
     <footer class="cqd-sheet-foot" aria-hidden="true"><span class="cqd-sheet-foot-dot"></span><span class="cqd-sheet-foot-rule"></span></footer>
   </article>`;
