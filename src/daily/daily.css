@@ -795,6 +795,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   pointer-events: none;
 }
 .cqd-verse-card .cqd-eyebrow { margin-right: 28px; background: #f4e7c4; color: #79520f; }
+.cqd-verse-text, .cqd-item-prompt { white-space: pre-line; }
 .cqd-verse-text { max-width: 58ch; font-size: 1.15rem; line-height: 1.75; margin: 6px 0 12px; }
 .cqd-verse-word {
   color: #79520f;

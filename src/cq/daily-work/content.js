@@ -1664,9 +1664,260 @@ const guided18 = Week('week-18', 'Week 18', [
     bible17Friday(),
   ]),
 }, '2026-11-09');
+// Week 19 (Monday 2026-11-16). Math and Word Problems follow the local Week 19 plan.
+
+const bible19Monday = () => bibleChoice("Jonah 1:1-17", [
+    choice("q1", "God told Jonah to go to the big city of Nineveh. What did Jonah do?", ["He obeyed and left for Nineveh right away", "He ran the other way, on a ship to Tarshish", "He stayed home and waited for God to change His mind"], "B", "Jonah 1:1-3. God told Jonah to go to Nineveh and speak against it. Jonah ran the other way and boarded a ship to Tarshish."),
+    choice("q2", "A huge storm hit the ship. What did Jonah tell the sailors to do?", ["Sail faster to the next town", "Tie him to the mast", "Throw him into the sea"], "C", "Jonah 1:11-12. Jonah told the sailors to pick him up and throw him into the sea, because the storm was his fault."),
+    choice("q3", "After the sailors threw Jonah into the sea, what happened?", ["The storm stopped, and God sent a huge fish to swallow Jonah", "The storm got worse, and the ship sank with everyone on it", "The sailors pulled Jonah back onto the ship and sailed home"], "A", "Jonah 1:15-17. The sea stopped raging, and God provided a huge fish that swallowed Jonah. Jonah was inside it three days and three nights.")
+  ]);
+
+const bible19Wednesday = (guided) => bibleReading("Jonah 2:1-3:10", guided
+  ? "After Jonah prayed inside the fish, what did the fish do? And what did the people of Nineveh do when they heard God's message? Write 1 or 2 sentences."
+  : "After Jonah prayed inside the fish, what did the fish do? And what did the people of Nineveh do when they heard God's message? Write 2 sentences.",
+  "A good answer says the fish spit Jonah out onto dry land (Jonah 2:10), and the people of Nineveh believed God, went without food, put on rough clothing called sackcloth, and turned from their evil ways (Jonah 3:5-10). God saw this and did not destroy them. One thing about the fish and one thing Nineveh did is enough. If the boys ask: Jonah went to Nineveh the second time after God spoke to him again (3:1-3), and the king of Nineveh did it too (3:6).");
+
+const bible19Friday = () => bibleChoice("Jonah 4:1-11", [
+    choice("q1", "How did Jonah feel when God did not destroy Nineveh?", ["Very happy", "Scared", "Very angry"], "C", "Jonah 4:1. Jonah was very upset and angry that God spared Nineveh."),
+    choice("q2", "Jonah said he ran away at the start because he knew something about God. What was it?", ["That God is kind and slow to anger, and would forgive Nineveh", "That God was too weak to protect him from the storm at sea", "That God had forgotten about all the people of Nineveh"], "A", "Jonah 4:2. Jonah said he knew God is gracious and compassionate, slow to anger and full of love, and that is why he ran away to Tarshish."),
+    choice("q3", "At the end, God asked Jonah a question about Nineveh. What was it?", ["Why did you not warn the great city of Nineveh sooner, Jonah?", "Should I not care about the great city of Nineveh, with all its people?", "Will you build a high wall around the great city of Nineveh?"], "B", "Jonah 4:11. God asked whether He should not care about the great city, which had more than 120,000 people and also many animals. The book ends with God's question and no answer from Jonah, on purpose. In 4:3 and 4:8 Jonah says it would be better for him to die. If a boy asks, you could say Jonah was so upset that he said things he should not have said, and God did not agree with him. God's reply in 4:4 and 4:9 is a question: is it right for you to be angry?")
+  ]);
+
+const verse19 = () => Sheet("memory-verse", "memory-verse", "Memory Verse", null, null, [
+  Item("verse", "fill-blank", "1. Have no other ___.\n2. Do not make ___.\n3. Do not misuse God's ___.\n4. Keep the ___ day holy.\n5. Honor your father and ___.\n6. Do not ___ another person.\n7. Be ___ in marriage.\n8. Do not ___ anything.\n9. Do not ___ about others.\n10. Do not ___ what belongs to others.", { wordBank: ["gods", "idols", "name", "Sabbath", "mother", "murder", "faithful", "steal", "lie", "covet"], answer: ["gods", "idols", "name", "Sabbath", "mother", "murder", "faithful", "steal", "lie", "covet"] }),
+], { citation: "The Ten Commandments (Exodus 20:3-17)" });
+
+const standard19 = Week("week-19", "Week 19", [verse19()], {
+
+  monday: Day([
+
+    Sheet("read-first-sales-tax", "math", "Read First: Sales Tax",
+      "Before you do any math, read the question twice and ask: 'What is the question asking for?' Sometimes it asks for the tax, and sometimes it asks for the total price. Those are different numbers, so check which one it wants first. Then ask 'up or down?' Tax makes the price go UP. There are two routes, and they check each other. Route 1: find the tax (write the percent as a decimal and multiply by the price), then add the tax to the price. Route 2: do it in one step. The price plus 8% is 100% + 8% = 108%, which is 1.08, so multiply the price by 1.08. At the end, check that your answer makes sense: with tax, the total is more than the price.",
+      "A $45 backpack has 8% tax. How much is the total? What is the question asking for? The total price (the price and the tax together). Up or down? Tax, so UP. Route 1: tax = 0.08 × 45. Ignore the decimal point: 8 × 45 = 360. 2 decimal places: 3.60. The tax is $3.6. Total: 45 + 3.6 = 48.6. Route 2: 1.08 × 45. Ignore the decimal point: 108 × 45 = 4860. 2 decimal places: 48.60. Both routes give $48.6. Check: more than 45, and only a little more.\n\nA $20 book has 10% tax. If the question asks 'How much is the tax?', it is asking for the tax only: 0.10 × 20. Ignore the decimal point: 10 × 20 = 200. 2 decimal places: 2.00. The answer is $2, and you stop there. If the question asks 'What is the total?', it is asking for the price and the tax together: 20 + 2 = 22. The answer is $22. Same book, two different questions, two different answers. Check: the tax is small, and the total is more than 20.", [
+        choice("1a", "What is the question asking for?", ["the tax", "the total price", "the original price"], "B", "The question asks for the TOTAL, so a plain tax answer would be wrong."),
+        pick14("1b", "Up or down? (Clue word: tax)", ["up", "down"], "up", "Tax means up."),
+        money("1c", "A $30 pair of gloves has 5% tax. Route 1: How much is the tax, in dollars?", 1.5, "0.05 × 30: 5 × 30 = 150; 2 places = 1.50. Accept 1.5 or 1.50."),
+        money("1d", "Route 1: What is the total, in dollars?", 31.5, "30 + 1.50 = 31.50. Accept 31.5 or 31.50."),
+        money("1e", "Route 2: What is 1.05 × 30?", 31.5, "105 × 30 = 3150; 2 places = 31.50. It must match 1d. Accept 31.5 or 31.50."),
+        choice("2a", "What is the question asking for?", ["the original price", "the tax", "the total price"], "C", "The question asks for the TOTAL."),
+        pick14("2b", "Up or down? (Clue word: tax)", ["up", "down"], "up", "Tax means up."),
+        money("2c", "A $64 game has 7% tax. What is the total, in dollars?", 68.48, "1.07 × 64: 107 × 64 = 6848; 2 places = 68.48. Or 64 + 4.48."),
+        choice("3a", "What is the question asking for?", ["the tax", "the total price", "the original price"], "A", "The question asks for the TAX only. The total would be 95.40, which is the wrong answer here."),
+        pick14("3b", "Up or down? (Clue word: tax)", ["up", "down"], "up", "Tax means up (even though the question only asks for the tax)."),
+        money("3c", "A $90 jacket has 6% tax. How much is the tax, in dollars?", 5.4, "0.06 × 90: 6 × 90 = 540; 2 places = 5.40. Accept 5.4 or 5.40. If he types 95.4 he answered the total.")
+      ]),
+    Sheet("clue-words-and-what-is-asked", "word-problems", "Clue Words and What Is Asked",
+      "Read each story twice. The words tax, tip and fee mean the price goes UP. The words off, sale, discount and coupon mean it goes DOWN. Then find the question at the end and ask what it wants: the tip, the total, how much you pay, or how much you save. Circle that, then solve. For up, multiply by 1 plus the percent (8% tax is 1.08). For down, multiply by 1 minus the percent (30% off is 0.70).",
+      "A $60 dinner has a 15% tip. How much is the tip? What is the question asking for? The tip only. Clue word: tip. 0.15 × 60. Ignore the decimal point: 15 × 60 = 900. 2 decimal places: 9.00. Answer: $9. (If it had asked for the total with the tip, it would be 60 + 9 = $69.)", [
+        choice("1a", "What is the question asking for?", ["the tip", "the total with the tip", "the price of the dinner"], "A", "Asks for the TIP only. The total would be 50.60."),
+        money("1b", "A $44 dinner has a 15% tip added. How much is the tip, in dollars?", 6.6, "0.15 × 44: 15 × 44 = 660; 2 places = 6.60. Accept 6.6 or 6.60."),
+        choice("2a", "What is the question asking for?", ["how much you save", "how much you pay", "the original price"], "B", "Asks what you PAY. Saving would be 33."),
+        money("2b", "A $110 jacket is on sale for 30% off. How much do you pay, in dollars?", 77, "Off means down. You pay 70%: 0.70 × 110: 70 × 110 = 7700; 2 places = 77.00. Or 110 − 33. Accept 77, 77.0 or 77.00."),
+        choice("3a", "What is the question asking for?", ["the tax", "the original price", "the total price"], "C", "Asks for the TOTAL."),
+        money("3b", "A $35 toy has 8% tax. What is the total, in dollars?", 37.8, "1.08 × 35: 108 × 35 = 3780; 2 places = 37.80. Accept 37.8 or 37.80.")
+      ]),
+    bible19Monday(),
+  ]),
+
+  tuesday: Day([
+
+    Sheet("read-first-percent-off", "math", "Read First: Percent Off",
+      "Read the question twice and ask: 'What is the question asking for?' With a discount it might ask how much you SAVE (the discount itself), or how much you PAY (what is left). Those are different numbers. Then ask 'up or down?' Off, sale, discount and coupon make the price go DOWN, so you pay less than the price. There are two routes, and they check each other. Route 1: find the discount (write the percent as a decimal and multiply by the price), then subtract it from the price. Route 2: do it in one step. If 20% comes off, you pay the other 100% − 20% = 80%, which is 0.80, so multiply the price by 0.80. At the end, check your answer: what you pay is less than the price.",
+      "A $50 hoodie is 20% off. How much do you pay? What is the question asking for? What you pay (the sale price). Up or down? Off, so DOWN. Route 1: discount = 0.20 × 50. Ignore the decimal point: 20 × 50 = 1000. 2 decimal places: 10.00. You save $10. You pay 50 − 10 = 40. Route 2: you pay 100% − 20% = 80%, which is 0.80. 0.80 × 50: 80 × 50 = 4000; 2 decimal places: 40.00. Both routes give $40. Check: less than 50.\n\nA $90 game is 40% off. If the question asks 'How much do you save?', it wants the discount itself: 0.40 × 90. Ignore the decimal point: 40 × 90 = 3600. 2 decimal places: 36.00. The answer is $36, and you stop there. If it asks 'How much do you pay?', it wants what is left: 90 − 36 = 54, or 0.60 × 90: 60 × 90 = 5400; 2 decimal places: 54.00. The answer is $54. Same game, two different questions, two different answers. Check: you pay less than 90.", [
+        choice("1a", "What is the question asking for?", ["how much you save", "how much you pay", "the original price"], "B", "Asks what you PAY, not what you save."),
+        pick14("1b", "Up or down? (Clue word: off)", ["up", "down"], "down", "Off means down."),
+        money("1c", "A $70 pair of boots is 10% off. Route 1: How much do you save, in dollars?", 7, "0.10 × 70: 10 × 70 = 700; 2 places = 7.00. Accept 7, 7.0 or 7.00."),
+        money("1d", "Route 1: How much do you pay, in dollars?", 63, "70 − 7 = 63. Accept 63, 63.0 or 63.00."),
+        money("1e", "Route 2: What is 0.90 × 70?", 63, "You pay 100% − 10% = 90%. 90 × 70 = 6300; 2 places = 63.00. It must match 1d. Accept 63, 63.0 or 63.00."),
+        choice("2a", "What is the question asking for?", ["the original price", "how much you save", "how much you pay"], "C", "Asks what you PAY."),
+        pick14("2b", "Up or down? (Clue word: sale)", ["up", "down"], "down", "Sale means down."),
+        money("2c", "A $160 tablet is on sale for 15% off. How much do you pay, in dollars?", 136, "You pay 85%: 0.85 × 160: 85 × 160 = 13600; 2 places = 136.00. Or 160 − 24. Accept 136, 136.0 or 136.00."),
+        choice("3a", "What is the question asking for?", ["how much you pay", "how much you save", "the original price"], "B", "Asks how much you SAVE. Paying would be 33."),
+        pick14("3b", "Up or down? (Clue word: coupon)", ["up", "down"], "down", "Coupon means down."),
+        money("3c", "A $55 sweater has a coupon for 40% off. How much do you save, in dollars?", 22, "0.40 × 55: 40 × 55 = 2200; 2 places = 22.00. Accept 22, 22.0 or 22.00. If he types 33 he answered what you pay.")
+      ]),
+    codeQuest13(),
+  ]),
+
+  wednesday: Day([
+
+    codeQuest13(),
+    bible19Wednesday(false),
+  ]),
+
+  thursday: Day([
+
+    Sheet("read-decide-up-or-down-then-solve", "math", "Read, Decide Up or Down, Then Solve",
+      "Today tax, tip and discounts are mixed. For every problem, do the same three things in the same order. First read and ask 'What is the question asking for?' Then ask 'up or down?': tax, tip and fee mean UP, and off, sale, discount and coupon mean DOWN. Then solve it with either route, and finish by checking that your answer makes sense. The routes are not written out today, so use them yourself.",
+      "A $70 pair of shoes has 8% tax. What is the total? What is the question asking for? The total price. Up or down? Tax, so UP. 1.08 × 70. Ignore the decimal point: 108 × 70 = 7560. 2 decimal places: 75.60. Answer: $75.60. Check: more than 70, and only a little more.\n\nA $100 coat is 30% off. If the question asks 'How much do you pay?', it wants what is left: you pay 100% − 30% = 70%, so 0.70 × 100 = 70. The answer is $70. If it asks 'How much do you save?', it wants the discount: 0.30 × 100 = 30. The answer is $30. Check: you pay less than 100.", [
+        choice("1a", "What is the question asking for?", ["the tax", "the total price", "the original price"], "B", "Asks for the TOTAL."),
+        pick14("1b", "Up or down? (Clue word: tax)", ["up", "down"], "up", "Tax means up."),
+        money("1c", "A $88 jacket has 7% tax. What is the total, in dollars?", 94.16, "1.07 × 88: 107 × 88 = 9416; 2 places = 94.16."),
+        choice("2a", "What is the question asking for?", ["how much you pay", "how much you save", "the original price"], "A", "Asks what you PAY."),
+        pick14("2b", "Up or down? (Clue word: off)", ["up", "down"], "down", "Off means down."),
+        money("2c", "A $65 skateboard is 25% off. How much do you pay, in dollars?", 48.75, "You pay 75%: 0.75 × 65: 75 × 65 = 4875; 2 places = 48.75. Or 65 − 16.25."),
+        choice("3a", "What is the question asking for?", ["the total with the tip", "the tip", "the price of the dinner"], "B", "Asks for the TIP only. The total would be 62.40."),
+        pick14("3b", "Up or down? (Clue word: tip)", ["up", "down"], "up", "Tip means up (even though the question only asks for the tip)."),
+        money("3c", "A $52 dinner has a 20% tip. How much is the tip, in dollars?", 10.4, "0.20 × 52: 20 × 52 = 1040; 2 places = 10.40. Accept 10.4 or 10.40. If he types 62.4 he answered the total.")
+      ]),
+    Sheet("two-steps-what-does-each-step-ask", "word-problems", "Two Steps: What Does Each Step Ask?",
+      "Some stories have two steps. When a story says 'on sale, then tax is added', do the sale first. The sale price is the new price, and the tax is a percent of the sale price, not the original price. Before each step, ask what the question wants. Step 1 is DOWN (multiply by 1 minus the discount). Step 2 is UP (multiply by 1 plus the tax). A tip is also UP.",
+      "A $120 sweater is 25% off. Then 8% tax is added to the sale price. What is the final cost? Step 1 (down): you pay 100% − 25% = 75%. 0.75 × 120: 75 × 120 = 9000; 2 decimal places: 90.00. The sale price is $90. Step 2 (up): 1.08 × 90. Ignore the decimal point: 108 × 90 = 9720. 2 decimal places: 97.20. Answer: $97.20.", [
+        choice("1a", "What is the question asking for?", ["the sale price only", "the final cost after the sale and the tax", "the tax"], "B", "Asks for the FINAL cost. The sale price (72) is only step 1."),
+        money("1b", "A $96 jacket is 25% off. What is the sale price, in dollars?", 72, "You pay 75%: 0.75 × 96: 75 × 96 = 7200; 2 places = 72.00. Or 96 − 24. Accept 72, 72.0 or 72.00."),
+        money("1c", "Then 6% tax is added to the sale price. What is the final cost, in dollars?", 76.32, "1.06 × 72: 106 × 72 = 7632; 2 places = 76.32."),
+        choice("2a", "What is the question asking for?", ["the tip", "the total with the tip", "the price of the dinner"], "B", "Asks for the TOTAL with the tip."),
+        money("2b", "A $64 dinner has a 15% tip added. What is the total with the tip, in dollars?", 73.6, "Tip means up. 1.15 × 64: 115 × 64 = 7360; 2 places = 73.60. Accept 73.6 or 73.60."),
+        choice("3a", "What is the question asking for?", ["how much you save", "how much you pay", "the original price"], "A", "Asks how much you SAVE. Paying would be 76."),
+        money("3b", "A $95 pair of sneakers is 20% off. How much do you save, in dollars?", 19, "0.20 × 95: 20 × 95 = 1900; 2 places = 19.00. Accept 19, 19.0 or 19.00. If he types 76 he answered what you pay.")
+      ]),
+  ]),
+
+  friday: Day([
+
+    Sheet("read-it-then-show-what-you-know", "math", "Read It, Then Show What You Know",
+      "No steps are written out today except the first question on every problem: 'What is the question asking for?' Read the problem twice and answer that first. Then decide up or down in your head, find the answer, and check that it makes sense. If you want to check yourself, use the other route and see if the two answers match.",
+      "A $100 jacket is 15% off. How much do you pay? What is the question asking for? What you pay. Up or down? Off, so DOWN. You pay 100% − 15% = 85%. 0.85 × 100 = 85. Answer: $85. Check: less than 100.\n\nA $30 lunch has 10% tax. What is the total? What is the question asking for? The total. Up or down? Tax, so UP. 1.10 × 30. Ignore the decimal point: 110 × 30 = 3300. 2 decimal places: 33.00. Answer: $33. Check: more than 30, and only a little more.", [
+        choice("1a", "What is the question asking for?", ["how much you save", "how much you pay", "the original price"], "A", "Asks how much you SAVE. Paying would be 96."),
+        money("1b", "A $120 coat is 20% off. How much do you save, in dollars?", 24, "0.20 × 120: 20 × 120 = 2400; 2 places = 24.00. Accept 24, 24.0 or 24.00."),
+        choice("2a", "What is the question asking for?", ["the tax", "the original price", "the total price"], "C", "Asks for the TOTAL."),
+        money("2b", "A $78 game has 5% tax. What is the total, in dollars?", 81.9, "1.05 × 78: 105 × 78 = 8190; 2 places = 81.90. Accept 81.9 or 81.90."),
+        choice("3a", "What is the question asking for?", ["how much you pay", "how much you save", "the original price"], "A", "Asks what you PAY. Saving would be 40."),
+        money("3b", "A $160 bike is 25% off. How much do you pay, in dollars?", 120, "You pay 75%: 0.75 × 160: 75 × 160 = 12000; 2 places = 120.00. Accept 120, 120.0 or 120.00."),
+        choice("4a", "What is the question asking for?", ["the total with the tip", "the tip", "the price of the dinner"], "B", "Asks for the TIP only. The total would be 47.20."),
+        money("4b", "A $40 dinner has an 18% tip. How much is the tip, in dollars?", 7.2, "0.18 × 40: 18 × 40 = 720; 2 places = 7.20. Accept 7.2 or 7.20."),
+        note("5", "Pick one problem from today. In one sentence, tell what the question was asking for and how you knew.", "A good answer names what the question wanted (the tax, the total, how much you save, or how much you pay) and points to the words in the question that showed it.")
+      ]),
+    Sheet("shopping-stories-read-carefully", "word-problems", "Shopping Stories: Read Carefully",
+      "Read each story twice. Circle the clue word, decide up or down, and find what the question wants before you calculate. Two-step stories need a step for the sale first and then a step for the tax. There are no steps written out today, because you know them now.",
+      "A $200 couch is 10% off. Then 8% tax is added to the sale price. What is the final cost? What is the question asking for? The final cost, after the sale and the tax. Step 1 (down): you pay 100% − 10% = 90%. 0.90 × 200 = 180. The sale price is $180. Step 2 (up): 1.08 × 180. Ignore the decimal point: 108 × 180 = 19440. 2 decimal places: 194.40. Answer: $194.40.", [
+        choice("1a", "What is the question asking for?", ["how much you save", "the original price", "how much you pay"], "C", "Asks what you PAY. Saving would be 21."),
+        money("1b", "A $84 pair of shoes is 25% off. How much do you pay, in dollars?", 63, "You pay 75%: 0.75 × 84: 75 × 84 = 6300; 2 places = 63.00. Accept 63, 63.0 or 63.00."),
+        choice("2a", "What is the question asking for?", ["the tip", "the total with the tip", "the price of the meal"], "B", "Asks for the TOTAL with the tip."),
+        money("2b", "A $70 meal has a 20% tip added. What is the total with the tip, in dollars?", 84, "Tip means up. 1.20 × 70: 120 × 70 = 8400; 2 places = 84.00. Accept 84, 84.0 or 84.00."),
+        choice("3a", "What is the question asking for?", ["the sale price only", "the final cost after the sale and the tax", "the tax"], "B", "Asks for the FINAL cost. The sale price (120) is only step 1."),
+        money("3b", "A $150 jacket is 20% off. What is the sale price, in dollars?", 120, "You pay 80%: 0.80 × 150: 80 × 150 = 12000; 2 places = 120.00. Accept 120, 120.0 or 120.00."),
+        money("3c", "Then 6% tax is added to the sale price. What is the final cost, in dollars?", 127.2, "1.06 × 120: 106 × 120 = 12720; 2 places = 127.20."),
+        note("4", "In one sentence, tell how you decide whether a price goes up or down.", "A good answer names the clue words: tax, tip or fee mean up, and off, sale, discount or coupon mean down.")
+      ]),
+    bible19Friday(),
+  ]),
+
+}, "2026-11-16");
+
+const guided19 = Week("week-19", "Week 19", [verse19()], {
+
+  monday: Day([
+
+    Sheet("big-numbers-small-steps-no-carrying", "math", "Big Numbers, Small Steps (No Carrying)",
+      "Strategy card. 4s: double the 2s, or 5 groups minus 1 group. 6s: 5 groups plus 1 group. 7s: 5 groups plus 2 groups. 8s: double the 4s. 9s: 10 groups minus 1 group.\n\nToday you multiply a small number by a number with three digits. There are two ways, and you can use the one that helps you. Way 1, break it apart: split the big number into hundreds, tens and ones, multiply each part, and then add. 2 × 413 is 2 × 400 = 800, 2 × 10 = 20 and 2 × 3 = 6, and 800 + 20 + 6 = 826. Way 2, stack it: write the big number on top and the small number under the ones. Multiply the ones first, then the tens, then the hundreds. Today none of the steps makes a number bigger than 9, so there is nothing to carry. Look at the strategy card if a fact is wobbly.",
+      "2 × 413. Method 1, break it apart: 2 × 400 = 800, 2 × 10 = 20, 2 × 3 = 6; 800 + 20 + 6 = 826. Method 2, stacked: 2 × 3 = 6: write 6; 2 × 1 = 2: write 2; 2 × 4 = 8: write 8. Answer 826. No carrying. There is nothing to carry. Both ways give 826.\n\n3 × 321. Method 1, break it apart: 3 × 300 = 900, 3 × 20 = 60, 3 × 1 = 3; 900 + 60 + 3 = 963. Method 2, stacked: 3 × 1 = 3: write 3; 3 × 2 = 6: write 6; 3 × 3 = 9: write 9. Answer 963. No carrying. There is nothing to carry. Both ways give 963.", [
+        money("1", "3 × 4 = ?", 12, "Single fact. He knows his 3s, so this is a warm-up for the carrying-free work today."),
+        money("2", "2 × 4 = ?", 8, "Single fact. He knows his 2s."),
+        money("3", "3 × 312 = (3 × 300) + (3 × 10) + (3 × 2). What is the answer?", 936, "3 × 312 = 936. Break apart: 3 × 300 = 900, 3 × 10 = 30, 3 × 2 = 6; 900 + 30 + 6 = 936. Stacked: 3 × 2 = 6: write 6; 3 × 1 = 3: write 3; 3 × 3 = 9: write 9. Answer 936. No carrying."),
+        money("4", "2 × 241 = (2 × 200) + (2 × 40) + (2 × 1). What is the answer?", 482, "2 × 241 = 482. Break apart: 2 × 200 = 400, 2 × 40 = 80, 2 × 1 = 2; 400 + 80 + 2 = 482. Stacked: 2 × 1 = 2: write 2; 2 × 4 = 8: write 8; 2 × 2 = 4: write 4. Answer 482. No carrying."),
+        money("5", "4 × 122 = (4 × 100) + (4 × 20) + (4 × 2). What is the answer?", 488, "4 × 122 = 488. Break apart: 4 × 100 = 400, 4 × 20 = 80, 4 × 2 = 8; 400 + 80 + 8 = 488. Stacked: 4 × 2 = 8: write 8; 4 × 2 = 8: write 8; 4 × 1 = 4: write 4. Answer 488. No carrying."),
+        money("6", "3 × 203 = (3 × 200) + (3 × 0) + (3 × 3). What is the answer?", 609, "3 × 203 = 609. Break apart: 3 × 200 = 600, 3 × 0 = 0, 3 × 3 = 9; 600 + 0 + 9 = 609. Stacked: 3 × 3 = 9: write 9; 3 × 0 = 0: write 0; 3 × 2 = 6: write 6. Answer 609. No carrying."),
+        money("7", "2 × 134 = (2 × 100) + (2 × 30) + (2 × 4). What is the answer?", 268, "2 × 134 = 268. Break apart: 2 × 100 = 200, 2 × 30 = 60, 2 × 4 = 8; 200 + 60 + 8 = 268. Stacked: 2 × 4 = 8: write 8; 2 × 3 = 6: write 6; 2 × 1 = 2: write 2. Answer 268. No carrying."),
+        money("8", "3 × 232 = (3 × 200) + (3 × 30) + (3 × 2). What is the answer?", 696, "3 × 232 = 696. Break apart: 3 × 200 = 600, 3 × 30 = 90, 3 × 2 = 6; 600 + 90 + 6 = 696. Stacked: 3 × 2 = 6: write 6; 3 × 3 = 9: write 9; 3 × 2 = 6: write 6. Answer 696. No carrying.")
+      ]),
+    Sheet("big-groups-small-groups", "word-problems", "Big Groups, Small Groups",
+      "Read the story slowly. Find what the groups are and how many are in each group. Then ask what you need to do. When every group is the same size and you want the total, you multiply. When some are taken away, you take away. When some are added, you add. For a big number, break it apart into hundreds, tens and ones, or stack it.",
+      "Kai buys 2 boxes. Each box has 124 beads. How many beads in all? Clue: 'each box has 124' and '2 boxes' mean equal groups, so MULTIPLY. 2 × 124: 2 × 100 = 200, 2 × 20 = 40, 2 × 4 = 8; 200 + 40 + 8 = 248. Stacked: 2 × 4 = 8, 2 × 2 = 4, 2 × 1 = 2, so 248. Answer: 248 beads.", [
+        choice("1a", "A farm has 3 crates. Each crate has 213 apples. What do you need to do?", ["Add", "Take away", "Multiply"], "C", "Equal groups means multiply."),
+        money("1b", "How many apples in all?", 639, "3 × 213 = 639. Break apart: 3 × 200 = 600, 3 × 10 = 30, 3 × 3 = 9; 600 + 30 + 9 = 639."),
+        money("2", "Lin has 4 bags. Each bag has 132 beans. How many beans in all?", 528, "4 × 132 = 528. Break apart: 4 × 100 = 400, 4 × 30 = 120, 4 × 2 = 8; 400 + 120 + 8 = 528. This one carries (4 × 3 tens = 12 tens). If he gets stuck, show him the stacked method."),
+        money("3", "Max has 300 stickers. He gives 120 away to his class. How many stickers does Max have left?", 180, "300 − 120 = 180. 'Gives away' means take away."),
+        choice("4a", "Nia has 214 cards. She gets 85 more cards. What do you need to do?", ["Add", "Take away", "Multiply"], "A", "'Gets 85 more' means add."),
+        money("4b", "How many cards does Nia have now?", 299, "214 + 85 = 299."),
+        money("5", "Pia has 3 shelves. Each shelf has 231 books. How many books in all?", 693, "3 × 231 = 693. Break apart: 3 × 200 = 600, 3 × 30 = 90, 3 × 1 = 3; 600 + 90 + 3 = 693.")
+      ]),
+    bible19Monday(),
+  ]),
+
+  tuesday: Day([
+
+    Sheet("bigger-parts-break-it-apart-or-carry", "math", "Bigger Parts: Break It Apart or Carry",
+      "Strategy card. 4s: double the 2s, or 5 groups minus 1 group. 6s: 5 groups plus 1 group. 7s: 5 groups plus 2 groups. 8s: double the 4s. 9s: 10 groups minus 1 group.\n\nToday some steps make a number bigger than 9. That is where you carry. Way 1, break it apart: 4 × 126 is 4 × 100 = 400, 4 × 20 = 80 and 4 × 6 = 24, and 400 + 80 + 24 = 504. Way 2, stack it: 4 × 6 = 24, so write the 4 and carry the 2. Then 4 × 2 = 8, plus the 2 you carried makes 10, so write the 0 and carry the 1. Then 4 × 1 = 4, plus the 1 you carried makes 5. The answer is 504. Both ways give the same answer, so you can check one with the other. Look at the strategy card if a fact is wobbly.",
+      "4 × 126. Method 1, break it apart: 4 × 100 = 400, 4 × 20 = 80, 4 × 6 = 24; 400 + 80 + 24 = 504. Method 2, stacked: 4 × 6 = 24: write 4, carry 2; 4 × 2 = 8, plus 2 carried = 10: write 0, carry 1; 4 × 1 = 4, plus 1 carried = 5: write 5. Answer 504. Both ways give 504.\n\n5 × 135. Method 1, break it apart: 5 × 100 = 500, 5 × 30 = 150, 5 × 5 = 25; 500 + 150 + 25 = 675. Method 2, stacked: 5 × 5 = 25: write 5, carry 2; 5 × 3 = 15, plus 2 carried = 17: write 7, carry 1; 5 × 1 = 5, plus 1 carried = 6: write 6. Answer 675. Both ways give 675.", [
+        money("1", "6 × 4 = ?", 24, "Single fact. INTENTIONAL REPEAT (6 × 4 was on Week 18, Monday): he needs to see facts more than once."),
+        money("2", "7 × 2 = ?", 14, "Single fact. He knows his 2s. It is the ones step of 7 × 112."),
+        money("3", "6 × 124 = (6 × 100) + (6 × 20) + (6 × 4). What is the answer?", 744, "6 × 124 = 744. Break apart: 6 × 100 = 600, 6 × 20 = 120, 6 × 4 = 24; 600 + 120 + 24 = 744. Stacked: 6 × 4 = 24: write 4, carry 2; 6 × 2 = 12, plus 2 carried = 14: write 4, carry 1; 6 × 1 = 6, plus 1 carried = 7: write 7. Answer 744."),
+        money("4", "7 × 112 = (7 × 100) + (7 × 10) + (7 × 2). What is the answer?", 784, "7 × 112 = 784. Break apart: 7 × 100 = 700, 7 × 10 = 70, 7 × 2 = 14; 700 + 70 + 14 = 784. Stacked: 7 × 2 = 14: write 4, carry 1; 7 × 1 = 7, plus 1 carried = 8: write 8; 7 × 1 = 7: write 7. Answer 784."),
+        money("5", "5 × 214 = (5 × 200) + (5 × 10) + (5 × 4). What is the answer?", 1070, "5 × 214 = 1070. Break apart: 5 × 200 = 1000, 5 × 10 = 50, 5 × 4 = 20; 1000 + 50 + 20 = 1070. Stacked: 5 × 4 = 20: write 0, carry 2; 5 × 1 = 5, plus 2 carried = 7: write 7; 5 × 2 = 10: write 10. Answer 1070."),
+        money("6", "3 × 235 = (3 × 200) + (3 × 30) + (3 × 5). What is the answer?", 705, "3 × 235 = 705. Break apart: 3 × 200 = 600, 3 × 30 = 90, 3 × 5 = 15; 600 + 90 + 15 = 705. Stacked: 3 × 5 = 15: write 5, carry 1; 3 × 3 = 9, plus 1 carried = 10: write 0, carry 1; 3 × 2 = 6, plus 1 carried = 7: write 7. Answer 705."),
+        money("7", "8 × 112 = (8 × 100) + (8 × 10) + (8 × 2). What is the answer?", 896, "8 × 112 = 896. Break apart: 8 × 100 = 800, 8 × 10 = 80, 8 × 2 = 16; 800 + 80 + 16 = 896. Stacked: 8 × 2 = 16: write 6, carry 1; 8 × 1 = 8, plus 1 carried = 9: write 9; 8 × 1 = 8: write 8. Answer 896."),
+        money("8", "4 × 183 = (4 × 100) + (4 × 80) + (4 × 3). What is the answer?", 732, "4 × 183 = 732. Break apart: 4 × 100 = 400, 4 × 80 = 320, 4 × 3 = 12; 400 + 320 + 12 = 732. Stacked: 4 × 3 = 12: write 2, carry 1; 4 × 8 = 32, plus 1 carried = 33: write 3, carry 3; 4 × 1 = 4, plus 3 carried = 7: write 7. Answer 732.")
+      ]),
+    codeQuest13(),
+  ]),
+
+  wednesday: Day([
+
+    codeQuest13(),
+    bible19Wednesday(true),
+  ]),
+
+  thursday: Day([
+
+    Sheet("bigger-facts-one-step-missing", "math", "Bigger Facts, One Step Missing",
+      "Strategy card. 4s: double the 2s, or 5 groups minus 1 group. 6s: 5 groups plus 1 group. 7s: 5 groups plus 2 groups. 8s: double the 4s. 9s: 10 groups minus 1 group.\n\nToday the facts are bigger (6s, 7s, 8s and 9s), and each problem is broken apart for you except the middle part. Fill in the middle part yourself, find the answer, and add. The strategy card shows how to build a bigger fact from a smaller one you know. If you like the stacked way better, use it, and the answers will match. 7 × 134 is 7 × 100 = 700, then 7 × 30 = 210 (that is the middle), then 7 × 4 = 28, and 700 + 210 + 28 = 938.",
+      "7 × 134. Method 1, break it apart: 7 × 100 = 700, 7 × 30 = 210, 7 × 4 = 28; 700 + 210 + 28 = 938. Method 2, stacked: 7 × 4 = 28: write 8, carry 2; 7 × 3 = 21, plus 2 carried = 23: write 3, carry 2; 7 × 1 = 7, plus 2 carried = 9: write 9. Answer 938. Both ways give 938.\n\n6 × 214. Method 1, break it apart: 6 × 200 = 1200, 6 × 10 = 60, 6 × 4 = 24; 1200 + 60 + 24 = 1284. Method 2, stacked: 6 × 4 = 24: write 4, carry 2; 6 × 1 = 6, plus 2 carried = 8: write 8; 6 × 2 = 12: write 12. Answer 1284. Both ways give 1284.", [
+        money("1", "8 × 3 = ?", 24, "Single fact. INTENTIONAL REPEAT (8 × 3 was a worked example on Week 18, Tuesday): he needs to see facts more than once."),
+        money("2", "9 × 4 = ?", 36, "Single fact. INTENTIONAL REPEAT (9 × 4 was on Week 18, Thursday): he needs to see facts more than once."),
+        money("3", "8 × 123 = 800 + \\\\_\\\\_\\\\_ + 24. What is the answer?", 984, "Middle step: 8 × 20 = 160. 8 × 123 = 984. Break apart: 8 × 100 = 800, 8 × 20 = 160, 8 × 3 = 24; 800 + 160 + 24 = 984. Stacked: 8 × 3 = 24: write 4, carry 2; 8 × 2 = 16, plus 2 carried = 18: write 8, carry 1; 8 × 1 = 8, plus 1 carried = 9: write 9. Answer 984."),
+        money("4", "9 × 142 = 900 + \\\\_\\\\_\\\\_ + 18. What is the answer?", 1278, "Middle step: 9 × 40 = 360. 9 × 142 = 1278. Break apart: 9 × 100 = 900, 9 × 40 = 360, 9 × 2 = 18; 900 + 360 + 18 = 1278. Stacked: 9 × 2 = 18: write 8, carry 1; 9 × 4 = 36, plus 1 carried = 37: write 7, carry 3; 9 × 1 = 9, plus 3 carried = 12: write 12. Answer 1278."),
+        money("5", "7 × 215 = 1400 + \\\\_\\\\_\\\\_ + 35. What is the answer?", 1505, "Middle step: 7 × 10 = 70. 7 × 215 = 1505. Break apart: 7 × 200 = 1400, 7 × 10 = 70, 7 × 5 = 35; 1400 + 70 + 35 = 1505. Stacked: 7 × 5 = 35: write 5, carry 3; 7 × 1 = 7, plus 3 carried = 10: write 0, carry 1; 7 × 2 = 14, plus 1 carried = 15: write 15. Answer 1505."),
+        money("6", "6 × 138 = 600 + \\\\_\\\\_\\\\_ + 48. What is the answer?", 828, "Middle step: 6 × 30 = 180. 6 × 138 = 828. Break apart: 6 × 100 = 600, 6 × 30 = 180, 6 × 8 = 48; 600 + 180 + 48 = 828. Stacked: 6 × 8 = 48: write 8, carry 4; 6 × 3 = 18, plus 4 carried = 22: write 2, carry 2; 6 × 1 = 6, plus 2 carried = 8: write 8. Answer 828."),
+        money("7", "9 × 126 = 900 + \\\\_\\\\_\\\\_ + 54. What is the answer?", 1134, "Middle step: 9 × 20 = 180. 9 × 126 = 1134. Break apart: 9 × 100 = 900, 9 × 20 = 180, 9 × 6 = 54; 900 + 180 + 54 = 1134. Stacked: 9 × 6 = 54: write 4, carry 5; 9 × 2 = 18, plus 5 carried = 23: write 3, carry 2; 9 × 1 = 9, plus 2 carried = 11: write 11. Answer 1134."),
+        money("8", "8 × 141 = 800 + \\\\_\\\\_\\\\_ + 8. What is the answer?", 1128, "Middle step: 8 × 40 = 320. 8 × 141 = 1128. Break apart: 8 × 100 = 800, 8 × 40 = 320, 8 × 1 = 8; 800 + 320 + 8 = 1128. Stacked: 8 × 1 = 8: write 8; 8 × 4 = 32: write 2, carry 3; 8 × 1 = 8, plus 3 carried = 11: write 11. Answer 1128.")
+      ]),
+    Sheet("stories-with-bigger-groups", "word-problems", "Stories With Bigger Groups",
+      "Read the story slowly. Find the groups and how many are in each group. Then ask what you need to do. Equal groups means multiply. 'Gives away' or 'spends' means take away. 'Gets more' or 'wins more' means add. For a big number, break it apart or stack it, and use the strategy card for the single facts.",
+      "Ravi has 3 trays. Each tray has 142 seeds. How many seeds in all? Clue: 'each tray has 142' and '3 trays' mean equal groups, so MULTIPLY. 3 × 142: 3 × 100 = 300, 3 × 40 = 120, 3 × 2 = 6; 300 + 120 + 6 = 426. Stacked: 3 × 2 = 6, 3 × 4 = 12 (write 2, carry 1), 3 × 1 = 3, plus 1 carried = 4, so 426. Answer: 426 seeds.", [
+        choice("1a", "A bakery has 4 racks. Each rack has 215 rolls. What do you need to do?", ["Add", "Take away", "Multiply"], "C", "Equal groups means multiply."),
+        money("1b", "How many rolls in all?", 860, "4 × 215 = 860. Break apart: 4 × 200 = 800, 4 × 10 = 40, 4 × 5 = 20; 800 + 40 + 20 = 860."),
+        money("2", "Zed has 6 boxes. Each box has 117 pins. How many pins in all?", 702, "6 × 117 = 702. Break apart: 6 × 100 = 600, 6 × 10 = 60, 6 × 7 = 42; 600 + 60 + 42 = 702. This one carries."),
+        money("3", "Ona has 450 coins. She gives 175 coins to her sister. How many coins does Ona have left?", 275, "450 − 175 = 275. 'Gives' means take away."),
+        choice("4a", "Gus has 320 points. He wins 85 more points. What do you need to do?", ["Add", "Take away", "Multiply"], "A", "'Wins 85 more' means add."),
+        money("4b", "How many points does Gus have now?", 405, "320 + 85 = 405."),
+        money("5", "Ivy has 7 jars. Each jar has 121 marbles. How many marbles in all?", 847, "7 × 121 = 847. Break apart: 7 × 100 = 700, 7 × 20 = 140, 7 × 1 = 7; 700 + 140 + 7 = 847.")
+      ]),
+  ]),
+
+  friday: Day([
+
+    Sheet("show-what-you-know", "math", "Show What You Know",
+      "Strategy card. 4s: double the 2s, or 5 groups minus 1 group. 6s: 5 groups plus 1 group. 7s: 5 groups plus 2 groups. 8s: double the 4s. 9s: 10 groups minus 1 group.\n\nNo steps are written out today. Pick the way that helps you most: break it apart, or stack it and carry. If you get stuck, go back to the worked example and follow the same steps one at a time. If you want to check yourself, do it the other way and see if the answers match. The last item asks how sure you feel.",
+      "6 × 235. Method 1, break it apart: 6 × 200 = 1200, 6 × 30 = 180, 6 × 5 = 30; 1200 + 180 + 30 = 1410. Method 2, stacked: 6 × 5 = 30: write 0, carry 3; 6 × 3 = 18, plus 3 carried = 21: write 1, carry 2; 6 × 2 = 12, plus 2 carried = 14: write 14. Answer 1410. Both ways give 1410.\n\n7 × 126. Method 1, break it apart: 7 × 100 = 700, 7 × 20 = 140, 7 × 6 = 42; 700 + 140 + 42 = 882. Method 2, stacked: 7 × 6 = 42: write 2, carry 4; 7 × 2 = 14, plus 4 carried = 18: write 8, carry 1; 7 × 1 = 7, plus 1 carried = 8: write 8. Answer 882. Both ways give 882.", [
+        money("1", "6 × 5 = ?", 30, "Single fact. INTENTIONAL REPEAT (5 × 6 was on Week 18, Monday): he needs to see facts more than once."),
+        money("2", "8 × 4 = ?", 32, "Single fact. INTENTIONAL REPEAT (4 × 8 was a hint on Week 18, Tuesday): he needs to see facts more than once."),
+        money("3", "6 × 125 = ?", 750, "6 × 125 = 750. Break apart: 6 × 100 = 600, 6 × 20 = 120, 6 × 5 = 30; 600 + 120 + 30 = 750. Stacked: 6 × 5 = 30: write 0, carry 3; 6 × 2 = 12, plus 3 carried = 15: write 5, carry 1; 6 × 1 = 6, plus 1 carried = 7: write 7. Answer 750."),
+        money("4", "7 × 143 = ?", 1001, "7 × 143 = 1001. Break apart: 7 × 100 = 700, 7 × 40 = 280, 7 × 3 = 21; 700 + 280 + 21 = 1001. Stacked: 7 × 3 = 21: write 1, carry 2; 7 × 4 = 28, plus 2 carried = 30: write 0, carry 3; 7 × 1 = 7, plus 3 carried = 10: write 10. Answer 1001."),
+        money("5", "8 × 214 = ?", 1712, "8 × 214 = 1712. Break apart: 8 × 200 = 1600, 8 × 10 = 80, 8 × 4 = 32; 1600 + 80 + 32 = 1712. Stacked: 8 × 4 = 32: write 2, carry 3; 8 × 1 = 8, plus 3 carried = 11: write 1, carry 1; 8 × 2 = 16, plus 1 carried = 17: write 17. Answer 1712."),
+        money("6", "9 × 118 = ?", 1062, "9 × 118 = 1062. Break apart: 9 × 100 = 900, 9 × 10 = 90, 9 × 8 = 72; 900 + 90 + 72 = 1062. Stacked: 9 × 8 = 72: write 2, carry 7; 9 × 1 = 9, plus 7 carried = 16: write 6, carry 1; 9 × 1 = 9, plus 1 carried = 10: write 10. Answer 1062."),
+        money("7", "5 × 307 = ?", 1535, "5 × 307 = 1535. Break apart: 5 × 300 = 1500, 5 × 0 = 0, 5 × 7 = 35; 1500 + 0 + 35 = 1535. Stacked: 5 × 7 = 35: write 5, carry 3; 5 × 0 = 0, plus 3 carried = 3: write 3; 5 × 3 = 15: write 15. Answer 1535."),
+        Item("8", "scale", "How sure do you feel about multiplying a 3-digit number? (1 = not sure, 5 = very sure)", { scaleMax: 5, parentNote: "Any number from 1 to 5 is fine. Jesse can use it to see how he feels." })
+      ]),
+    Sheet("show-what-you-know-stories", "word-problems", "Show What You Know: Stories",
+      "Read each story slowly. Find what the groups are and how many are in each group. Then ask what you need to do. Equal groups means multiply, 'gives away' or 'spends' means take away, and 'gets more' means add. There are no steps written out today.",
+      "Dev has 5 packs. Each pack has 105 cards. How many cards in all? Clue: 'each pack has 105' and '5 packs' mean equal groups, so MULTIPLY. 5 × 105: 5 × 100 = 500, 5 × 0 = 0, 5 × 5 = 25; 500 + 0 + 25 = 525. Stacked: 5 × 5 = 25 (write 5, carry 2), 5 × 0 = 0, plus 2 carried = 2, 5 × 1 = 5, so 525. Answer: 525 cards.", [
+        choice("1a", "A truck makes 4 trips. Each trip carries 216 boxes. What do you need to do?", ["Add", "Take away", "Multiply"], "C", "Equal groups means multiply."),
+        money("1b", "How many boxes in all?", 864, "4 × 216 = 864. Break apart: 4 × 200 = 800, 4 × 10 = 40, 4 × 6 = 24; 800 + 40 + 24 = 864."),
+        money("2", "Eli has 2 jars. Each jar has 316 coins. How many coins in all?", 632, "2 × 316 = 632. Break apart: 2 × 300 = 600, 2 × 10 = 20, 2 × 6 = 12; 600 + 20 + 12 = 632."),
+        money("3", "Fay has 640 stamps. She gives 215 stamps away. How many stamps does Fay have left?", 425, "640 − 215 = 425. 'Gives away' means take away."),
+        choice("4a", "Hal has 135 stickers. He gets 86 more stickers. What do you need to do?", ["Add", "Take away", "Multiply"], "A", "'Gets 86 more' means add."),
+        money("4b", "How many stickers does Hal have now?", 221, "135 + 86 = 221. This one carries in the ones place."),
+        money("5", "Jo has 8 boxes. Each box has 105 crayons. How many crayons in all?", 840, "8 × 105 = 840. Break apart: 8 × 100 = 800, 8 × 0 = 0, 8 × 5 = 40; 800 + 0 + 40 = 840.")
+      ]),
+    bible19Friday(),
+  ]),
+
+}, "2026-11-16");
+
 export const DAILY_WORK = deepFreeze({
-  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14, 'week-15': guided15, 'week-16': guided16, 'week-17': guided17, 'week-18': guided18 } },
-  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14, 'week-15': standard15, 'week-16': standard16, 'week-17': standard17, 'week-18': standard18 } },
+  guided: { weeks: { 'week-11': guided, 'week-12': guided12, 'week-13': guided13, 'week-14': guided14, 'week-15': guided15, 'week-16': guided16, 'week-17': guided17, 'week-18': guided18, 'week-19': guided19 } },
+  standard: { weeks: { 'week-11': standard, 'week-12': standard12, 'week-13': standard13, 'week-14': standard14, 'week-15': standard15, 'week-16': standard16, 'week-17': standard17, 'week-18': standard18, 'week-19': standard19 } },
 });
 
 export function getWeek(track, weekId) {
